@@ -25,12 +25,12 @@ Conventional Commits:
 
 Core four — use these for almost everything:
 
-| type       | Purpose                                              |
-|------------|------------------------------------------------------|
-| `feat`     | New feature / user-visible capability                |
-| `fix`      | Bug fix                                               |
-| `chore`    | Tooling, deps, config, CI, housekeeping (no app logic)|
-| `refactor` | Code change that neither fixes a bug nor adds a feature|
+| type       | Purpose                                                 |
+|------------|---------------------------------------------------------|
+| `feat`     | New feature / user-visible capability                   |
+| `fix`      | Bug fix                                                 |
+| `chore`    | Tooling, deps, config, CI, housekeeping (no app logic)  |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
 
 Also allowed when they fit better: `docs`, `test`, `perf`, `style`.
 

@@ -1,17 +1,15 @@
+# Root build context (used by the nginx edge image). Keep it lean.
 .git
 .github
+.claude
 .idea
 .vscode
-.claude
-.venv
-venv
-__pycache__
-*.pyc
-.env
-*.session
-.mypy_cache
-.ruff_cache
-.pytest_cache
-data/*.db
-crawl4ai_cache
+backend
 skills-lock.json
+docker-compose.yml
+*.md
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/*.session

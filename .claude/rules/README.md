@@ -22,4 +22,9 @@ enforceable specifics here.
 
 ## Files
 
-- `00-conventions.md` — starter conventions (edit/expand as the project grows).
+- `00-conventions.md` — baseline conventions.
+- `10-core.md` — core development principles.
+- `20-git.md` — commit conventions.
+- `30-python.md` — Python guidelines.
+- `40-monorepo.md` — repo structure, backend/frontend split, networking.
+- `50-docs.md` — keep each folder's `README.md` current.
