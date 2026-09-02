@@ -1,5 +1,8 @@
 # Local stack. Run from repo root:
 #   docker compose up --build
+#
+# Only nginx publishes a host port (80). postgres and api are reachable only
+# on the internal compose network (no host ports) — the rest stays closed.
 name: cifra
 
 services:
@@ -9,8 +12,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-cifra}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cifra}
       POSTGRES_DB: ${POSTGRES_DB:-cifra}
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,16 +24,28 @@ services:
 
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: services/api/Dockerfile
-    env_file: .env
+    env_file:
+      - path: ./backend/.env
+        required: false
     environment:
       POSTGRES_HOST: postgres
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Edge: builds the React SPA and serves it (static) + proxies /api.
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
 
 volumes:
   pgdata:

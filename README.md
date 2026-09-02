@@ -15,6 +15,23 @@ media, regulators, and Telegram channels.
 - **User control**: add/edit/delete sources; edit or hide articles; add items
   manually.
 
+## Structure
+
+- `backend/` — Python (uv workspace): `common` shared lib + `services/api` (FastAPI).
+- `frontend/` — React SPA (Vite, TypeScript, React Router).
+- `nginx/` — edge: builds the SPA, serves it static, proxies `/api`; the only
+  service exposed to the host.
+- `docker-compose.yml` — nginx (public) + api + postgres (internal).
+
+## Run
+
+```bash
+docker compose up --build -d   # everything, reachable at http://localhost/
+```
+
+Local dev: backend `cd backend && uv run uvicorn app.main:app --reload --app-dir services/api`;
+frontend `cd frontend && npm install && npm run dev`.
+
 ## Commit conventions
 
 [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`.
