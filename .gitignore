@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.eggs/
+dist/
+build/
+
+# Env & secrets
+.env
+*.session          # Telethon session files
+*.session-journal
+
+# IDE
+.idea/
+.vscode/
+
+# Tooling
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data / runtime
+*.log
+data/*.db
+crawl4ai_cache/

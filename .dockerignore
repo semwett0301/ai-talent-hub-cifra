@@ -1,0 +1,17 @@
+.git
+.github
+.idea
+.vscode
+.claude
+.venv
+venv
+__pycache__
+*.pyc
+.env
+*.session
+.mypy_cache
+.ruff_cache
+.pytest_cache
+data/*.db
+crawl4ai_cache
+skills-lock.json
