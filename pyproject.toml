@@ -1,0 +1,64 @@
+[project]
+name = "common"
+version = "0.1.0"
+description = "Shared library for all services (config, logging; grows as needed)"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["common"]
+
+# uv workspace: this root IS the shared `common` package; services live under services/.
+[tool.uv.workspace]
+members = ["services/*"]
+
+[tool.uv.sources]
+common = { workspace = true }
+
+# Dev tooling shared across the workspace.
+[dependency-groups]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.2",
+    "ruff==0.14.0",
+    "mypy==1.14.1",
+]
+
+# ---- Shared tooling (applies repo-wide) ----
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Vendored third-party skills are not our code.
+extend-exclude = [".claude"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+ignore = ["E501"]  # line length handled softly for prompts/docs
+
+# FastAPI dependency-injection defaults (Depends/Query/...) are not mutable
+# argument defaults — exempt them from B008.
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+warn_unused_ignores = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Tests are added later as per-service unit tests or top-level e2e.
