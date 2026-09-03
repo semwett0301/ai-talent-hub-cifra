@@ -55,7 +55,7 @@ variable "CPU" {
 variable "RAM_MB" {
   description = "RAM in MB; must be a multiple of 1024."
   type        = number
-  default     = 4096
+  default     = 2048
 
   validation {
     condition     = var.RAM_MB % 1024 == 0
