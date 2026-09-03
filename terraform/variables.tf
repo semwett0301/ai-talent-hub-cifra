@@ -25,13 +25,13 @@ variable "APP_NAME" {
 variable "LOCATION" {
   description = "Location: ru-1 (spb), ru-2 (nsk), ru-3 (msk), de-1, kz-1, nl-1."
   type        = string
-  default     = "kz-1"
+  default     = "ru-3"
 }
 
 variable "AVAILABILITY_ZONE" {
   description = "Availability zone; must match the location (ru-1=spb-3, ru-2=nsk-1, ru-3=msk-1, kz-1=ala-1, nl-1=ams-1)."
   type        = string
-  default     = "ala-1"
+  default     = "msk-1"
 }
 
 variable "OS_NAME" {
@@ -55,7 +55,7 @@ variable "CPU" {
 variable "RAM_MB" {
   description = "RAM in MB; must be a multiple of 1024."
   type        = number
-  default     = 2048
+  default     = 4096
 
   validation {
     condition     = var.RAM_MB % 1024 == 0
@@ -66,6 +66,6 @@ variable "RAM_MB" {
 variable "DISK_MB" {
   description = "System disk size in MB; non-RU locations require 40960-2048000 in steps of 5120."
   type        = number
-  default     = 40960
+  default     = 30720
 }
 
