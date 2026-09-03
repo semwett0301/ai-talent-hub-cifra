@@ -23,6 +23,11 @@ resource "twc_ssh_key" "deploy" {
   body = var.SSH_PUBLIC_KEY
 }
 
+resource "twc_server_ip" "ipv4" {
+  source_server_id = twc_server.app.id
+  type             = "ipv4"
+}
+
 resource "twc_server" "app" {
   name     = var.SERVER_NAME
   hostname = local.server_hostname
@@ -56,3 +61,4 @@ resource "twc_server" "app" {
     ignore_changes = [cloud_init, os_id, software_id]
   }
 }
+
