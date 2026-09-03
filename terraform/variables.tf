@@ -69,8 +69,8 @@ variable "DISK_MB" {
   default     = 30720
 }
 
-variable "DISK_TYPE" {
-  description = "Disk type: ssd, nvme, hdd."
+variable "PRESET_TYPE" {
+  description = "Configurator preset type: premium, standard, gpu, dedicated_cpu."
   type        = string
-  default     = "nvme"
+  default     = "standard"
 }
