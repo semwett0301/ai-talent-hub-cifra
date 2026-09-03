@@ -22,22 +22,52 @@ services:
       timeout: 3s
       retries: 10
 
-  api:
+  rabbitmq:
+    image: rabbitmq:3-alpine
+    expose:
+      - "5672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: apply Alembic migrations, then exit. Everything DB-backed waits on it.
+  migrator:
     build:
       context: ./backend
-      dockerfile: services/api/Dockerfile
+      dockerfile: migrator/Dockerfile
     env_file:
       - path: ./backend/.env
         required: false
     environment:
       POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  source_service:
+    build:
+      context: ./backend
+      dockerfile: source_service/Dockerfile
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      POSTGRES_HOST: postgres
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     expose:
       - "8000"
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
 
-  # Edge: builds the React SPA and serves it (static) + proxies /api.
+  # Edge: serves the static SPA and reverse-proxies /api/* to the internal
+  # source_service. depends_on so the upstream host resolves at boot.
   nginx:
     build:
       context: .
@@ -45,7 +75,7 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - api
+      - source_service
 
 volumes:
   pgdata:

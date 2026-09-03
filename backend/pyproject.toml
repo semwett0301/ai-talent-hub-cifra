@@ -1,23 +1,8 @@
-[project]
-name = "common"
-version = "0.1.0"
-description = "Shared library for all services (config, logging; grows as needed)"
-requires-python = ">=3.12"
-dependencies = [
-    "pydantic==2.10.4",
-    "pydantic-settings==2.7.1",
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["common"]
-
-# uv workspace: this root IS the shared `common` package; services live under services/.
+# uv workspace root — a virtual root with no package of its own. The shared library
+# lives in `common/` as a regular member (its own pyproject); each service is a
+# sibling dir. Run uv from here.
 [tool.uv.workspace]
-members = ["services/*"]
+members = ["common", "source_service", "migrator"]
 
 [tool.uv.sources]
 common = { workspace = true }

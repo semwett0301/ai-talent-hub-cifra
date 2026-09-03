@@ -1,0 +1,16 @@
+[project]
+name = "source-service"
+version = "0.1.0"
+description = "Source ingestion service — CRUD sources, collect news, publish to RabbitMQ"
+requires-python = ">=3.12"
+dependencies = [
+    "common",
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "aio-pika==9.5.4",
+    "apscheduler==3.11.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

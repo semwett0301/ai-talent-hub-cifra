@@ -1,13 +1,70 @@
 # backend
 
-All Python code, as one uv workspace.
+All Python code, as one uv workspace. The workspace root is virtual (declares no
+package); the shared library and each deployable service are sibling member
+directories (no `services/` wrapper).
 
-- `common/` — shared library, imported as `common`.
-- `services/` — one package per deployable service (e.g. `api`).
-- `pyproject.toml` — workspace root **and** the `common` package (deps + ruff/mypy/pytest config).
+- `common/` — shared library member (its own `pyproject.toml`; package at
+  `common/common/`, imported as `common`): `settings`, `core/` = logging + DB infra,
+  `enums`, `dto` contracts. Only holds what ≥2 services use.
+- `source_service/` — ingestion service: CRUD sources, collect news (stub
+  collectors), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
+- `migrator/` — one-shot Alembic runner that owns the shared DB schema history (one
+  database for all services). Runs `upgrade head` on boot, then exits.
+- `pyproject.toml` — virtual workspace root: `[tool.uv.workspace] members` (common +
+  the services) + shared dev tooling (ruff/mypy/pytest). No package of its own.
 - `uv.lock` — locked versions (committed).
 - `.env.example` — settings template → copy to `.env`.
 
-Notes: run uv from here (`uv sync --all-packages`). This dir doubles as the
-`common` package. Models live only in `common.models`; services never import each
-other (share via `common`).
+## Service architecture — onion / clean layers
+
+Each service is structured as **onion architecture**: dependencies point **inward**,
+toward the domain. Outer layers depend on inner ones, never the reverse; the
+concrete wiring happens once, at the composition root.
+
+| Layer | Holds | Depends on |
+|-------|-------|-----------|
+| `domain/` | Business entities, value objects, business rules, domain errors. No I/O. | nothing |
+| `application/` | Use cases / orchestration, the **ports** (interfaces) infra implements, and DTOs. | domain |
+| `infrastructure/` | Implementations of the ports: ORM schemas, repositories, RabbitMQ, collectors (feedparser / Playwright / aiogram), external APIs. | application, domain |
+| `api/` | FastAPI routes / controllers and HTTP-only types. | application |
+| `deps.py` | **Composition root** — builds the concrete implementations and injects them into application (registries, repository, publisher). | everything |
+
+Inversion in practice: application defines a `Protocol` port (`SourceRepository`,
+`NewsPublisher`, `PullCollector`/`PushCollector`); infrastructure supplies a class
+that structurally satisfies it; `deps.py` constructs the impl and passes it in.
+Application never imports a concrete infra class — only its own ports. (One
+pragmatic concession: the ports type against the ORM `Source` schema directly
+rather than a separate domain entity.)
+
+`source_service/` folder layout:
+
+```
+source_service/                 # the importable package
+  domain/
+    entities/news_item.py       # NewsItem (domain entity)
+  application/
+    ports/                      # collectors.py, repositories.py, publisher.py (Protocols)
+    dto/source/                 # SourceCreate / SourceOut / SourceUpdate
+    services/                   # SourceService, SchedulerService, SubscriptionService
+  infrastructure/
+    persistence/schemas/        # ORM Source (table)
+    persistence/repositories/   # SourceRepo → implements SourceRepository
+    rabbit/connector.py         # RabbitConnector → implements NewsPublisher
+    collectors/                 # RssCollector / WebCrawlCollector / TelegramCollector
+  api/routes/                   # health.py, sources.py (FastAPI routers)
+  deps.py                       # composition root — DI wiring
+  main.py                       # FastAPI app + lifespan
+```
+
+Notes: run uv from here (`uv sync --all-packages`). Each service is its own package
+(`pyproject.toml` depending on `common`, plus a `Dockerfile`), and ships a
+**uniquely named** top-level package (e.g. `source_service`, not a generic `app`)
+so services coexist when the migrator imports their models. New service = copy
+`source_service/`, add it to `members` in `pyproject.toml` and a block to the root
+`docker-compose.yml`. Models live in the owning service; services never import each
+other (share via `common` + the bus) — except `migrator`, which imports each
+service's models to build the full schema. Migrations are centralized in `migrator`
+— `cd migrator && uv run alembic -c alembic.ini upgrade head` (the compose
+`migrator` one-shot does this). A public API gateway is planned
+(`../plans/api-gateway.md`); services stay internal until then.
