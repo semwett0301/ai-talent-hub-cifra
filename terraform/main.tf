@@ -23,9 +23,8 @@ resource "twc_ssh_key" "deploy" {
   body = var.SSH_PUBLIC_KEY
 }
 
-resource "twc_server_ip" "ipv4" {
-  source_server_id = twc_server.app.id
-  type             = "ipv4"
+resource "twc_floating_ip" "app" {
+  availability_zone = var.AVAILABILITY_ZONE
 }
 
 resource "twc_server" "app" {
@@ -36,6 +35,7 @@ resource "twc_server" "app" {
   software_id = data.twc_software.docker.id
 
   availability_zone = var.AVAILABILITY_ZONE
+  floating_ip_id    = twc_floating_ip.app.id
 
   configuration {
     configurator_id = data.twc_configurator.main.id
