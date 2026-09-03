@@ -64,8 +64,8 @@ variable "RAM_MB" {
 }
 
 variable "DISK_MB" {
-  description = "System disk size in MB; non-RU locations require 40960-2048000 in steps of 5120."
+  description = "System disk size in MB; configurator requires 40960-2048000 in steps of 5120."
   type        = number
-  default     = 30720
+  default     = 40960
 }
 
