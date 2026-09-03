@@ -64,8 +64,8 @@ variable "RAM_MB" {
 }
 
 variable "DISK_MB" {
-  description = "System disk size in MB."
+  description = "System disk size in MB; nl-1 requires 40960-2048000 in steps of 5120."
   type        = number
-  default     = 30720
+  default     = 40960
 }
 
