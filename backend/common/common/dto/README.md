@@ -9,5 +9,4 @@ shared enums live next door in `common/enums`.
   (`schema_version`, `source_id`, `source_type`, `url`, `text`, `published_at`, `raw`).
 - `routing.py` — `routing_key(source_type)` → `news.raw.<type>`; `ROUTING_PREFIX`.
 
-Notes: bump `schema_version` on breaking changes. The EventCatalog `NewsRaw` event
-schema is generated from `NewsDTO` — keep them in sync.
+Notes: bump `schema_version` on breaking changes.

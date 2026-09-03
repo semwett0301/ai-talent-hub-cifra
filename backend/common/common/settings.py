@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     app_name: str = "AI Analytical Center"
     environment: str = "local"
     debug: bool = True
-    api_v1_prefix: str = "/api/v1"
     secret_key: str = "change-me"
 
     # Postgres

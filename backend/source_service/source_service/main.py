@@ -4,7 +4,6 @@
 from contextlib import asynccontextmanager
 
 from common.core.logging import configure_logging, get_logger
-from common.settings import settings
 from fastapi import FastAPI
 
 from source_service import deps
@@ -39,4 +38,5 @@ async def lifespan(app: FastAPI):
 # App assembly and routes
 app = FastAPI(title="source_service", version="0.1.0", lifespan=lifespan)
 app.include_router(health.router)
-app.include_router(sources.router, prefix=settings.api_v1_prefix)
+# Served at /sources; nginx exposes it publicly as /api/sources.
+app.include_router(sources.router)

@@ -47,8 +47,7 @@ frontend/                 # React SPA — Vite + TypeScript + React Router
   public/                 #   static assets served as-is
   .env.example            #   VITE_-prefixed (public) config
   .oxlintrc.json          #   linter config
-eventcatalog/             # EventCatalog docs (services/events); built + served at /catalog
-nginx/                    # edge image: builds + serves static (SPA + EventCatalog); no proxy yet
+nginx/                    # edge: serves static SPA + reverse-proxies /api/* → source_service
   Dockerfile              #   multi-stage: node build → nginx serving dist/
   nginx.conf
 docker-compose.yml        # root: nginx (public) + migrator + source_service + postgres + rabbitmq (internal)
@@ -75,10 +74,11 @@ README.md, .mcp.json, .gitignore
 - **Only nginx publishes a host port (80).** Backend services (`source_service`),
   `postgres`, and `rabbitmq` are reachable only on the internal compose network
   (`expose`, no host ports) — everything else stays closed.
-- The `nginx` image builds and serves **static only**: the React SPA (fallback to
-  `index.html`) and the EventCatalog at `/catalog/`. **No `/api` proxy yet** —
-  backend services stay internal until the API gateway lands
-  (`plans/api-gateway.md`). There is **no separate frontend container**. Edit
+- The `nginx` image serves the static React SPA (fallback to `index.html`) and
+  **reverse-proxies `/api/*` → `source_service:8000`** (the `/api` prefix is
+  stripped, so `/api/sources` → `/sources`). Other services stay internal until a
+  full API gateway lands (`plans/api-gateway.md`). There is
+  **no separate frontend container**. Edit
   `nginx/nginx.conf` and `nginx/Dockerfile`.
 
 ## Architecture rules (backend)

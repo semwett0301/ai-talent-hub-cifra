@@ -66,14 +66,16 @@ services:
       migrator:
         condition: service_completed_successfully
 
-  # Edge: builds and serves static only (React SPA + EventCatalog). No backend
-  # proxy for now — source_service stays internal until the API gateway lands.
+  # Edge: serves the static SPA and reverse-proxies /api/* to the internal
+  # source_service. depends_on so the upstream host resolves at boot.
   nginx:
     build:
       context: .
       dockerfile: nginx/Dockerfile
     ports:
       - "80:80"
+    depends_on:
+      - source_service
 
 volumes:
   pgdata:

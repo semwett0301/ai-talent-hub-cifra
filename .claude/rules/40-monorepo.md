@@ -8,7 +8,7 @@ backend/     all Python — its own uv workspace (root pyproject = virtual works
   common/    shared library, its own pyproject; package at common/common (imported as `common`)
   source_service/, migrator/   one package per service, siblings of common (no services/ wrapper)
 frontend/    React SPA (Vite, TypeScript, React Router) — built to static files
-nginx/       edge image: builds + serves static (SPA + EventCatalog); no backend proxy yet
+nginx/       edge image: serves static SPA + proxies /api/* → source_service
 docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
 ```
 
@@ -65,8 +65,8 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
 - **Only nginx publishes a host port (80).** Backend services (`source_service`),
   `postgres`, and `rabbitmq` are internal-only (`expose`, no host `ports`). There
   is no separate frontend container.
-- The `nginx` image (`nginx/Dockerfile`, build context = repo root) builds and
-  serves **static only** — the SPA (fallback to `index.html`) and the EventCatalog
-  at `/catalog/`. **No backend proxy yet** — services stay internal until the API
-  gateway lands (`plans/api-gateway.md`).
+- The `nginx` image (`nginx/Dockerfile`, build context = repo root) serves the SPA
+  (fallback to `index.html`) and **reverse-proxies `/api/*` →
+  `source_service:8000`** (the `/api` prefix is stripped). Other services stay
+  internal until a full API gateway lands (`plans/api-gateway.md`).
 - Backend service images build from `./backend`.
