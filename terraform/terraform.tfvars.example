@@ -1,0 +1,4 @@
+ssh_key_name = "deploy-key"
+server_name  = "myapp-prod"
+app_name     = "myapp"
+location     = "ru-1"
