@@ -1,0 +1,49 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+timezone: Europe/Moscow
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - ufw
+  - fail2ban
+
+disable_root: false
+
+users:
+  - default
+  - name: root
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+  - name: ${deploy_user}
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+runcmd:
+  - |
+    set -eux
+
+    systemctl enable --now docker
+    docker compose version
+
+  - [ usermod, -aG, docker, "${deploy_user}" ]
+
+  - |
+    set -eux
+    ufw --force reset
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow 22/tcp
+    ufw allow 80/tcp
+    ufw --force enable
+
+  - [ install, -d, -o, "${deploy_user}", -g, "${deploy_user}", "${app_dir}" ]
+  - [ touch, /var/lib/cloud/bootstrap-complete ]
+
+final_message: "cloud-init finished. uptime=$UPTIME sec. App dir ready: ${app_dir}"

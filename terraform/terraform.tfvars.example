@@ -1,0 +1,4 @@
+SSH_PUBLIC_KEY = "ssh-ed25519 AAAA... deploy"
+SERVER_NAME    = "myapp-prod"
+APP_NAME       = "myapp"
+LOCATION       = "ru-1"
