@@ -4,8 +4,7 @@ locals {
 }
 
 data "twc_configurator" "main" {
-  location    = var.LOCATION
-  preset_type = var.PRESET_TYPE
+  location = var.LOCATION
 }
 
 data "twc_software" "docker" {
