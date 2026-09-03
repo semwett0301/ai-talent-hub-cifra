@@ -29,9 +29,9 @@ variable "LOCATION" {
 }
 
 variable "AVAILABILITY_ZONE" {
-  description = "Availability zone within the location; null picks one automatically."
+  description = "Availability zone; must match the location and the floating IP (e.g. spb-3 for ru-1)."
   type        = string
-  default     = null
+  default     = "spb-3"
 }
 
 variable "OS_NAME" {
