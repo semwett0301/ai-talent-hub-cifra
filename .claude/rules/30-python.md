@@ -64,6 +64,24 @@ except httpx.TimeoutException as e:
 - Use `@dataclass(frozen=True)` for immutable data
 - Use `pydantic.BaseSettings` for configuration objects
 
+## Module Organization
+
+- **One public class per module.** A file defines a single top-level class; name the
+  module after it in `snake_case` (`SourceRepo` → `source_repo.py`,
+  `RabbitConnector` → `connector.py` inside a `rabbit/` package). Splitting a
+  multi-class file into a package is preferred over letting it grow.
+- When an enclosing package already names the noun, the module drops the redundant
+  prefix: `dto/source/create.py` (holds `SourceCreate`), not `source_create.py`.
+- **Expose the package's public API from `__init__.py`** by re-exporting the classes
+  (`from .connector import RabbitConnector`) with an explicit `__all__`, so callers
+  import from the package (`from source_service.infra.rabbit import RabbitConnector`),
+  not deep modules. Sibling modules inside the package import each other directly
+  (`from ...pull_collector import PullCollector`), not via the package, to avoid
+  import cycles.
+- Allowed exceptions (do not over-split): a private helper class used by exactly one
+  public class (e.g. `_Row`) may share its file; a module holding only related
+  enums or constants is fine.
+
 ## Project Structure
 
 - Use `pyproject.toml` for project configuration (not `setup.py`)

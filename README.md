@@ -17,7 +17,10 @@ media, regulators, and Telegram channels.
 
 ## Structure
 
-- `backend/` — Python (uv workspace): `common` shared lib + `services/api` (FastAPI).
+- `backend/` — Python (uv workspace): `common` shared lib + `source_service`
+  (FastAPI) + `migrator` (Alembic), as sibling packages. Services follow **onion
+  architecture** (domain → application → infrastructure → api, wired in `deps.py`);
+  see `backend/README.md`.
 - `frontend/` — React SPA (Vite, TypeScript, React Router).
 - `nginx/` — edge: builds the SPA, serves it static, proxies `/api`; the only
   service exposed to the host.
@@ -29,8 +32,28 @@ media, regulators, and Telegram channels.
 docker compose up --build -d   # everything, reachable at http://localhost/
 ```
 
-Local dev: backend `cd backend && uv run uvicorn app.main:app --reload --app-dir services/api`;
+Local dev: backend `cd backend && uv run uvicorn source_service.main:app --reload --app-dir source_service`;
 frontend `cd frontend && npm install && npm run dev`.
+
+### Migrations
+
+The `migrator` service owns the single Alembic history for the shared DB. Compose
+runs `alembic upgrade head` once at startup; DB-backed services wait for it.
+
+```bash
+cd backend/migrator                                            # run from here
+uv run alembic -c alembic.ini upgrade head                     # apply migrations
+uv run alembic -c alembic.ini revision --autogenerate -m "msg" # after a model change
+```
+
+Autogenerate imports each service's models (listed in `SERVICE_MODEL_MODULES` in
+`migrations/autogenerate.py`) to diff against the DB — so run it via `uv` where the whole
+workspace is installed, then review the emitted revision. `upgrade` never reads
+models, so the shipped migrator image carries no service packages. Adding a
+service's first table: add the service to the `autogen` dependency group in
+`migrator/pyproject.toml` and append its models module to `SERVICE_MODEL_MODULES`.
+Each service ships a uniquely named package (e.g. `source_service`), so all coexist.
+See `backend/migrator/README.md`.
 
 ## Commit conventions
 

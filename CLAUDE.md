@@ -28,15 +28,18 @@ Backend and frontend are separated; the root holds only deployment and shared
 repo files.
 
 ```
-backend/                  # all Python — a single uv workspace
-  common/                 # shared library, imported as `common`
-    core/                 #   config (pydantic-settings) + logging (stdlib)
-  services/
-    api/                  # package cifra-api — FastAPI service
-      app/                #   application package (main.py: `/`, `/health`)
-      Dockerfile          #   image build (context ./backend)
-      pyproject.toml      #   depends on `common`
-  pyproject.toml          # workspace root AND the `common` package (+ ruff/mypy/pytest)
+backend/                  # all Python — a single uv workspace (services are siblings)
+  common/                 # shared library (≥2 services), its own pyproject
+    common/               #   importable package: settings, core (logging + db infra), enums, dto
+    pyproject.toml        #   the `common` package
+  source_service/         # project source-service — FastAPI ingestion service
+    source_service/       #   importable package (uniquely named, not generic `app`)
+    Dockerfile            #   image build (context ./backend)
+    pyproject.toml        #   depends on `common`
+  migrator/               # one-shot Alembic runner — owns the shared DB schema history
+    migrations/           #   single Alembic history (all services) + alembic.ini
+    Dockerfile, pyproject.toml
+  pyproject.toml          # virtual workspace root — members + shared ruff/mypy/pytest (no package)
   uv.lock                 # committed lockfile
   .env.example            # backend settings template
 frontend/                 # React SPA — Vite + TypeScript + React Router
@@ -44,17 +47,18 @@ frontend/                 # React SPA — Vite + TypeScript + React Router
   public/                 #   static assets served as-is
   .env.example            #   VITE_-prefixed (public) config
   .oxlintrc.json          #   linter config
-nginx/                    # edge image: builds the SPA + serves it + proxies /api
+eventcatalog/             # EventCatalog docs (services/events); built + served at /catalog
+nginx/                    # edge image: builds + serves static (SPA + EventCatalog); no proxy yet
   Dockerfile              #   multi-stage: node build → nginx serving dist/
   nginx.conf
-docker-compose.yml        # root: nginx (public) + api + postgres (internal)
+docker-compose.yml        # root: nginx (public) + migrator + source_service + postgres + rabbitmq (internal)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
 README.md, .mcp.json, .gitignore
 ```
 
 `backend/common` grows to hold shared DB/models/schemas/LLM code as introduced.
-`data/`, `backend/migrations/`, and test dirs are intentionally absent for now.
+`data/` and test dirs are intentionally absent for now.
 
 ## Tech stack
 
@@ -68,21 +72,26 @@ README.md, .mcp.json, .gitignore
 
 ## Networking (docker)
 
-- **Only nginx publishes a host port (80).** `api` and `postgres` are reachable
-  only on the internal compose network (`expose`, no host ports) — everything
-  else stays closed.
-- The `nginx` image builds the React SPA and serves it as static files; `/api/`
-  is proxied to `api:8000` (single backend → `proxy_pass` directly, no
-  `upstream`). There is **no separate frontend container**. Client routes fall
-  back to `index.html`. Edit `nginx/nginx.conf` and `nginx/Dockerfile`.
+- **Only nginx publishes a host port (80).** Backend services (`source_service`),
+  `postgres`, and `rabbitmq` are reachable only on the internal compose network
+  (`expose`, no host ports) — everything else stays closed.
+- The `nginx` image builds and serves **static only**: the React SPA (fallback to
+  `index.html`) and the EventCatalog at `/catalog/`. **No `/api` proxy yet** —
+  backend services stay internal until the API gateway lands
+  (`plans/api-gateway.md`). There is **no separate frontend container**. Edit
+  `nginx/nginx.conf` and `nginx/Dockerfile`.
 
 ## Architecture rules (backend)
 
-- Shared code (config, and later db, models, schemas, LLM) lives in `common`.
-  Service dirs hold only that service's own logic.
-- When models are added, they live **only** in `common.models`; one shared
-  Postgres, one Alembic history.
-- **No cross-service imports** — services share via `common`.
+- `common` holds **only what ≥2 services use** (config, db infra, event/message
+  contracts, LLM). Anything used by a single service lives **in that service**;
+  promote to `common` when a second consumer appears.
+- Models live in the **owning service**. A model moves to `common.models` only once
+  ≥2 services share the table. The DB is one for all services, so the **Alembic
+  history is centralized in the `migrator` service** (not per service).
+- **No cross-service imports** — services communicate via `common` (contracts) and
+  the message bus, never importing each other. The one exception is `migrator`,
+  which imports each service's models to build the full schema.
 - Endpoints stay thin; keep LLM and network I/O in services / `common`. Never
   return ORM objects raw — map through Pydantic schemas.
 
@@ -90,7 +99,7 @@ README.md, .mcp.json, .gitignore
 
 Backend (Python):
 - **Async everywhere** on the request path.
-- **Config** only through `common.core.config.settings` — never read
+- **Config** only through `common.settings.settings` — never read
   `os.environ`; add a field to `Settings`.
 - **Logging** via `common.core.logging.get_logger` (stdlib `logging`). No `print`.
 - Keep deps minimal — add a package to a `pyproject.toml` only when code imports
@@ -111,7 +120,7 @@ Backend uses **uv** — one workspace venv + lockfile under `backend/`.
 # Backend (from backend/)
 cd backend
 uv sync --all-packages            # install common + all services + dev tools
-uv run uvicorn app.main:app --reload --app-dir services/api
+uv run uvicorn source_service.main:app --reload --app-dir source_service
 uvx ruff@0.14.0 check backend     # lint (CI pins ruff 0.14.0)
 uvx ruff@0.14.0 format --check backend
 
@@ -142,14 +151,19 @@ Two path-filtered workflows, so a change runs only the relevant job:
 
 - **Frontend UI** → add pages/components under `frontend/src/`, wire routes in
   `App.tsx`. Talk to the API via `/api/...`.
-- **New backend service** → create `backend/services/<name>/` with a
-  `pyproject.toml` (depend on `common`), an `app/` package, and a `Dockerfile`;
-  add a block to `docker-compose.yml`. The workspace glob (`services/*`) picks it
-  up automatically.
+- **New backend service** → create `backend/<name>/` (a sibling of `common`) with a
+  `pyproject.toml` (depend on `common`), a **uniquely named** importable package
+  (`<name>/`, not a generic `app` — so services coexist when the migrator imports
+  their models), and a `Dockerfile`; add `<name>` to `[tool.uv.workspace] members`
+  in `backend/pyproject.toml` and a block to `docker-compose.yml`.
 - **Shared code** (DB session, models, schemas, LLM) → add under `backend/common/`
   and its deps to `backend/pyproject.toml`.
-- **Migrations** → introduce Alembic (`backend/migrations/`) with a single shared
-  history once models exist; only one service runs `upgrade head` on startup.
+- **Migrations** → live in the `migrator` service (`backend/migrator/`), a single
+  shared Alembic history. Adding a table = add the service to the `autogen` group
+  in `migrator/pyproject.toml` and append its models module to
+  `SERVICE_MODEL_MODULES` in `migrations/autogenerate.py`, then autogenerate a
+  revision. The
+  compose `migrator` one-shot runs `upgrade head` before DB-backed services start.
 - **Tests** → per-service unit tests, or top-level e2e.
 - Whatever you touch, **update the folder's `README.md`** to match.
 
