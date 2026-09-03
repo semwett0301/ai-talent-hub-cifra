@@ -1,11 +1,11 @@
 locals {
-  app_dir         = "/opt/${var.app_name}"
-  server_hostname = replace(replace(var.app_name, ".", "-"), "_", "-")
+  app_dir         = "/opt/${var.APP_NAME}"
+  server_hostname = replace(replace(var.APP_NAME, ".", "-"), "_", "-")
 }
 
 data "twc_configurator" "main" {
-  location  = var.location
-  disk_type = var.disk_type
+  location  = var.LOCATION
+  disk_type = var.DISK_TYPE
 }
 
 data "twc_software" "docker" {
@@ -13,39 +13,41 @@ data "twc_software" "docker" {
 
   os {
     family  = "linux"
-    name    = var.os_name
-    version = var.os_version
+    name    = var.OS_NAME
+    version = var.OS_VERSION
   }
 }
 
-data "twc_ssh_keys" "deploy" {
-  name = var.ssh_key_name
+resource "twc_ssh_key" "deploy" {
+  name = "${var.APP_NAME}-deploy"
+  body = var.SSH_PUBLIC_KEY
 }
 
 resource "twc_server" "app" {
-  name     = var.server_name
+  name     = var.SERVER_NAME
   hostname = local.server_hostname
 
   os_id       = data.twc_software.docker.os[0].id
   software_id = data.twc_software.docker.id
 
-  availability_zone = var.availability_zone
+  availability_zone = var.AVAILABILITY_ZONE
 
   configuration {
     configurator_id = data.twc_configurator.main.id
-    cpu             = var.cpu
-    ram             = var.ram_mb
-    disk            = var.disk_mb
+    cpu             = var.CPU
+    ram             = var.RAM_MB
+    disk            = var.DISK_MB
   }
 
-  ssh_keys_ids = [data.twc_ssh_keys.deploy.id]
+  ssh_keys_ids = [twc_ssh_key.deploy.id]
 
   is_root_password_required = false
 
   cloud_init = templatefile("${path.module}/cloud-init/cloud-init.yaml.tftpl", {
     app_dir        = local.app_dir
     hostname       = local.server_hostname
-    ssh_public_key = trimspace(data.twc_ssh_keys.deploy.body)
+    deploy_user    = var.DEPLOY_USER
+    ssh_public_key = trimspace(var.SSH_PUBLIC_KEY)
   })
 
   lifecycle {

@@ -20,7 +20,7 @@ users:
   - name: root
     ssh_authorized_keys:
       - ${ssh_public_key}
-  - name: deploy
+  - name: ${deploy_user}
     shell: /bin/bash
     ssh_authorized_keys:
       - ${ssh_public_key}
@@ -32,7 +32,7 @@ runcmd:
     systemctl enable --now docker
     docker compose version
 
-  - [ usermod, -aG, docker, deploy ]
+  - [ usermod, -aG, docker, "${deploy_user}" ]
 
   - |
     set -eux
@@ -43,7 +43,7 @@ runcmd:
     ufw allow 80/tcp
     ufw --force enable
 
-  - [ install, -d, -o, deploy, -g, deploy, "${app_dir}" ]
+  - [ install, -d, -o, "${deploy_user}", -g, "${deploy_user}", "${app_dir}" ]
   - [ touch, /var/lib/cloud/bootstrap-complete ]
 
 final_message: "cloud-init finished. uptime=$UPTIME sec. App dir ready: ${app_dir}"

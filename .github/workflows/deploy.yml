@@ -1,5 +1,5 @@
-# App deploy: rsync the repo to the server and rebuild the compose stack over SSH.
-# Terraform (infra.yml) owns the server; this owns the app running on it.
+# CI/CD: apply infra (only when terraform/ changed), then deploy the app over SSH.
+# The server host is read from Terraform state (S3), so there is no SSH_HOST secret.
 name: Deploy
 
 on:
@@ -7,49 +7,115 @@ on:
   push:
     branches: [main]
 
-
 concurrency:
   group: deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  deploy:
-    name: Deploy over SSH
+  changes:
+    name: detect changes
     runs-on: ubuntu-latest
-    environment: production
+    outputs:
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            terraform:
+              - 'terraform/**'
+
+  infra:
+    name: terraform apply
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
     env:
-      SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_USER: ${{ secrets.SSH_USER }}
-      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      TWC_TOKEN: ${{ secrets.TWC_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      TF_VAR_SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_APP_NAME: ${{ secrets.APP_NAME }}
+      TF_VAR_DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Check required config
         run: |
-          test -n "$SSH_HOST" || { echo "::error::secret SSH_HOST is not set"; exit 1; }
-          test -n "$SSH_USER" || { echo "::error::secret SSH_USER is not set"; exit 1; }
-          test -n "$DEPLOY_PATH" || { echo "::error::secret DEPLOY_PATH is not set"; exit 1; }
+          test -n "$TWC_TOKEN" || { echo "::error::secret TWC_TOKEN is not set"; exit 1; }
+          test -n "$AWS_ACCESS_KEY_ID" || { echo "::error::secret TF_STATE_ACCESS_KEY is not set"; exit 1; }
+          test -n "$AWS_SECRET_ACCESS_KEY" || { echo "::error::secret TF_STATE_SECRET_KEY is not set"; exit 1; }
+          test -n "$TF_VAR_SSH_PUBLIC_KEY" || { echo "::error::secret SSH_PUBLIC_KEY is not set"; exit 1; }
+          test -n "$TF_VAR_APP_NAME" || { echo "::error::secret APP_NAME is not set"; exit 1; }
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - run: terraform fmt -check -recursive
+      - run: terraform init -input=false
+      - run: terraform validate
+      - run: terraform apply -input=false -auto-approve
+
+  deploy:
+    name: deploy over SSH
+    needs: [changes, infra]
+    if: ${{ always() && needs.changes.result == 'success' && needs.infra.result != 'failure' }}
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: /opt/${{ secrets.APP_NAME }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Resolve server host from Terraform state
+        id: host
+        working-directory: terraform
+        run: |
+          terraform init -input=false
+          echo "host=$(terraform output -raw server_ipv4)" >> "$GITHUB_OUTPUT"
 
       - name: Set up SSH
+        env:
+          SSH_HOST: ${{ steps.host.outputs.host }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Rsync to deploy path
+        env:
+          SSH_HOST: ${{ steps.host.outputs.host }}
         run: >
           rsync -az --delete
-          -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT"
+          -e "ssh -i ~/.ssh/deploy_key"
           --filter=':- .gitignore'
           --exclude='.env'
           --exclude='.env.example'
           --exclude='.git/'
-          ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          ./ "$DEPLOY_USER@$SSH_HOST:$DEPLOY_PATH/"
 
       - name: Restart containers
+        env:
+          SSH_HOST: ${{ steps.host.outputs.host }}
         run: |
-          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$SSH_HOST" \
             "docker compose --project-directory '$DEPLOY_PATH' down && \
              docker compose --project-directory '$DEPLOY_PATH' up -d --build"

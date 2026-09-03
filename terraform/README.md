@@ -7,8 +7,9 @@ is deployed **separately** via Docker Compose — Terraform does not run it. See
 
 - `providers.tf` — Terraform + `timeweb-cloud/timeweb-cloud` provider (`~> 1.8`) +
   `backend "s3"` storing state in Timeweb S3 (`cifra-tfstate`).
-- `variables.tf` — inputs (ssh key, server size/location, `app_name`).
-- `main.tf` — data lookups (configurator, Docker software, ssh key) + `twc_server`.
+- `variables.tf` — inputs (`SSH_PUBLIC_KEY`, server size/location, `APP_NAME`).
+- `main.tf` — data lookups (configurator, Docker software) + `twc_ssh_key` +
+  `twc_server`.
 - `outputs.tf` — server IP, ssh command, `app_url` (http://IP), root password.
 - `cloud-init/` — first-boot server prep (Docker + Compose v2, `deploy` user,
   UFW 22/80, creates `/opt/<app_name>` ready for a compose project).
@@ -27,28 +28,29 @@ the plan's section 7).
 Two ways to feed variables — they don't mix:
 
 - **Local run** — values from `terraform.tfvars` (copy from
-  `terraform.tfvars.example`) plus `export TWC_TOKEN=...` and the S3 state keys
-  (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) in the shell.
-- **GitHub Actions** (`.github/workflows/infra.yml`) — `terraform.tfvars` is
-  **not used** (it's gitignored, absent on the runner). Variables come from the
-  repo's Secrets/Variables, injected as `TF_VAR_*`. Anything not set falls back to
-  the `default` in `variables.tf`.
+  `terraform.tfvars.example`; set `SSH_PUBLIC_KEY` or
+  `export TF_VAR_SSH_PUBLIC_KEY="$(cat deploy-key.pub)"`) plus `export TWC_TOKEN=...`
+  and the S3 state keys (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) in the shell.
+- **GitHub Actions** (`.github/workflows/deploy.yml`, `infra` job) —
+  `terraform.tfvars` is **not used** (it's gitignored, absent on the runner). All
+  inputs come from repo **Secrets**, injected as `TF_VAR_*`.
 
-Set them in **repo → Settings → Secrets and variables → Actions**:
+Set them in **repo → Settings → Secrets and variables → Actions** (all Secrets):
 
-| Kind     | Name                  | Maps to                             | Required |
-|----------|-----------------------|-------------------------------------|----------|
-| Secret   | `TWC_TOKEN`           | provider token                      | yes      |
-| Secret   | `TF_STATE_ACCESS_KEY` | `AWS_ACCESS_KEY_ID` (S3 state)      | yes      |
-| Secret   | `TF_STATE_SECRET_KEY` | `AWS_SECRET_ACCESS_KEY` (S3 state)  | yes      |
-| Variable | `SSH_KEY_NAME`        | `TF_VAR_ssh_key_name`               | yes      |
-| Variable | `APP_NAME`            | `TF_VAR_app_name` (default `myapp`) | no       |
+| Name                  | Maps to                             | Required |
+|-----------------------|-------------------------------------|----------|
+| `TWC_TOKEN`           | provider token                      | yes      |
+| `TF_STATE_ACCESS_KEY` | `AWS_ACCESS_KEY_ID` (S3 state)      | yes      |
+| `TF_STATE_SECRET_KEY` | `AWS_SECRET_ACCESS_KEY` (S3 state)  | yes      |
+| `SSH_PUBLIC_KEY`      | `TF_VAR_SSH_PUBLIC_KEY`             | yes      |
+| `APP_NAME`            | `TF_VAR_APP_NAME`                   | yes      |
+| `DEPLOY_USER`         | `TF_VAR_DEPLOY_USER` (default `deploy`)| no    |
 
-The infra workflow runs `terraform apply` — manually (workflow_dispatch) or on push
-to `main` touching `terraform/**`. App releases are a separate workflow
-(`deploy.yml`, over SSH) — see `../plans/ci-deploy-pipeline.md`. To expose more
-knobs (`server_name`, `location`, size) in CI, add matching `TF_VAR_*` lines to
-`infra.yml`.
+CI/CD lives in a single `deploy.yml`: the `infra` job runs `terraform apply` (only
+when `terraform/**` changed, or on manual dispatch), then the `deploy` job ships the
+app over SSH — reading the server IP from `terraform output` (S3 state), so there's
+no `SSH_HOST` secret. To expose more knobs (`SERVER_NAME`, `LOCATION`, size) in CI,
+add matching `TF_VAR_*` lines to the `infra` job.
 
 ## Remote state (Timeweb S3)
 
