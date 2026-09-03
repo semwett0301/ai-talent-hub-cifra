@@ -47,15 +47,15 @@ variable "OS_VERSION" {
 }
 
 variable "CPU" {
-  description = "Number of vCPU."
+  description = "Number of vCPU; configurator minimum is 2."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "RAM_MB" {
   description = "RAM in MB; must be a multiple of 1024."
   type        = number
-  default     = 2048
+  default     = 4096
 
   validation {
     condition     = var.RAM_MB % 1024 == 0
