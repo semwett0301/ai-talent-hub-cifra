@@ -3,7 +3,8 @@
 from common.core.logging import get_logger
 
 from source_service.application.ports import PullCollector
-from source_service.domain.schemas import NewsItem, Source
+from source_service.domain.entities import NewsItem
+from source_service.domain.schemas import Source
 
 logger = get_logger(__name__)
 

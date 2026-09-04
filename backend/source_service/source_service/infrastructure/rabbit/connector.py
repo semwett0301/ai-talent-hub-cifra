@@ -9,7 +9,7 @@ from common.dto import NewsDTO, routing_key
 from common.enums import SourceType
 
 from source_service.application.ports import NewsPublisher
-from source_service.domain.schemas import NewsItem
+from source_service.domain.entities import NewsItem
 
 logger = get_logger(__name__)
 

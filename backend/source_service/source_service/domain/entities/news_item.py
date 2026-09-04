@@ -1,4 +1,4 @@
-"""NewsItem — in-memory schema: the normalized unit every collector emits."""
+"""NewsItem — the normalized unit every collector emits (plain, never stored)."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
