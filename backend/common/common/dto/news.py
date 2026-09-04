@@ -1,5 +1,6 @@
 """News DTO — the RabbitMQ message contract shared across services."""
 
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -11,8 +12,8 @@ from common.enums import SourceType
 class NewsDTO(BaseModel):
     """A single collected news item as published to the `news` exchange."""
 
-    schema_version: int = 1
-    source_id: int
+    schema_version: int = 3
+    source_id: uuid.UUID
     source_type: SourceType
     url: str
     text: str

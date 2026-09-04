@@ -23,14 +23,16 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
   - `domain/schemas/` — the data shapes: `Source` (DB-backed ORM) + `NewsItem`
     (plain shape); they differ only in whether they hit the DB.
   - `application/` — `ports/` (interfaces infra implements) + `dto/` + `services/`:
-    `SourceService` (CRUD over the repo port), `SchedulerService` (pull aggregator),
-    `SubscriptionService` (push aggregator).
+    `SourceService` (CRUD over the repo port) and `SourceRegistry` (the runtime
+    registrar — pull scheduling + push subscription, kept in sync with CRUD).
   - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a
     session per call), `rabbit/` (`RabbitConnector`), `collectors/`
     (`Rss`/`WebCrawl`/`Telegram`).
   - `api/routes/` — FastAPI routers only: `sources.py` (CRUD), `health.py`.
 
 Notes: pull collectors run on `poll_interval_seconds` (default 300s); push sources
-are subscribed at startup. Live (re)scheduling on CRUD is a TODO. Filling in a
-collector = implement `fetch`/`subscribe` in its infra file; register it in `deps`.
+are subscribed at startup. CRUD stays live — create/update/delete reconcile the
+runtime through the `SourceRegistry` composite (stored on `app.state.registrar`), so
+sources (un)schedule/(un)subscribe without a restart. Filling in a collector =
+implement `fetch`/`subscribe` in its infra file; register it in `deps`.
 This service owns the `Source` table; the DB schema history lives in `../migrator`.

@@ -18,19 +18,20 @@ logger = get_logger(__name__)
 # Startup/shutdown lifecycle: build collaborators via deps, connect infra, start
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup — build infra, connect, then load + start the aggregators.
+    # Startup — build infra, connect, then load + start the runtime registry.
     rabbit = deps.build_rabbit()
     await rabbit.connect()
 
     telegram = deps.build_telegram_collector(rabbit)
     await telegram.start()
 
-    scheduler = deps.build_scheduler(rabbit)
-    subscriptions = deps.build_subscriptions(telegram)
+    # Registry: CRUD reaches it via app.state to (un)schedule/(un)subscribe live.
+    registry = deps.build_registry(rabbit, telegram)
+    await registry.load()
 
-    await scheduler.load()
-    await subscriptions.load()
-    scheduler.start()
+    registry.start()
+
+    app.state.registrar = registry
 
     logger.info("source_service started")
 
@@ -38,7 +39,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        scheduler.shutdown()
+        registry.shutdown()
         await telegram.stop()
         await rabbit.close()
 

@@ -1,10 +1,11 @@
 """Source — DB-backed schema (SQLAlchemy ORM), owned by source_service."""
 
+import uuid
 from datetime import datetime
 
 from common.core.base import Base
 from common.enums import SourceType
-from sqlalchemy import Boolean, DateTime, Enum, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 _SOURCE_TYPE = Enum(
@@ -19,10 +20,12 @@ _SOURCE_TYPE = Enum(
 class Source(Base):
     __tablename__ = "source"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
     type: Mapped[SourceType] = mapped_column(_SOURCE_TYPE)
     name: Mapped[str] = mapped_column(String(255))
-    link: Mapped[str] = mapped_column(String(1024))
+    link: Mapped[str] = mapped_column(String(255))
     # How often to poll a pull source (RSS/Web), seconds. Null for push (Telegram).
     poll_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")

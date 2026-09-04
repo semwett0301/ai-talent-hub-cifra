@@ -1,5 +1,6 @@
 """Output DTO for a Source (ORM is never exposed directly)."""
 
+import uuid
 from datetime import datetime
 
 from common.enums import SourceType
@@ -9,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 class SourceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: uuid.UUID
     type: SourceType
     name: str
     link: str

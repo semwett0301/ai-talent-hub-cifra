@@ -1,19 +1,21 @@
 """Composition root — wire infrastructure implementations into application.
 
 The one place that knows every layer: it builds the collector registries and the
-concrete repository/publisher, and hands them to application (use cases and the
-background aggregators). Everything else depends only on ports.
+concrete repository/publisher, and hands them to application (the CRUD use case and
+the runtime registry). Everything else depends only on ports.
 """
 
 from common.enums import SourceType
 from common.settings import settings
+from fastapi import Request
 
-from source_service.application.ports import NewsPublisher, PullCollector, PushCollector
-from source_service.application.services import (
-    SchedulerService,
-    SourceService,
-    SubscriptionService,
+from source_service.application.ports import (
+    NewsPublisher,
+    PullCollector,
+    PushCollector,
+    SourceRegistrar,
 )
+from source_service.application.services import SourceRegistry, SourceService
 from source_service.infrastructure.collectors import (
     RssCollector,
     TelegramCollector,
@@ -30,17 +32,15 @@ PULL_COLLECTORS: dict[SourceType, PullCollector] = {
 }
 
 
-def get_source_service() -> SourceService:
-    """FastAPI use case. SourceRepo opens a session per call, so no request binding."""
-    return SourceService(SourceRepo())
+def get_source_service(request: Request) -> SourceService:
+    """FastAPI use case. SourceRepo opens a session per call, so no request binding.
+    The runtime registry is an app-lifetime singleton on `app.state`."""
+    registrar: SourceRegistrar = request.app.state.registrar
+    return SourceService(SourceRepo(), registrar)
 
 
 def build_rabbit() -> RabbitConnector:
     return RabbitConnector(settings.rabbitmq_url, settings.news_exchange)
-
-
-def build_scheduler(publisher: RabbitConnector) -> SchedulerService:
-    return SchedulerService(publisher, PULL_COLLECTORS, SourceRepo())
 
 
 def build_telegram_collector(publisher: NewsPublisher) -> TelegramCollector:
@@ -54,6 +54,7 @@ def build_telegram_collector(publisher: NewsPublisher) -> TelegramCollector:
     )
 
 
-def build_subscriptions(telegram: TelegramCollector) -> SubscriptionService:
+def build_registry(publisher: RabbitConnector, telegram: TelegramCollector) -> SourceRegistry:
+    """The runtime registry: pull scheduling + push subscription behind one registrar."""
     push_collectors: dict[SourceType, PushCollector] = {SourceType.TELEGRAM: telegram}
-    return SubscriptionService(push_collectors, SourceRepo())
+    return SourceRegistry(publisher, PULL_COLLECTORS, push_collectors, SourceRepo())

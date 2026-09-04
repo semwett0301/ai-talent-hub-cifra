@@ -3,6 +3,8 @@
 `publish_news` maps `NewsItem` → `common.dto.NewsDTO` and publishes it.
 """
 
+import uuid
+
 import aio_pika
 from common.core.logging import get_logger
 from common.dto import NewsDTO, routing_key
@@ -30,7 +32,7 @@ class RabbitConnector(NewsPublisher):
         logger.info("rabbit connected, exchange=%s", self._exchange_name)
 
     async def publish_news(
-        self, source_id: int, source_type: SourceType, items: list[NewsItem]
+        self, source_id: uuid.UUID, source_type: SourceType, items: list[NewsItem]
     ) -> int:
         if self._exchange is None:
             logger.warning("rabbit not connected; dropping %d items", len(items))

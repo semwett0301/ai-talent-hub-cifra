@@ -3,15 +3,15 @@
 Application services — use cases and background aggregators, one public class per
 module (re-exported from `__init__.py`).
 
-- `source_service.py` — `SourceService`: CRUD use-cases over the `SourceRepository`
-  port.
-- `scheduler_service.py` — `SchedulerService`: pull aggregator; injected publisher +
-  collectors + `SourceRepository` (APScheduler).
-- `subscription_service.py` — `SubscriptionService`: push aggregator; injected
-  collectors + `SourceRepository`.
+- `source_service.py` — `SourceService`: CRUD use-cases over `SourceRepository`; each
+  mutation reconciles the runtime through the injected `SourceRegistrar`.
+- `source_registry.py` — `SourceRegistry`: the sole `SourceRegistrar`. Dispatches by
+  source type — pull → APScheduler job, push → subscription; injected publisher +
+  pull/push collectors + `SourceRepository`. Owns `start`/`shutdown`/`load` lifecycle
+  (used by `main.py`, off the port).
 
 Notes: collaborators are injected from the root `deps.py` as ports (interfaces),
-never bare callables or concrete infra. The aggregators load sources through the
-injected `SourceRepository` (`deps` passes a `SourceRepo`, which opens a session per
-call — safe for these long-lived, concurrent services). Started from `main.py`'s
-lifespan.
+never bare callables or concrete infra. `register`/`unregister` is the single
+per-source path — CRUD calls it for one source (via `app.state.registrar`), startup
+`load` calls it for every enabled source. The `SourceRepo` opens a session per call —
+safe for this long-lived, concurrent service. Started from `main.py`'s lifespan.

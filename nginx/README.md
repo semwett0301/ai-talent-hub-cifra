@@ -17,7 +17,7 @@ docker-entrypoint envsubst step at container start (`*.template` under
 `${SOURCES_API_PREFIX}` from the container environment — nginx's own
 `$`-variables (`$host`, `$remote_addr`, `$scheme`, `$uri`, `$1`, ...) are left
 alone since they aren't set as env vars. `SOURCES_API_PREFIX` is defined **once**,
-in `docker-compose.yml` (`x-sources-api-prefix` anchor), and shared with
+in the repo-root `.env` (see `../.env.example`), and shared with
 `source_service` (which reads it back as FastAPI's `root_path` via
 `common.settings.settings.sources_api_prefix`) — change the prefix there, not here.
 

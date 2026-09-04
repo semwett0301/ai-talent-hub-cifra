@@ -1,5 +1,6 @@
 """Repository ports — data access contracts, implemented in infrastructure."""
 
+import uuid
 from typing import Protocol
 
 from common.enums import SourceType
@@ -14,7 +15,7 @@ class SourceRepository(Protocol):
 
     async def list_enabled(self, type: SourceType | None = None) -> list[Source]: ...
 
-    async def get(self, source_id: int) -> Source | None: ...
+    async def get(self, source_id: uuid.UUID) -> Source | None: ...
 
     async def create(self, data: dict) -> Source: ...
 

@@ -1,5 +1,6 @@
 """Publisher port — the message-bus contract, implemented in infrastructure."""
 
+import uuid
 from typing import Protocol
 
 from common.enums import SourceType
@@ -11,5 +12,5 @@ class NewsPublisher(Protocol):
     """Publishes collected news items to the bus; returns the count published."""
 
     async def publish_news(
-        self, source_id: int, source_type: SourceType, items: list[NewsItem]
+        self, source_id: uuid.UUID, source_type: SourceType, items: list[NewsItem]
     ) -> int: ...

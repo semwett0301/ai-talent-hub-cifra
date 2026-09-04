@@ -1,7 +1,6 @@
-"""Application services — use cases and background aggregators."""
+"""Application services — CRUD use case and the runtime registry."""
 
-from source_service.application.services.scheduler_service import SchedulerService
+from source_service.application.services.source_registry import SourceRegistry
 from source_service.application.services.source_service import SourceService
-from source_service.application.services.subscription_service import SubscriptionService
 
-__all__ = ["SchedulerService", "SourceService", "SubscriptionService"]
+__all__ = ["SourceRegistry", "SourceService"]
