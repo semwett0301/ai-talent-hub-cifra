@@ -55,7 +55,7 @@ resource "twc_server" "app" {
   })
 
   lifecycle {
-    # Freeze image ids (drift shouldn't reinstall); cloud_init stays live so a template edit reprovisions.
+    # Freeze image ids so drift never reinstalls. A cloud_init edit alone won't replace the server (not ForceNew) — use `terraform apply -replace=twc_server.app`.
     ignore_changes = [os_id, software_id]
   }
 }
