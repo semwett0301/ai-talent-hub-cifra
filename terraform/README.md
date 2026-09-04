@@ -21,7 +21,9 @@ Notes: pass the API token via `export TWC_TOKEN=...` and the S3 state keys via
 `terraform init && terraform plan -out=tfplan && terraform apply tfplan`. Only ports
 22 and 80 are open. After apply, deploy the app: copy your `docker-compose.yml` to
 `/opt/<app_name>` and `docker compose up -d`. Domain + HTTPS is a later step (see
-the plan's section 7).
+the plan's section 7). **Editing `cloud-init/` reprovisions the server** —
+`cloud_init` is not in the server's `ignore_changes`, so a template change replaces
+the instance on the next apply (the floating IP is a separate resource and stays).
 
 ## Inputs: local vs GitHub Actions
 

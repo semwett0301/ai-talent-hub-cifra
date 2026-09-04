@@ -25,25 +25,41 @@ users:
     ssh_authorized_keys:
       - ${ssh_public_key}
 
+# Free the apt lock before the packages module (apt-daily races corrupt the cache).
+bootcmd:
+  - |
+    set -ux
+    systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+    systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+    for _ in $(seq 1 60); do
+      fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1 || break
+      sleep 2
+    done
+
 runcmd:
-  - |
-    set -eux
-
-    systemctl enable --now docker
-    docker compose version
-
-  - [ usermod, -aG, docker, "${deploy_user}" ]
-
-  - |
-    set -eux
-    ufw --force reset
-    ufw default deny incoming
-    ufw default allow outgoing
-    ufw allow 22/tcp
-    ufw allow 80/tcp
-    ufw --force enable
-
+  # Deploy dir first (rsync target; deploy user can't mkdir under /opt) — never abort before it.
   - [ install, -d, -o, "${deploy_user}", -g, "${deploy_user}", "${app_dir}" ]
+
+  # Wait for the Timeweb-provided Docker unit, then enable it.
+  - |
+    set -ux
+    for _ in $(seq 1 60); do
+      systemctl list-unit-files docker.service >/dev/null 2>&1 && break
+      sleep 5
+    done
+    systemctl enable --now docker || true
+    docker compose version || true
+    usermod -aG docker "${deploy_user}" || true
+
+  - |
+    set -ux
+    ufw --force reset || true
+    ufw default deny incoming || true
+    ufw default allow outgoing || true
+    ufw allow 22/tcp || true
+    ufw allow 80/tcp || true
+    ufw --force enable || true
+
   - [ touch, /var/lib/cloud/bootstrap-complete ]
 
 final_message: "cloud-init finished. uptime=$UPTIME sec. App dir ready: ${app_dir}"
