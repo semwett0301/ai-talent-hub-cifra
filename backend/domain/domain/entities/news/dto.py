@@ -1,8 +1,10 @@
 """News contract — the `news` exchange message, its source type, and its routing.
 
 Everything the `news` domain shares between producer and consumers lives here: the
-`SourceType` a post came from, the `NewsDTO` payload, and the routing key it is
-published under. Grouped by domain (news) rather than by technical kind.
+`SourceType` a post came from, the `NewsDTO` payload (which also carries the source's
+`SourceReliability`, so a consumer never has to call back into `source_service`), and
+the routing key it is published under. Grouped by domain (news) rather than by
+technical kind.
 """
 
 from datetime import datetime
@@ -10,6 +12,8 @@ from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from domain.entities.source import SourceReliability
 
 ROUTING_PREFIX = "news.raw"
 
@@ -25,9 +29,10 @@ class SourceType(StrEnum):
 class NewsDTO(BaseModel):
     """A single collected news item as published to the `news` exchange."""
 
-    schema_version: int = 2
+    schema_version: int = 3
     source_link: str
     source_type: SourceType
+    source_reliability: SourceReliability
     url: str
     text: str
     published_at: datetime | None = None

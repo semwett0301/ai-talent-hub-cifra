@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.core.base import Base
 from domain.entities.news import SourceType
+from domain.entities.source import SourceReliability
 
 _SOURCE_TYPE = Enum(
     SourceType,
@@ -15,6 +16,14 @@ _SOURCE_TYPE = Enum(
     native_enum=False,
     length=16,
     name="source_type",
+)
+
+_SOURCE_RELIABILITY = Enum(
+    SourceReliability,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+    native_enum=False,
+    length=8,
+    name="source_reliability",
 )
 
 
@@ -27,6 +36,9 @@ class Source(Base):
     type: Mapped[SourceType] = mapped_column(_SOURCE_TYPE)
     name: Mapped[str] = mapped_column(String(255))
     link: Mapped[str] = mapped_column(String(255))
+    reliability: Mapped[SourceReliability] = mapped_column(
+        _SOURCE_RELIABILITY, default=SourceReliability.MEDIUM, server_default="medium"
+    )
     # How often to poll a pull source (RSS/Web), seconds. Null for push (Telegram).
     poll_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
