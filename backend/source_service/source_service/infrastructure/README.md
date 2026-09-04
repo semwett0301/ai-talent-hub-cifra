@@ -8,6 +8,8 @@ nothing depends inward on it except the composition root (`deps.py`).
   table itself lives in `domain/schemas/`).
 - `rabbit/` — `RabbitConnector`, the `NewsPublisher` implementation.
 - `collectors/` — `Pull`/`PushCollector` implementations (RSS, Web, Telegram).
+- `crawling/` — `Crawl4AiPageFetcher`, the `PageFetcher` implementation used by
+  `SourceService` to auto-detect a source's type.
 
 Notes: classes here implement the ports (they inherit the `Protocol`); `deps.py`
 constructs them and injects them where a port is expected. DB engine/session come

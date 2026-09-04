@@ -11,7 +11,12 @@ Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py
 - `registrar.py` — `SourceRegistrar` (`register`/`unregister`): reconciles one source
   to the runtime. Implemented by `SourceRegistry`; injected into `SourceService` so
   CRUD stays live.
+- `crawler.py` — `PageFetcher` (`fetch`): fetches a URL's page content for
+  `SourceService`'s type auto-detection (`application.parse`); implemented by
+  `Crawl4AiPageFetcher`.
 
 Notes: ports reference the `domain.schemas` `Source` and the shared
 `domain.entities.news.NewsDTO` contract directly. The repository method is `list_all` (not
 `list`) so the name doesn't shadow the builtin `list[...]` used in return annotations.
+`PageFetcher` is the one port with no domain type in its signature — it deals in
+plain page text.

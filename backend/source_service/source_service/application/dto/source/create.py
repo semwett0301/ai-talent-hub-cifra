@@ -1,11 +1,9 @@
-"""Input DTO for creating a Source."""
+"""Input DTO for creating a Source. `type` is not accepted — SourceService detects it."""
 
-from domain.entities.news import SourceType
 from pydantic import BaseModel
 
 
 class SourceCreate(BaseModel):
-    type: SourceType
     name: str
     link: str
     poll_interval_seconds: int | None = None

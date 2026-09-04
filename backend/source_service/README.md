@@ -10,8 +10,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
 
 - `Dockerfile` — image (FastAPI + Uvicorn). Multi-stage: uv builds a self-contained
   `.venv`, copied onto a clean `python:3.12-slim`. Migrations live in `migrator`.
-- `pyproject.toml` — deps on `domain` + fastapi, aio-pika, apscheduler, kurigram.
-  Ships a uniquely named top-level package `source_service`.
+- `pyproject.toml` — deps on `domain` + fastapi, aio-pika, apscheduler, kurigram,
+  crawl4ai. Ships a uniquely named top-level package `source_service`.
 - `source_service/`
   - `main.py` — FastAPI app + lifespan; builds collaborators via `deps` and runs
     them. Routers own paths from the root; nginx maps `/api/sources/*` onto them, so
@@ -21,12 +21,14 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
   - `deps.py` — **composition root**: builds collector registries + repository +
     publisher and injects them into application (all DI lives here). Data shapes are
     shared: `Source` (ORM) from `domain.schemas`, `NewsDTO` from `domain.entities.news`.
-  - `application/` — `ports/` (interfaces infra implements) + `dto/` + `services/`:
-    `SourceService` (CRUD over the repo port) and `SourceRegistry` (the runtime
-    registrar — pull scheduling + push subscription, kept in sync with CRUD).
+  - `application/` — `ports/` (interfaces infra implements) + `dto/` + `services/` +
+    `parse/`: `SourceService` (CRUD over the repo port; auto-detects a source's
+    `type` from its `link` via `parse/` + the `PageFetcher` port — clients never
+    send `type`) and `SourceRegistry` (the runtime registrar — pull scheduling +
+    push subscription, kept in sync with CRUD).
   - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a
     session per call), `rabbit/` (`RabbitConnector`), `collectors/`
-    (`Rss`/`WebCrawl`/`Telegram`).
+    (`Rss`/`WebCrawl`/`Telegram`), `crawling/` (`Crawl4AiPageFetcher`).
   - `api/routes/` — FastAPI routers only: `sources.py` (CRUD), `health.py`.
 
 Notes: pull collectors run on `poll_interval_seconds` (default 300s); push sources
