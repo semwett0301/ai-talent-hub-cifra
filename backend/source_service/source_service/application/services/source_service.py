@@ -7,9 +7,10 @@ and push subscriptions stay in sync without a restart.
 
 import uuid
 
+from domain.schemas import Source
+
 from source_service.application.dto.source import SourceCreate, SourceUpdate
 from source_service.application.ports import SourceRegistrar, SourceRepository
-from source_service.domain.schemas import Source
 
 
 class SourceService:

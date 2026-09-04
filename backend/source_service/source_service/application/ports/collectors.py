@@ -1,19 +1,20 @@
 """Collector ports — the pull/push strategies, implemented in infrastructure.
 
 `Source` is the persistence schema (ORM), used directly here by design (no separate
-domain entity). `NewsItem` is the domain entity every collector emits.
+domain entity). `NewsDTO` (from `domain.entities.news`) is the shared message contract every
+collector emits.
 """
 
 from typing import Protocol
 
-from source_service.domain.entities import NewsItem
-from source_service.domain.schemas import Source
+from domain.entities.news import NewsDTO
+from domain.schemas import Source
 
 
 class PullCollector(Protocol):
     """We go and fetch on a timer (RSS, Web)."""
 
-    async def fetch(self, source: Source) -> list[NewsItem]: ...
+    async def fetch(self, source: Source) -> list[NewsDTO]: ...
 
 
 class PushCollector(Protocol):

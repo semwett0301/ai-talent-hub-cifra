@@ -3,10 +3,10 @@ name = "migrator"
 version = "0.1.0"
 description = "One-shot Alembic migrator — owns the shared DB schema history for all services"
 requires-python = ">=3.12"
-# Runtime deps — what `alembic upgrade head` needs. No services: upgrade replays
-# version scripts and never imports models.
+# Runtime deps — what `alembic upgrade head` needs. All ORM models live in the
+# shared `domain` package (domain.schemas), so no service packages are pulled in.
 dependencies = [
-    "common",
+    "domain",
     "alembic==1.14.0",
     "psycopg2-binary==2.9.10",
 ]
@@ -14,11 +14,3 @@ dependencies = [
 # Not an importable package — just Alembic config + migrations run in-place.
 [tool.uv]
 package = false
-
-# Services whose models autogenerate needs (to diff Base.metadata). Not required
-# at runtime, so the image is built without this group and stays service-free.
-[dependency-groups]
-autogen = ["source-service"]
-
-[tool.uv.sources]
-source-service = { workspace = true }

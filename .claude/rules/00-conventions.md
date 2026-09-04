@@ -3,10 +3,10 @@
 Starter rules — expand these as the team agrees on more.
 
 - Monorepo layout & shared-code rules: see `40-monorepo.md`.
-- Keep LLM and network I/O in services / `common.llm`; endpoints stay thin.
-- Read config only through `common.settings.settings`; never `os.environ`.
-- Log via `common.core.logging.get_logger`; no `print`.
-- Reuse enums from `common.enums`; don't duplicate string literals.
+- Keep LLM and network I/O in services / `domain.llm`; endpoints stay thin.
+- Read config only through `domain.core.settings.settings`; never `os.environ`.
+- Log via `domain.core.logging.get_logger`; no `print`.
+- Reuse enums from `domain.entities.news`; don't duplicate string literals.
 - Every model change goes through Alembic autogenerate + a reviewed migration.
 - Never commit secrets: `.env`, `*.session`, API keys.
 - No external API / LLM calls in tests or CI.

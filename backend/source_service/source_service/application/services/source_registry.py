@@ -10,8 +10,9 @@ removes it, `load` bootstraps every enabled source at startup.
 import uuid
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from common.core.logging import get_logger
-from common.enums import SourceType
+from domain.core.logging import get_logger
+from domain.entities.news import SourceType
+from domain.schemas import Source
 
 from source_service.application.ports import (
     NewsPublisher,
@@ -20,7 +21,6 @@ from source_service.application.ports import (
     SourceRegistrar,
     SourceRepository,
 )
-from source_service.domain.schemas import Source
 
 logger = get_logger(__name__)
 
@@ -102,4 +102,4 @@ class SourceRegistry(SourceRegistrar):
         if collector is None:
             return
         items = await collector.fetch(source)
-        await self._publisher.publish_news(source.id, source.type, items)
+        await self._publisher.publish_news(items)

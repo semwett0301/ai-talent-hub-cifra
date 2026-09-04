@@ -5,8 +5,8 @@ concrete repository/publisher, and hands them to application (the CRUD use case 
 the runtime registry). Everything else depends only on ports.
 """
 
-from common.enums import SourceType
-from common.settings import settings
+from domain.core.settings import settings
+from domain.entities.news import SourceType
 from fastapi import Request
 
 from source_service.application.ports import (

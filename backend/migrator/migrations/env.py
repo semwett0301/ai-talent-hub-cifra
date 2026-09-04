@@ -1,16 +1,16 @@
 """Alembic environment — the shared DB schema history (sync engine, psycopg2).
 
-Owns migrations for every service on the one database. Service models are
-imported lazily (only for `--autogenerate`) via `migrations.autogenerate`, so the
-one-shot `upgrade` image stays free of every service package.
+Owns migrations for every service on the one database. All ORM models live in the
+shared `domain.schemas` package; importing it registers every table on
+`Base.metadata` for both `upgrade` and `--autogenerate`.
 """
 
 from logging.config import fileConfig
 
+import domain.schemas  # noqa: F401 — import registers every ORM model on Base.metadata
 from alembic import context
-from common.core.base import Base
-from common.settings import settings
-from migrations.autogenerate import is_autogenerate, load_service_models
+from domain.core.base import Base
+from domain.core.settings import settings
 from sqlalchemy import engine_from_config, pool
 
 config = context.config
@@ -19,8 +19,6 @@ if config.config_file_name is not None:
 
 config.set_main_option("sqlalchemy.url", settings.sync_database_url)
 
-if is_autogenerate(config):
-    load_service_models()
 target_metadata = Base.metadata
 
 

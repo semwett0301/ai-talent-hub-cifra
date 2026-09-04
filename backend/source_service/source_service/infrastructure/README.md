@@ -11,4 +11,4 @@ nothing depends inward on it except the composition root (`deps.py`).
 
 Notes: classes here implement the ports (they inherit the `Protocol`); `deps.py`
 constructs them and injects them where a port is expected. DB engine/session come
-from `common.core.session`.
+from `domain.core.session`.

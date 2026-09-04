@@ -1,0 +1,39 @@
+"""News contract — the `news` exchange message, its source type, and its routing.
+
+Everything the `news` domain shares between producer and consumers lives here: the
+`SourceType` a post came from, the `NewsDTO` payload, and the routing key it is
+published under. Grouped by domain (news) rather than by technical kind.
+"""
+
+from datetime import datetime
+from enum import StrEnum
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+ROUTING_PREFIX = "news.raw"
+
+
+class SourceType(StrEnum):
+    """How a source is collected."""
+
+    TELEGRAM = "telegram"
+    RSS = "rss"
+    WEB = "web"
+
+
+class NewsDTO(BaseModel):
+    """A single collected news item as published to the `news` exchange."""
+
+    schema_version: int = 2
+    source_link: str
+    source_type: SourceType
+    url: str
+    text: str
+    published_at: datetime | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
+
+
+def routing_key(source_type: SourceType) -> str:
+    """`news.raw.telegram` / `news.raw.rss` / `news.raw.web`."""
+    return f"{ROUTING_PREFIX}.{source_type.value}"

@@ -6,8 +6,8 @@ Collector implementations of the application collector ports — the per-source-
 - `rss.py` — `RssCollector` (pull, feedparser). **Stub**.
 - `web.py` — `WebCrawlCollector` (pull, crawl4ai/Playwright). **Stub**.
 - `telegram.py` — `TelegramCollector` (push, kurigram — a Pyrogram fork, imported as
-  `pyrogram`): joins channels and publishes each new post as a `NewsItem` via the
-  injected `NewsPublisher`. **Implemented.**
+  `pyrogram`): joins channels and publishes each new post as a `domain.entities.news.NewsDTO`
+  via the injected `NewsPublisher`. **Implemented.**
 
 Notes: each collector **inherits its port** (`PullCollector` / `PushCollector`) so mypy
 verifies conformance at the definition site (nominal + structural double guard).

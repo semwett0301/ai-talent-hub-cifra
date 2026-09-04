@@ -29,13 +29,13 @@ repo files.
 
 ```
 backend/                  # all Python — a single uv workspace (services are siblings)
-  common/                 # shared library (≥2 services), its own pyproject
-    common/               #   importable package: settings, core (logging + db infra), enums, dto
-    pyproject.toml        #   the `common` package
+  domain/                 # shared kernel (one DB → shared schemas), its own pyproject
+    domain/               #   importable package: core (settings/logging/db), entities, schemas
+    pyproject.toml        #   the `domain` package
   source_service/         # project source-service — FastAPI ingestion service
     source_service/       #   importable package (uniquely named, not generic `app`)
     Dockerfile            #   image build (context ./backend)
-    pyproject.toml        #   depends on `common`
+    pyproject.toml        #   depends on `domain`
   migrator/               # one-shot Alembic runner — owns the shared DB schema history
     migrations/           #   single Alembic history (all services) + alembic.ini
     Dockerfile, pyproject.toml
@@ -57,7 +57,8 @@ terraform/                # Timeweb Cloud infra (Terraform + cloud-init)
 README.md, .mcp.json, .gitignore
 ```
 
-`backend/common` grows to hold shared DB/models/schemas/LLM code as introduced.
+`backend/domain` holds the shared kernel — ORM `schemas` (one DB for all), business
+`entities`, and `core` infra — and grows with shared LLM code as introduced.
 `data/` and test dirs are intentionally absent for now.
 
 ## Tech stack
@@ -86,32 +87,32 @@ README.md, .mcp.json, .gitignore
   `nginx/templates/default.conf.template` and `nginx/Dockerfile`. The `/api/sources`
   prefix itself is a single source of truth — `SOURCES_API_PREFIX` in the root
   `.env` — shared with both nginx (envsubst'd into the template) and
-  `source_service` (`common.settings.settings.sources_api_prefix`, used as
+  `source_service` (`domain.core.settings.settings.sources_api_prefix`, used as
   FastAPI's `root_path`); change it there, not in either file directly.
 
 ## Architecture rules (backend)
 
-- `common` holds **only what ≥2 services use** (config, db infra, event/message
-  contracts, LLM). Anything used by a single service lives **in that service**;
-  promote to `common` when a second consumer appears.
-- Models live in the **owning service**. A model moves to `common.models` only once
-  ≥2 services share the table. The DB is one for all services, so the **Alembic
-  history is centralized in the `migrator` service** (not per service).
-- **No cross-service imports** — services communicate via `common` (contracts) and
-  the message bus, never importing each other. The one exception is `migrator`,
-  which imports each service's models to build the full schema.
-- Endpoints stay thin; keep LLM and network I/O in services / `common`. Never
-  return ORM objects raw — map through Pydantic schemas.
+- `domain` is the **shared kernel** — `core` (settings/logging/db infra), `entities`
+  (business shapes), and `schemas` (ORM models). The **DB is one for all services**,
+  so every ORM model lives in `domain.schemas` (not per service), and the Alembic
+  history is centralized in the `migrator`, which imports `domain.schemas`.
+- Service-specific logic (use cases, ports, collectors, routes) stays **in that
+  service**; only genuinely shared things go in `domain`.
+- **No cross-service imports** — services communicate via `domain` (schemas +
+  entities) and the message bus, never importing each other. The `migrator` imports
+  only `domain.schemas`, not any service.
+- Endpoints stay thin; keep LLM and network I/O in services / `domain`. Never
+  return ORM objects raw — map through Pydantic schemas/DTOs.
 
 ## Conventions
 
 Backend (Python):
 - **Async everywhere** on the request path.
-- **Config** only through `common.settings.settings` — never read
+- **Config** only through `domain.core.settings.settings` — never read
   `os.environ`; add a field to `Settings`. Every variable in the project (backend,
   frontend, nginx, compose, Terraform, deploy) is declared in the **root
   `.env.example`** and documented in `README.md` — there is no per-folder env file.
-- **Logging** via `common.core.logging.get_logger` (stdlib `logging`). No `print`.
+- **Logging** via `domain.core.logging.get_logger` (stdlib `logging`). No `print`.
 - Keep deps minimal — add a package to a `pyproject.toml` only when code imports
   it. Line length 100; lint/format with `ruff` (config in `backend/pyproject.toml`).
 
@@ -129,7 +130,7 @@ Backend uses **uv** — one workspace venv + lockfile under `backend/`.
 ```bash
 # Backend (from backend/)
 cd backend
-uv sync --all-packages            # install common + all services + dev tools
+uv sync --all-packages            # install domain + all services + dev tools
 uv run uvicorn source_service.main:app --reload --app-dir source_service
 uvx ruff@0.14.0 check backend     # lint (CI pins ruff 0.14.0)
 uvx ruff@0.14.0 format --check backend
@@ -161,19 +162,19 @@ Two path-filtered workflows, so a change runs only the relevant job:
 
 - **Frontend UI** → add pages/components under `frontend/src/`, wire routes in
   `App.tsx`. Talk to the API via `/api/...`.
-- **New backend service** → create `backend/<name>/` (a sibling of `common`) with a
-  `pyproject.toml` (depend on `common`), a **uniquely named** importable package
-  (`<name>/`, not a generic `app` — so services coexist when the migrator imports
-  their models), and a `Dockerfile`; add `<name>` to `[tool.uv.workspace] members`
-  in `backend/pyproject.toml` and a block to `docker-compose.yml`.
-- **Shared code** (DB session, models, schemas, LLM) → add under `backend/common/`
-  and its deps to `backend/pyproject.toml`.
-- **Migrations** → live in the `migrator` service (`backend/migrator/`), a single
-  shared Alembic history. Adding a table = add the service to the `autogen` group
-  in `migrator/pyproject.toml` and append its models module to
-  `SERVICE_MODEL_MODULES` in `migrations/autogenerate.py`, then autogenerate a
-  revision. The
-  compose `migrator` one-shot runs `upgrade head` before DB-backed services start.
+- **New backend service** → create `backend/<name>/` (a sibling of `domain`) with a
+  `pyproject.toml` (depend on `domain`), a **uniquely named** importable package
+  (`<name>/`, not a generic `app`), and a `Dockerfile`; add `<name>` to
+  `[tool.uv.workspace] members` in `backend/pyproject.toml` and a block to
+  `docker-compose.yml`.
+- **Shared code** (ORM schemas, business entities, DB session, LLM) → add under
+  `backend/domain/` (`schemas/`, `entities/`, `core/`) and its deps to
+  `domain/pyproject.toml`.
+- **Migrations** → live in the `migrator` (`backend/migrator/`), a single shared
+  Alembic history. Adding a table = define the model in `domain/schemas/` and
+  re-export it from `domain.schemas.__init__`, then autogenerate a revision (`env.py`
+  imports `domain.schemas`, so no migrator change is needed). The compose `migrator`
+  one-shot runs `upgrade head` before DB-backed services start.
 - **Tests** → per-service unit tests, or top-level e2e.
 - Whatever you touch, **update the folder's `README.md`** to match.
 

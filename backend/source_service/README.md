@@ -10,7 +10,7 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
 
 - `Dockerfile` — image (FastAPI + Uvicorn). Multi-stage: uv builds a self-contained
   `.venv`, copied onto a clean `python:3.12-slim`. Migrations live in `migrator`.
-- `pyproject.toml` — deps on `common` + fastapi, aio-pika, apscheduler, kurigram.
+- `pyproject.toml` — deps on `domain` + fastapi, aio-pika, apscheduler, kurigram.
   Ships a uniquely named top-level package `source_service`.
 - `source_service/`
   - `main.py` — FastAPI app + lifespan; builds collaborators via `deps` and runs
@@ -19,9 +19,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     the Swagger UI at `/api/sources/docs` won't auto-load the spec through nginx —
     use it against the service directly in dev.)
   - `deps.py` — **composition root**: builds collector registries + repository +
-    publisher and injects them into application (all DI lives here).
-  - `domain/schemas/` — the data shapes: `Source` (DB-backed ORM) + `NewsItem`
-    (plain shape); they differ only in whether they hit the DB.
+    publisher and injects them into application (all DI lives here). Data shapes are
+    shared: `Source` (ORM) from `domain.schemas`, `NewsDTO` from `domain.entities.news`.
   - `application/` — `ports/` (interfaces infra implements) + `dto/` + `services/`:
     `SourceService` (CRUD over the repo port) and `SourceRegistry` (the runtime
     registrar — pull scheduling + push subscription, kept in sync with CRUD).
@@ -35,4 +34,5 @@ are subscribed at startup. CRUD stays live — create/update/delete reconcile th
 runtime through the `SourceRegistry` composite (stored on `app.state.registrar`), so
 sources (un)schedule/(un)subscribe without a restart. Filling in a collector =
 implement `fetch`/`subscribe` in its infra file; register it in `deps`.
-This service owns the `Source` table; the DB schema history lives in `../migrator`.
+The `Source` table and every ORM model live in the shared `domain.schemas` (one DB for
+all services); the DB schema history is applied by `../migrator`.

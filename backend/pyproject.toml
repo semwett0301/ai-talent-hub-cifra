@@ -2,10 +2,10 @@
 # lives in `common/` as a regular member (its own pyproject); each service is a
 # sibling dir. Run uv from here.
 [tool.uv.workspace]
-members = ["common", "source_service", "migrator"]
+members = ["domain", "source_service", "migrator"]
 
 [tool.uv.sources]
-common = { workspace = true }
+domain = { workspace = true }
 
 # Dev tooling shared across the workspace.
 [dependency-groups]
