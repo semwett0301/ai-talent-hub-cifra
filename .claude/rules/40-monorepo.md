@@ -66,7 +66,9 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
   `postgres`, and `rabbitmq` are internal-only (`expose`, no host `ports`). There
   is no separate frontend container.
 - The `nginx` image (`nginx/Dockerfile`, build context = repo root) serves the SPA
-  (fallback to `index.html`) and **reverse-proxies `/api/*` →
-  `source_service:8000`** (the `/api` prefix is stripped). Other services stay
-  internal until a full API gateway lands (`plans/api-gateway.md`).
+  (fallback to `index.html`) and gives each backend its own `/api/<service>/`
+  namespace — currently **`/api/sources/*` → `source_service:8000`** with the whole
+  `/api/sources` prefix stripped (the service sets `root_path=/api/sources` so its
+  OpenAPI/Swagger resolve through the proxy). New services get a sibling
+  `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
 - Backend service images build from `./backend`.

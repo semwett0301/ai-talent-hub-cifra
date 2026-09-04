@@ -12,7 +12,11 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
 - `pyproject.toml` — deps on `common` + fastapi, aio-pika, apscheduler. Ships a
   uniquely named top-level package `source_service`.
 - `source_service/`
-  - `main.py` — FastAPI app + lifespan; builds collaborators via `deps` and runs them.
+  - `main.py` — FastAPI app + lifespan; builds collaborators via `deps` and runs
+    them. `root_path` comes from `settings.api_root_path` (`/api/sources` behind
+    nginx, which strips that prefix); routers own paths from the root, so default
+    OpenAPI/Swagger resolve publicly at `/api/sources/openapi.json` and
+    `/api/sources/docs`.
   - `deps.py` — **composition root**: builds collector registries + repository +
     publisher and injects them into application (all DI lives here).
   - `domain/entities/` — business entities (`NewsItem`); no I/O, no dependencies.

@@ -17,6 +17,8 @@ This is the most important rule: **Do not mimic the style and patterns of existi
 - Function parameters must not exceed 4; use an object parameter if more are needed
 - No commented-out code allowed; delete unused code instead of commenting it out
 - No magic numbers or magic strings; extract them into named constants
+- At most one comment line directly above a line/block of code; if one line is not
+  enough, the code needs a clearer name or a split, not a longer comment
 
 ## Naming
 
