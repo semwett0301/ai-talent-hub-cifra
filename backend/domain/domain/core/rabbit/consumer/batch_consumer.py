@@ -18,7 +18,6 @@ and the runner meet only at the inbox.
 """
 
 import asyncio
-from contextlib import suppress
 
 import aio_pika
 from aio_pika.abc import AbstractIncomingMessage, AbstractQueue, AbstractRobustConnection
@@ -111,9 +110,8 @@ class RabbitBatchConsumer[T: BaseModel]:
     async def __store_pending(self) -> None:
         messages, self.__pending = self.__pending, []
 
-        try:
-            await self.__flush(messages)
-        except BatchStoreError:
+        is_stored = await self.__flush(messages)
+        if not is_stored:
             # The run is settled (requeued or dropped); back off so a dead DB doesn't spin us.
             await asyncio.sleep(self.__config.batch_interval_seconds)
 
@@ -123,25 +121,27 @@ class RabbitBatchConsumer[T: BaseModel]:
             self.__pending.append(self.__inbox.get_nowait())
 
         messages, self.__pending = self.__pending, []
-        with suppress(BatchStoreError):
-            await self.__flush(messages)
+        await self.__flush(messages)
 
-    async def __flush(self, messages: list[AbstractIncomingMessage]) -> None:
+    async def __flush(self, messages: list[AbstractIncomingMessage]) -> bool:
+        """Store one run and settle it with the broker; False when the handler failed
+        (the run is already nacked), so the caller can back off."""
         if not messages:
-            return
+            return True
 
         batch = MessageBatch(messages, self.__model)
         await batch.reject_invalid()
         if not batch.items:
-            return
+            return True
 
         try:
             await self.__handler.handle_batch(batch.items)
         except BatchStoreError:
             await self.__settle_failed(batch)
-            raise
+            return False
 
         await batch.ack()
+        return True
 
     async def __settle_failed(self, batch: MessageBatch[T]) -> None:
         """Hand a batch the handler could not store back to the broker: requeued for
