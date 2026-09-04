@@ -14,7 +14,8 @@ directories (no `services/` wrapper).
 - `pyproject.toml` — virtual workspace root: `[tool.uv.workspace] members` (common +
   the services) + shared dev tooling (ruff/mypy/pytest). No package of its own.
 - `uv.lock` — locked versions (committed).
-- `.env.example` — settings template → copy to `.env`.
+- Settings come from the **repo-root `.env`** (see `../.env.example`); `common.settings`
+  loads it by absolute path, so `uv run` works from any directory.
 
 ## Service architecture — onion / clean layers
 

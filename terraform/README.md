@@ -14,13 +14,14 @@ is deployed **separately** via Docker Compose — Terraform does not run it. See
 - `outputs.tf` — `server_ipv4` (= `twc_server.main_ipv4`), `ssh_command`, `app_url`.
 - `cloud-init/` — first-boot server prep (Docker + Compose v2, `deploy` user,
   UFW 22/80, creates `/opt/<app_name>` ready for a compose project).
-- `terraform.tfvars.example` — copy to `terraform.tfvars` and fill in.
+- Inputs come from the **repo-root `.env`** as `TF_VAR_*` (see `../.env.example`
+  and the variable reference in `../README.md`) — there is no `terraform.tfvars`.
 - `.gitignore` — keeps state/tfvars/plans out of git.
 
-Notes: pass the API token via `export TWC_TOKEN=...` and the S3 state keys via
-`export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...` (never commit them). Run:
-`terraform init && terraform plan -out=tfplan && terraform apply tfplan`. Only ports
-22 and 80 are open. After apply, deploy the app: copy your `docker-compose.yml` to
+Notes: the provider token (`TWC_TOKEN`) and the S3 state keys (`AWS_ACCESS_KEY_ID` /
+`AWS_SECRET_ACCESS_KEY`) live in the root `.env` too — export it, then run:
+`set -a; source ../.env; set +a` → `terraform init && terraform plan -out=tfplan
+&& terraform apply tfplan`. Only ports 22 and 80 are open. After apply, deploy the app: copy your `docker-compose.yml` to
 `/opt/<app_name>` and `docker compose up -d`. Domain + HTTPS is a later step (see
 the plan's section 7). **Editing `cloud-init/` reprovisions the server** —
 `cloud_init` is not in the server's `ignore_changes`, so a template change replaces
@@ -30,15 +31,14 @@ the instance on the next apply (the floating IP is a separate resource and stays
 
 Two ways to feed variables — they don't mix:
 
-- **Local run** — values from `terraform.tfvars` (copy from
-  `terraform.tfvars.example`; set `SSH_PUBLIC_KEY` or
-  `export TF_VAR_SSH_PUBLIC_KEY="$(cat deploy-key.pub)"`) plus `export TWC_TOKEN=...`
-  and the S3 state keys (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) in the shell.
-- **GitHub Actions** (`.github/workflows/deploy.yml`, `infra` job) —
-  `terraform.tfvars` is **not used** (it's gitignored, absent on the runner). All
-  inputs come from repo **Secrets**, injected as `TF_VAR_*`.
+- **Local run** — everything from the repo-root `.env`: `set -a; source ../.env; set +a`
+  exports `TF_VAR_*` (inputs), `TWC_TOKEN` (provider) and the S3 state keys. For the
+  key itself: `TF_VAR_SSH_PUBLIC_KEY="$(cat deploy-key.pub)"`.
+- **GitHub Actions** (`.github/workflows/deploy.yml`, `infra` job) — the `.env` is
+  absent on the runner; all inputs come from repo **Secrets**, injected as `TF_VAR_*`.
 
-Set them in **repo → Settings → Secrets and variables → Actions** (all Secrets):
+Set them in **repo → Settings → Secrets and variables → Actions** (all Secrets); the
+canonical list of every variable in the project is `../.env.example`:
 
 | Name                  | Maps to                             | Required |
 |-----------------------|-------------------------------------|----------|
@@ -62,4 +62,5 @@ endpoint `s3.twcstorage.ru`, region `ru-1`). The bucket and its access/secret ke
 must be created in the Timeweb panel **before** `terraform init`. Locally, export
 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`; in CI they come from the
 `TF_STATE_ACCESS_KEY` / `TF_STATE_SECRET_KEY` secrets. Note: Timeweb S3 has no
-state locking — don't run local and CI applies at the same time.
+state locking — don't run local and CI applies at the same time. `.gitignore` still
+blocks `*.tfvars` so a stray file can't be committed.

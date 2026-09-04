@@ -1,13 +1,18 @@
-"""Application settings loaded from environment / .env file."""
+"""Application settings loaded from environment / the repo-root .env file."""
 
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import computed_field
+from pydantic import computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# The one .env for the whole repo (see .env.example) — this file lives at
+# <root>/backend/common/common/settings.py, hence four levels up.
+ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
     # App
     app_name: str = "AI Analytical Center"
@@ -36,6 +41,12 @@ class Settings(BaseSettings):
     telegram_api_id: int | None = None
     telegram_api_hash: str | None = None
     telegram_session: str = ""  # exported session string of a pre-authorized user account
+
+    @field_validator("telegram_api_id", mode="before")
+    @classmethod
+    def _blank_to_none(cls, raw: object) -> object:
+        """A key left empty in .env arrives as "" — treat it as "not configured"."""
+        return None if raw == "" else raw
 
     @computed_field  # type: ignore[prop-decorator]
     @property

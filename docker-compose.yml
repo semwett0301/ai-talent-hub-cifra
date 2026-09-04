@@ -1,14 +1,21 @@
 # Local stack. Run from repo root:
 #   docker compose up --build
 #
-# Only nginx publishes a host port (80). postgres and api are reachable only
-# on the internal compose network (no host ports) — the rest stays closed.
+# Only nginx publishes a host port (80). postgres, rabbitmq and the backend
+# services are reachable only on the internal compose network.
+#
+# Every value comes from the root .env (compose loads it automatically for
+# ${...} substitution) — the single source of truth, see .env.example. Each
+# service is handed only the variables it needs, so infra/deploy secrets never
+# enter an application container.
 name: cifra
 
-# Single source of truth for the nginx location source_service is mounted
-# under; nginx substitutes it into its config template and source_service
-# reads it back as FastAPI's root_path — change it once, here.
-x-sources-api-prefix: &sources_api_prefix "/api/sources"
+x-postgres-env: &postgres-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: ${POSTGRES_USER:-cifra}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cifra}
+  POSTGRES_DB: ${POSTGRES_DB:-cifra}
 
 services:
   postgres:
@@ -42,11 +49,7 @@ services:
     build:
       context: ./backend
       dockerfile: migrator/Dockerfile
-    env_file:
-      - path: ./backend/.env
-        required: false
-    environment:
-      POSTGRES_HOST: postgres
+    environment: *postgres-env
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,13 +58,18 @@ services:
     build:
       context: ./backend
       dockerfile: source_service/Dockerfile
-    env_file:
-      - path: ./backend/.env
-        required: false
     environment:
-      POSTGRES_HOST: postgres
+      <<: *postgres-env
+      APP_NAME: ${APP_NAME:-AI Analytical Center}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      DEBUG: ${DEBUG:-true}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-      SOURCES_API_PREFIX: *sources_api_prefix
+      NEWS_EXCHANGE: ${NEWS_EXCHANGE:-news}
+      SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:-}
+      TELEGRAM_SESSION: ${TELEGRAM_SESSION:-}
     expose:
       - "8000"
     depends_on:
@@ -72,14 +80,16 @@ services:
       migrator:
         condition: service_completed_successfully
 
-  # Edge: serves the static SPA and reverse-proxies /api/* to the internal
-  # source_service. depends_on so the upstream host resolves at boot.
+  # Edge: builds the SPA (VITE_* are baked in at build time), serves it static
+  # and reverse-proxies /api/* to the internal source_service.
   nginx:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     environment:
-      SOURCES_API_PREFIX: *sources_api_prefix
+      SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
     ports:
       - "80:80"
     depends_on:

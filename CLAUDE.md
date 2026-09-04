@@ -41,11 +41,9 @@ backend/                  # all Python — a single uv workspace (services are s
     Dockerfile, pyproject.toml
   pyproject.toml          # virtual workspace root — members + shared ruff/mypy/pytest (no package)
   uv.lock                 # committed lockfile
-  .env.example            # backend settings template
 frontend/                 # React SPA — Vite + TypeScript + React Router
   src/                    #   main.tsx, App.tsx, pages/, assets/
   public/                 #   static assets served as-is
-  .env.example            #   VITE_-prefixed (public) config
   .oxlintrc.json          #   linter config
 nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service
   Dockerfile              #   multi-stage: node build → nginx serving dist/
@@ -53,6 +51,9 @@ nginx/                    # edge: serves static SPA + reverse-proxies /api/sourc
 docker-compose.yml        # root: nginx (public) + migrator + source_service + postgres + rabbitmq (internal)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
+terraform/                # Timeweb Cloud infra (Terraform + cloud-init)
+.env.example              # THE env template for every part — backend, frontend,
+                          #   nginx, compose, terraform, deploy (copy to .env)
 README.md, .mcp.json, .gitignore
 ```
 
@@ -83,10 +84,10 @@ README.md, .mcp.json, .gitignore
   `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
   There is **no separate frontend container**. Edit
   `nginx/templates/default.conf.template` and `nginx/Dockerfile`. The `/api/sources`
-  prefix itself is a single source of truth — the `x-sources-api-prefix` anchor in
-  `docker-compose.yml` — shared as `SOURCES_API_PREFIX` with both nginx (envsubst'd
-  into the template) and `source_service` (`common.settings.settings.sources_api_prefix`,
-  used as FastAPI's `root_path`); change it there, not in either file directly.
+  prefix itself is a single source of truth — `SOURCES_API_PREFIX` in the root
+  `.env` — shared with both nginx (envsubst'd into the template) and
+  `source_service` (`common.settings.settings.sources_api_prefix`, used as
+  FastAPI's `root_path`); change it there, not in either file directly.
 
 ## Architecture rules (backend)
 
@@ -107,7 +108,9 @@ README.md, .mcp.json, .gitignore
 Backend (Python):
 - **Async everywhere** on the request path.
 - **Config** only through `common.settings.settings` — never read
-  `os.environ`; add a field to `Settings`.
+  `os.environ`; add a field to `Settings`. Every variable in the project (backend,
+  frontend, nginx, compose, Terraform, deploy) is declared in the **root
+  `.env.example`** and documented in `README.md` — there is no per-folder env file.
 - **Logging** via `common.core.logging.get_logger` (stdlib `logging`). No `print`.
 - Keep deps minimal — add a package to a `pyproject.toml` only when code imports
   it. Line length 100; lint/format with `ruff` (config in `backend/pyproject.toml`).
