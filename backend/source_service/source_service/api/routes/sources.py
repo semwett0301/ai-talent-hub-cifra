@@ -32,9 +32,7 @@ async def create_source(
 
 
 @router.get("/{link:path}", response_model=SourceOut)
-async def get_source(
-    link: str, service: SourceService = Depends(get_source_service)
-) -> SourceOut:
+async def get_source(link: str, service: SourceService = Depends(get_source_service)) -> SourceOut:
     source = await _get_or_404(service, link)
     return SourceOut.model_validate(source)
 
@@ -51,8 +49,6 @@ async def update_source(
 
 
 @router.delete("/{link:path}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_source(
-    link: str, service: SourceService = Depends(get_source_service)
-) -> None:
+async def delete_source(link: str, service: SourceService = Depends(get_source_service)) -> None:
     source = await _get_or_404(service, link)
     await service.delete(source)
