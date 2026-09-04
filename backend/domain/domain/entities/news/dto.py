@@ -36,6 +36,10 @@ class NewsDTO(BaseModel):
     url: str
     text: str
     published_at: datetime | None = None
+    # Source-specific, JSON-serializable provenance. Web crawls put the full
+    # extracted article record under ``raw['article']`` so optional metadata
+    # (title, canonical URL, author, image, extraction evidence) survives the
+    # compact cross-service contract.
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
