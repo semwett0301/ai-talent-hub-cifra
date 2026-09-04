@@ -9,7 +9,8 @@ Alembic — the **shared** schema history for all services on the one database
   is passed**, so `upgrade` needs no service package.
 - `script.py.mako` — revision template.
 - `versions/` — the single linear history. `0001_initial_source` creates the `source`
-  table (owned by source_service).
+  table (owned by source_service); `0002_seed_sources` seeds the starting source
+  list (data migration, inline `sa.table` — no service import).
 
 Notes: run from `../` (the migrator dir) — `uv run alembic -c alembic.ini upgrade head`.
 Autogenerate: `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`.
