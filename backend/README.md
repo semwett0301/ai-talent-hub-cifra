@@ -10,6 +10,9 @@ directories (no `services/` wrapper).
   = the shared ORM models. Because the DB is one for all services, schemas live here.
 - `source_service/` — ingestion service: CRUD sources, collect news (Telegram push
   + RSS pull implemented, Web crawl a stub), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
+- `news_service/` — consumer service: reads the `news` exchange in batches (prefetch +
+  deferred ack), stores each `NewsDTO` once per `url` in the `news` table, serves
+  list + dismiss on `/api/news`. See `../plans/news-service.md`.
 - `migrator/` — one-shot Alembic runner that owns the shared DB schema history (one
   database for all services). Runs `upgrade head` on boot, then exits.
 - `pyproject.toml` — virtual workspace root: `[tool.uv.workspace] members` (domain +
@@ -26,7 +29,7 @@ concrete wiring happens once, at the composition root.
 
 | Layer | Holds | Depends on |
 |-------|-------|-----------|
-| `domain` (shared) | ORM **schemas** (`Source`) + business **entities** (`NewsDTO`) + `core` infra. Shared across all services. | SQLAlchemy / pydantic |
+| `domain` (shared) | ORM **schemas** (`Source`, `News`) + business **entities** (`NewsDTO`) + `core` infra. Shared across all services. | SQLAlchemy / pydantic |
 | `application/` | Use cases / orchestration, the **ports** (interfaces) infra implements, and DTOs. | domain |
 | `infrastructure/` | Implementations of the ports: repositories, RabbitMQ, collectors (feedparser / Playwright / kurigram), external APIs. | application, domain |
 | `api/` | FastAPI routes / controllers and HTTP-only types. | application |
@@ -57,6 +60,11 @@ source_service/                 # the importable package
   deps.py                       # composition root — DI wiring
   main.py                       # FastAPI app + lifespan
 ```
+
+`news_service/` mirrors it, with the bus as an *entry point* instead of an exit: the
+consumer (`infrastructure/rabbit/consumer.py`) calls the inward-facing port
+`application.ports.NewsBatchHandler`, implemented by `application.services.NewsIngestor`,
+which writes through `NewsRepository` (`infrastructure/repositories/news_repo.py`).
 
 Notes: run uv from here (`uv sync --all-packages`). Each service is its own package
 (`pyproject.toml` depending on `domain`, plus a `Dockerfile`), and ships a

@@ -7,7 +7,7 @@ repo files.
 backend/     all Python — its own uv workspace (root pyproject = virtual workspace root, no package)
   domain/    shared kernel, its own pyproject; package at domain/domain (imported as `domain`)
              core/ (settings/logging/db) + entities/ (business shapes) + schemas/ (shared ORM models)
-  source_service/, migrator/   one package per service, siblings of domain (no services/ wrapper)
+  source_service/, news_service/, migrator/   one package per service, siblings of domain (no services/ wrapper)
 frontend/    React SPA (Vite, TypeScript, React Router) — built to static files
 nginx/       edge image: serves static SPA + proxies /api/* → source_service
 docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
@@ -62,13 +62,14 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
 ## Deployment / networking
 
 - `docker-compose.yml` lives at the repo root and orchestrates all parts.
-- **Only nginx publishes a host port (80).** Backend services (`source_service`),
-  `postgres`, and `rabbitmq` are internal-only (`expose`, no host `ports`). There
-  is no separate frontend container.
+- **Only nginx publishes a host port (80).** Backend services (`source_service`,
+  `news_service`), `postgres`, and `rabbitmq` are internal-only (`expose`, no host
+  `ports`). There is no separate frontend container.
 - The `nginx` image (`nginx/Dockerfile`, build context = repo root) serves the SPA
   (fallback to `index.html`) and gives each backend its own `/api/<service>/`
   namespace — currently **`/api/sources/*` → `source_service:8000`** with the whole
   `/api/sources` prefix stripped, so the OpenAPI spec is reachable at
-  `/api/sources/openapi.json`. New services get a sibling `/api/<name>/` location
-  until a full API gateway lands (`plans/api-gateway.md`).
+  `/api/sources/openapi.json` — and **`/api/news/*` → `news_service:8000`** likewise.
+  New services get a sibling `/api/<name>/` location until a full API gateway lands
+  (`plans/api-gateway.md`).
 - Backend service images build from `./backend`.

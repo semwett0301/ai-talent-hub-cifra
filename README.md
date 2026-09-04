@@ -18,13 +18,15 @@ media, regulators, and Telegram channels.
 ## Structure
 
 - `backend/` — Python (uv workspace): `domain` shared kernel (core + entities +
-  shared ORM schemas) + `source_service` (FastAPI) + `migrator` (Alembic), as sibling
-  packages. Services follow **onion architecture** (application → infrastructure →
-  api, wired in `deps.py`); see `backend/README.md`.
+  shared ORM schemas) + `source_service` (FastAPI, collects → RabbitMQ) +
+  `news_service` (FastAPI, RabbitMQ → DB in batches + list/dismiss API) + `migrator` (Alembic),
+  as sibling packages. Services follow **onion architecture** (application →
+  infrastructure → api, wired in `deps.py`); see `backend/README.md`.
 - `frontend/` — React SPA (Vite, TypeScript, React Router).
 - `nginx/` — edge: builds the SPA, serves it static, proxies `/api`; the only
   service exposed to the host.
-- `docker-compose.yml` — nginx (public) + api (3 replicas) + postgres (internal).
+- `docker-compose.yml` — nginx (public) + source_service (3 replicas) + news_service
+  + migrator + postgres + rabbitmq (internal).
 
 ## Run
 
@@ -106,11 +108,20 @@ How each consumer picks it up:
 | `RABBITMQ_URL` | AMQP connection URL. Compose overrides it to the internal `rabbitmq` host. | `amqp://guest:guest@localhost:5672/` | **yes** |
 | `NEWS_EXCHANGE` | Exchange collected news is published to. | `news` | no |
 
+### news_service consumer
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `NEWS_QUEUE` | Durable queue `news_service` declares and binds to `NEWS_EXCHANGE` (`news.raw.#`). | `news.raw` | no |
+| `NEWS_BATCH_SIZE` | Messages per DB batch; also the channel `prefetch_count`. | `100` | no |
+| `NEWS_BATCH_INTERVAL_SECONDS` | Max seconds a partial batch waits before being written. A batch flushes on **either** limit. | `15` | no |
+
 ### Edge routing
 
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
 | `SOURCES_API_PREFIX` | The nginx location `source_service` is mounted under, and the same value as FastAPI's `root_path` (so `/docs` and `openapi.json` resolve behind the proxy). Consumed by **both** containers — change it here only. | `/api/sources` | no |
+| `NEWS_API_PREFIX` | Same for `news_service`. | `/api/news` | no |
 
 ### Scaling
 

@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     # sync with nginx via the same env var (see docker-compose.yml); FastAPI's
     # root_path uses it so /docs and openapi.json resolve behind the proxy.
     sources_api_prefix: str = "/api/sources"
+    news_api_prefix: str = "/api/news"
+
+    # news_service consumer: the queue bound to the exchange, and the batch limits — a
+    # batch is flushed to the DB when either is hit (size doubles as the prefetch).
+    news_queue: str = "news.raw"
+    news_batch_size: int = 100
+    news_batch_interval_seconds: float = 15.0
 
     # Telegram (MTProto user session for channel monitoring)
     telegram_api_id: int | None = None

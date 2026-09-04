@@ -4,6 +4,8 @@ Base infrastructure shared by every service: settings, logging, and the DB layer
 
 - `settings.py` — `Settings` (pydantic-settings, reads the repo-root `.env`) +
   the `settings` singleton. Read config only through it (never `os.environ`).
+  Holds every service's knobs — e.g. the `news_*` batch settings `news_service`
+  reads and the `*_api_prefix` values shared with nginx.
 - `logging.py` — `configure_logging()` + `get_logger()` over stdlib `logging`;
   caps `NOISY_LOGGERS` (aio_pika/aiormq/pamqp, pyrogram, httpx, urllib3,
   charset_normalizer, newspaper, readability) at INFO so `DEBUG=true` doesn't

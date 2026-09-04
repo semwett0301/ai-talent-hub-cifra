@@ -36,6 +36,9 @@ backend/                  # all Python — a single uv workspace (services are s
     source_service/       #   importable package (uniquely named, not generic `app`)
     Dockerfile            #   image build (context ./backend)
     pyproject.toml        #   depends on `domain`
+  news_service/           # project news-service — RabbitMQ → DB batch consumer + news list/dismiss
+    news_service/         #   importable package; same onion layout as source_service
+    Dockerfile, pyproject.toml
   migrator/               # one-shot Alembic runner — owns the shared DB schema history
     migrations/           #   single Alembic history (all services) + alembic.ini
     Dockerfile, pyproject.toml
@@ -45,10 +48,10 @@ frontend/                 # React SPA — Vite + TypeScript + React Router
   src/                    #   main.tsx, App.tsx, pages/, assets/
   public/                 #   static assets served as-is
   .oxlintrc.json          #   linter config
-nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service
+nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service, /api/news/* → news_service
   Dockerfile              #   multi-stage: node build → nginx serving dist/
   templates/default.conf.template
-docker-compose.yml        # root: nginx (public) + migrator + source_service + postgres + rabbitmq (internal)
+docker-compose.yml        # root: nginx (public) + migrator + source_service + news_service + postgres + rabbitmq (internal)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
 terraform/                # Timeweb Cloud infra (Terraform + cloud-init)
@@ -74,22 +77,23 @@ gen_session.py            # one-off: interactive Telegram login → TELEGRAM_SES
 
 ## Networking (docker)
 
-- **Only nginx publishes a host port (80).** Backend services (`source_service`),
-  `postgres`, and `rabbitmq` are reachable only on the internal compose network
-  (`expose`, no host ports) — everything else stays closed.
+- **Only nginx publishes a host port (80).** Backend services (`source_service`,
+  `news_service`), `postgres`, and `rabbitmq` are reachable only on the internal
+  compose network (`expose`, no host ports) — everything else stays closed.
 - The `nginx` image serves the static React SPA (fallback to `index.html`) and
   gives each backend its own **`/api/<service>/` namespace**. Currently it
   **reverse-proxies `/api/sources/*` → `source_service:8000`** with the whole
   `/api/sources` prefix stripped (so `/api/sources` → `/`,
   `/api/sources/openapi.json` → `/openapi.json`), so the OpenAPI spec is reachable
-  at `/api/sources/openapi.json`. New services get a sibling
+  at `/api/sources/openapi.json`. `news_service` has the sibling **`/api/news/*` →
+  `news_service:8000`** location (`NEWS_API_PREFIX`). New services get their own
   `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
   There is **no separate frontend container**. Edit
-  `nginx/templates/default.conf.template` and `nginx/Dockerfile`. The `/api/sources`
-  prefix itself is a single source of truth — `SOURCES_API_PREFIX` in the root
-  `.env` — shared with both nginx (envsubst'd into the template) and
-  `source_service` (`domain.core.settings.settings.sources_api_prefix`, used as
-  FastAPI's `root_path`); change it there, not in either file directly.
+  `nginx/templates/default.conf.template` and `nginx/Dockerfile`. Each prefix is a
+  single source of truth — `SOURCES_API_PREFIX` / `NEWS_API_PREFIX` in the root
+  `.env` — shared with both nginx (envsubst'd into the template) and the service
+  (`domain.core.settings.settings.<name>_api_prefix`, used as FastAPI's
+  `root_path`); change it there, not in either file directly.
 
 ## Architecture rules (backend)
 

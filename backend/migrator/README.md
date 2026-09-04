@@ -16,7 +16,9 @@ for all services, so migrations live here (not per service): the migrator runs
   DB-generated UUID and shrinks `link` to varchar(255); `0004_source_reliability`
   adds the `reliability` column, defaulting existing rows to `medium`;
   `0005_seed_test_source` seeds the `Тест` Telegram channel used for manual
-  end-to-end checks).
+  end-to-end checks; `0006_source_rss_link` adds the `rss_link` column with its
+  `type = rss` CHECK constraint; `0007_news_table` creates the `news` table
+  `news_service` writes bus messages into, with `url` UNIQUE as the dedupe key).
 - `pyproject.toml` — runtime deps `domain` + `alembic` + `psycopg2-binary`. Every
   ORM model comes from `domain.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.
