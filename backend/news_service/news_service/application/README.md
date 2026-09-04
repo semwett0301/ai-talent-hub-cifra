@@ -12,7 +12,7 @@ root (`deps.py`).
 - `services/` — `NewsFeed` (list / dismiss) and `NewsIngestor` (batch ingest, implements
   `NewsBatchHandler`), one class per module.
 - `errors.py` — `NewsStoreError` (subclasses `BatchStoreError`: a batch write failed;
-  the shared consumer requeues).
+  the shared consumer nacks it — requeue by default, `NEWS_REQUEUE_ON_STORE_ERROR`).
 
 Notes: import ports (`application.ports`), not infra classes. `NewsBatchHandler` is
 unusual in pointing *inward* — infrastructure (the consumer) calls it, application

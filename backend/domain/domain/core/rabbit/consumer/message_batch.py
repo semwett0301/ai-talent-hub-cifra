@@ -61,6 +61,13 @@ class MessageBatch[T: BaseModel]:
 
         await self.__settle(self.__valid[-1].nack(multiple=True, requeue=True), "nack")
 
+    async def drop(self) -> None:
+        """Nack without requeue — the run is gone (or dead-lettered if the queue has a DLX)."""
+        if not self.__valid:
+            return
+
+        await self.__settle(self.__valid[-1].nack(multiple=True, requeue=False), "drop")
+
     def __parse(self, message: AbstractIncomingMessage) -> None:
         try:
             item = self.__model.model_validate_json(message.body)

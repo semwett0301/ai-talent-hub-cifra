@@ -8,7 +8,8 @@ from pydantic import BaseModel
 class BatchHandler[T: BaseModel](Protocol):
     """Persists one batch of parsed messages; returns the number newly stored.
 
-    Raises `BatchStoreError` when the batch could not be written, so the consumer
-    hands the messages back to the broker instead of acknowledging them."""
+    Raises `BatchStoreError` (`domain.core.errors`) when the batch could not be written,
+    so the consumer nacks the messages (requeue or drop, per config) instead of
+    acknowledging them."""
 
     async def handle_batch(self, items: list[T]) -> int: ...

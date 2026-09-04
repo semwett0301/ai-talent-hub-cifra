@@ -15,3 +15,6 @@ class BatchConsumerConfig:
     # the channel prefetch, so the broker never hands out more than one batch unacked.
     batch_size: int
     batch_interval_seconds: float
+    # What happens to a batch the handler could not store (`BatchStoreError`): `True`
+    # nacks it back onto the queue for another attempt (at-least-once), `False` drops it.
+    requeue_on_store_error: bool

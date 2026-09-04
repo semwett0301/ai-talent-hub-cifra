@@ -115,6 +115,7 @@ How each consumer picks it up:
 | `NEWS_QUEUE` | Durable queue `news_service` declares and binds to `NEWS_EXCHANGE` (`news.raw.#`). | `news.raw` | no |
 | `NEWS_BATCH_SIZE` | Messages per DB batch; also the channel `prefetch_count`. | `100` | no |
 | `NEWS_BATCH_INTERVAL_SECONDS` | Max seconds a partial batch waits before being written. A batch flushes on **either** limit. | `15` | no |
+| `NEWS_REQUEUE_ON_STORE_ERROR` | When the DB write of a batch fails: `true` nacks it back onto the queue and retries after one interval (at-least-once, nothing lost); `false` nacks it without requeue (dropped, or dead-lettered if the queue gets a DLX). | `true` | no |
 
 ### Edge routing
 

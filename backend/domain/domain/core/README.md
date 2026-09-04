@@ -10,10 +10,12 @@ inside it.
   noisy-library caps (`NOISY_LOGGERS`, `CHATTY_LOGGERS`).
 - `db/` — the declarative `Base` every ORM model inherits, plus the async `engine`,
   `async_session_factory`, and `get_session`.
+- `errors/` — domain-wide error types shared between services and the mechanisms
+  here (`BatchStoreError`: a batch could not be persisted). Transport-agnostic.
 - `rabbit/` — the shared RabbitMQ **batch consumer** (`RabbitBatchConsumer[T]`,
-  `BatchHandler[T]`, `BatchConsumerConfig`, `BatchStoreError`): a service supplies a
-  pydantic message model + a handler, the mechanism (prefetch, buffer, ack-after-store,
-  requeue) lives here once.
+  `BatchHandler[T]`, `BatchConsumerConfig`): a service supplies a pydantic message
+  model + a handler, the mechanism (prefetch, buffer, ack-after-store, requeue/drop on
+  `BatchStoreError`) lives here once.
 
 Notes: `settings` is imported by `logging` and `db`, so it must stay dependency-free
 within `core`. Alembic uses `settings.sync_database_url`; everything else the async one.

@@ -28,7 +28,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
 
 Notes: batching (in `domain.core.rabbit`) = `prefetch_count == NEWS_BATCH_SIZE` (100)
 + a flush every `NEWS_BATCH_INTERVAL_SECONDS` (15) **or** when the buffer is full,
-whichever first — one transaction per batch, acks only after commit, nack+requeue on
-`NewsStoreError` (a `BatchStoreError`).
+whichever first — one transaction per batch, acks only after commit, nack on
+`NewsStoreError` (a `BatchStoreError`) — requeued while `NEWS_REQUEUE_ON_STORE_ERROR`
+is `true` (default), dropped otherwise.
 The `News` table and every ORM model live in the shared `domain.schemas` (one DB for
 all services); the DB schema history is applied by `../migrator`.

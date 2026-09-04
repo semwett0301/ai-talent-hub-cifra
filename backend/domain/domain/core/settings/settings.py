@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     news_queue: str = "news.raw"
     news_batch_size: int = 100
     news_batch_interval_seconds: float = 15.0
+    # Requeue a batch the DB write failed on (retry after one interval) vs drop it.
+    news_requeue_on_store_error: bool = True
 
     # Telegram (MTProto user session for channel monitoring)
     telegram_api_id: int | None = None

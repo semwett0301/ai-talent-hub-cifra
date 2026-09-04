@@ -31,5 +31,6 @@ def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
         binding_key=NEWS_BINDING_KEY,
         batch_size=settings.news_batch_size,
         batch_interval_seconds=settings.news_batch_interval_seconds,
+        requeue_on_store_error=settings.news_requeue_on_store_error,
     )
     return RabbitBatchConsumer(config, NewsIngestor(NewsRepo()), NewsDTO)
