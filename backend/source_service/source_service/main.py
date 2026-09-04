@@ -42,11 +42,14 @@ async def lifespan(app: FastAPI):
         await rabbit.close()
 
 
-# Routers own paths from the root; nginx exposes them under /api/sources/*.
+# Routers own paths from the root; nginx exposes them under /api/sources/* and
+# strips the prefix before proxying. root_path tells FastAPI about that prefix
+# so /docs and the generated openapi.json use the right absolute URLs.
 app = FastAPI(
     title="source_service",
     version="0.1.0",
     lifespan=lifespan,
+    root_path="/api/sources",
 )
 app.include_router(health.router)
 app.include_router(sources.router)
