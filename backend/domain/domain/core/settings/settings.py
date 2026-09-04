@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # batch is flushed to the DB when either is hit (size doubles as the prefetch).
     news_queue: str = "news.raw"
     news_batch_size: int = 100
-    news_batch_interval_seconds: float = 15.0
+    news_batch_interval_seconds: float = 60.0
     # Requeue a batch the DB write failed on (retry after one interval) vs drop it.
     news_requeue_on_store_error: bool = True
 
