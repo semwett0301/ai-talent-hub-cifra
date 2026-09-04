@@ -1,4 +1,4 @@
-from source_service.infrastructure.crawling.news_agent.html_meta import (
+from source_service.infrastructure.crawlers.news_agent.html_meta import (
     extract_html_metadata,
     extract_publication_date_signal,
 )

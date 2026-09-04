@@ -4,7 +4,7 @@ Ingestion service: **CRUD sources → collect news → publish to RabbitMQ**. No
 persistent dedupe, no news storage — downstream consumes from RabbitMQ and dedupes on
 `NewsDTO.url`. Telegram (kurigram), RSS (feedparser + news-please), and WEB
 sources are implemented. WEB sources use the embedded
-`infrastructure.crawling.news_agent` through `WebCrawlCollector`.
+`infrastructure.crawlers.news_agent` through `WebCrawlCollector`.
 Design: `../../../plans/source-service-architecture.md`,
 `../../../plans/telegram-kurigram-migration.md`.
 

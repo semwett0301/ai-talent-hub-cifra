@@ -2,11 +2,11 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from source_service.infrastructure.crawling.news_agent.extractor import (
+from source_service.infrastructure.crawlers.news_agent.extractor import (
     ArticleExtractor,
     LLMDateGate,
 )
-from source_service.infrastructure.crawling.news_agent.models import (
+from source_service.infrastructure.crawlers.news_agent.models import (
     ArticleCandidate,
     RuntimeSettings,
 )

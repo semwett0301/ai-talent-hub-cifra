@@ -15,14 +15,14 @@ from domain.entities.news import NewsDTO, SourceType
 from domain.schemas import Source
 
 from source_service.application.ports import PullCollector
-from source_service.infrastructure.crawling.news_agent.config import EnvSettings
-from source_service.infrastructure.crawling.news_agent.models import (
+from source_service.infrastructure.crawlers.news_agent.config import EnvSettings
+from source_service.infrastructure.crawlers.news_agent.models import (
     AppConfig,
     ArticleRecord,
     RuntimeSettings,
     SiteConfig,
 )
-from source_service.infrastructure.crawling.news_agent.pipeline import NewsPipeline
+from source_service.infrastructure.crawlers.news_agent.pipeline import NewsPipeline
 
 logger = get_logger(__name__)
 

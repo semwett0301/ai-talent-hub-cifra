@@ -16,7 +16,6 @@ class SiteConfig(BaseModel):
 class RuntimeSettings(BaseModel):
     days: int = 3
     timezone: str = "Europe/Moscow"
-    output_dir: str = "output"
 
     discovery_query: str = (
         "recent news press releases newsroom media publications articles company updates "
@@ -79,11 +78,6 @@ class RuntimeSettings(BaseModel):
     out_of_scope_consecutive_batches: int = 2
     out_of_scope_min_resolved_dates_per_batch: int = 8
 
-    browser_use_fallback: bool = False
-    browser_fallback_trigger_candidates_below: int = 3
-    browser_headless: bool = True
-    browser_max_steps: int = 14
-    browser_max_hubs: int = 8
 
 
 class AppConfig(BaseModel):
@@ -95,7 +89,7 @@ class HubCandidate(BaseModel):
     url: str
     score: float
     title: str | None = None
-    source: Literal["adaptive", "best_first", "browser_use", "seed"]
+    source: Literal["adaptive", "best_first", "seed"]
 
 
 class DiscoveryTrace(BaseModel):
@@ -106,7 +100,6 @@ class DiscoveryTrace(BaseModel):
     adaptive_urls: list[str] = Field(default_factory=list)
     hubs: list[HubCandidate] = Field(default_factory=list)
     candidate_count: int = 0
-    browser_fallback_used: bool = False
     best_first_runs: list[dict] = Field(default_factory=list)
     listing_runs: list[dict] = Field(default_factory=list)
     listing_classifications: list[dict] = Field(default_factory=list)
@@ -120,7 +113,7 @@ class ArticleCandidate(BaseModel):
     source_hub: str | None = None
     title_hint: str | None = None
     score: float = 0.0
-    origin: Literal["adaptive", "best_first", "link", "browser_use", "listing"] = "link"
+    origin: Literal["adaptive", "best_first", "link", "listing"] = "link"
 
 
 class LLMDateExtraction(BaseModel):

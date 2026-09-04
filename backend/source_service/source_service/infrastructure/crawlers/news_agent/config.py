@@ -26,7 +26,6 @@ class EnvSettings(BaseModel):
     openrouter_model: str | None = None
     openai_api_key: str | None = None
     openai_base_url: str | None = None
-    browser_use_model: str = "deepseek/deepseek-v4-flash"
 
     def llm_provider(self) -> str:
         if self.news_llm_provider:

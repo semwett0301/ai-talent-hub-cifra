@@ -1,7 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from source_service.infrastructure.crawling.news_agent.listing import (
+from source_service.infrastructure.crawlers.news_agent.listing import (
     is_pagination_url,
     listing_identity,
     listing_links,

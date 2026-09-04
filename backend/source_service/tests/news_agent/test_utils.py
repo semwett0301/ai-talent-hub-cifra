@@ -1,13 +1,13 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from source_service.infrastructure.crawling.news_agent.crawl_client import is_date_probe_page
-from source_service.infrastructure.crawling.news_agent.date_utils import (
+from source_service.infrastructure.crawlers.news_agent.crawl_client import is_date_probe_page
+from source_service.infrastructure.crawlers.news_agent.date_utils import (
     is_older_than_window,
     is_recent,
     parse_date,
 )
-from source_service.infrastructure.crawling.news_agent.url_utils import (
+from source_service.infrastructure.crawlers.news_agent.url_utils import (
     article_score,
     host_matches,
     hub_score,

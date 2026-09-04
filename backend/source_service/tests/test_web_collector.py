@@ -7,7 +7,7 @@ from domain.entities.news import SourceType
 from domain.entities.source import SourceReliability
 from domain.schemas import Source
 from source_service.infrastructure.collectors.web import WebCrawlCollector
-from source_service.infrastructure.crawling.news_agent.models import ArticleRecord
+from source_service.infrastructure.crawlers.news_agent.models import ArticleRecord
 
 
 class FakePipeline:
