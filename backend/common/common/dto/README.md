@@ -6,8 +6,7 @@ truth for the bus payloads. Put here anything used in the contract between servi
 shared enums live next door in `common/enums`.
 
 - `news.py` — `NewsDTO`: what gets published to the `news` exchange
-  (`schema_version`, `source_link`, `source_type`, `url`, `text`, `published_at`, `raw`).
-  `source_link` is the source's primary key (its URL/channel), not a surrogate id.
+  (`schema_version`, `source_id`, `source_type`, `url`, `text`, `published_at`, `raw`).
 - `routing.py` — `routing_key(source_type)` → `news.raw.<type>`; `ROUTING_PREFIX`.
 
 Notes: bump `schema_version` on breaking changes.

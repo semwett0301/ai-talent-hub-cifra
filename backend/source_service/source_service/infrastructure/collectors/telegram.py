@@ -140,5 +140,5 @@ class TelegramCollector(PushCollector):
         )
 
         item = _to_news_item(chat, message)
-        await self.__publisher.publish_news(source.link, source.type, [item])
+        await self.__publisher.publish_news(source.id, source.type, [item])
         logger.info("telegram post published: source=%s url=%s", source.link, item.url)

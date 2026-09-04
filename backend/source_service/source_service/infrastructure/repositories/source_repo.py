@@ -1,5 +1,7 @@
 """SourceRepo — SourceRepository over SQLAlchemy, a fresh session per call."""
 
+import uuid
+
 from common.core.session import async_session_factory
 from common.enums import SourceType
 from sqlalchemy import select
@@ -29,9 +31,9 @@ class SourceRepo(SourceRepository):
             result = await session.execute(stmt)
             return list(result.scalars().all())
 
-    async def get(self, link: str) -> Source | None:
+    async def get(self, source_id: uuid.UUID) -> Source | None:
         async with async_session_factory() as session:
-            return await session.get(Source, link)
+            return await session.get(Source, source_id)
 
     async def create(self, data: dict) -> Source:
         async with async_session_factory() as session:

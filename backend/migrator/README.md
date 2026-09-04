@@ -14,7 +14,8 @@ for all services, so migrations live here (not per service): the migrator runs
   (lazy), so `upgrade` needs no service package.
 - `migrations/versions/` — the single linear revision history (`0001_initial_source`
   creates the `source` table; `0002_seed_sources` seeds the starting source list;
-  `0003_source_link_pk` swaps the primary key from a surrogate `id` to `link`).
+  `0003_source_uuid_id` switches the surrogate id from a serial int to a
+  DB-generated UUID and shrinks `link` to varchar(255)).
 - `pyproject.toml` — runtime deps `common` + `alembic` + `psycopg2-binary`; the
   services whose models autogenerate needs live in the **`autogen` dependency
   group** (currently `source-service`) — installed for local autogenerate,

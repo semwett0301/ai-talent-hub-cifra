@@ -1,5 +1,7 @@
 """CRUD endpoints for sources."""
 
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from source_service.application.dto.source import SourceCreate, SourceOut, SourceUpdate
@@ -10,8 +12,8 @@ from source_service.domain.schemas import Source
 router = APIRouter(tags=["sources"])
 
 
-async def _get_or_404(service: SourceService, link: str) -> Source:
-    source = await service.get(link)
+async def _get_or_404(service: SourceService, source_id: uuid.UUID) -> Source:
+    source = await service.get(source_id)
     if source is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="source not found")
     return source
@@ -31,24 +33,28 @@ async def create_source(
     return SourceOut.model_validate(created)
 
 
-@router.get("/{link:path}", response_model=SourceOut)
-async def get_source(link: str, service: SourceService = Depends(get_source_service)) -> SourceOut:
-    source = await _get_or_404(service, link)
+@router.get("/{source_id}", response_model=SourceOut)
+async def get_source(
+    source_id: uuid.UUID, service: SourceService = Depends(get_source_service)
+) -> SourceOut:
+    source = await _get_or_404(service, source_id)
     return SourceOut.model_validate(source)
 
 
-@router.patch("/{link:path}", response_model=SourceOut)
+@router.patch("/{source_id}", response_model=SourceOut)
 async def update_source(
-    link: str,
+    source_id: uuid.UUID,
     payload: SourceUpdate,
     service: SourceService = Depends(get_source_service),
 ) -> SourceOut:
-    source = await _get_or_404(service, link)
+    source = await _get_or_404(service, source_id)
     updated = await service.update(source, payload)
     return SourceOut.model_validate(updated)
 
 
-@router.delete("/{link:path}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_source(link: str, service: SourceService = Depends(get_source_service)) -> None:
-    source = await _get_or_404(service, link)
+@router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_source(
+    source_id: uuid.UUID, service: SourceService = Depends(get_source_service)
+) -> None:
+    source = await _get_or_404(service, source_id)
     await service.delete(source)
