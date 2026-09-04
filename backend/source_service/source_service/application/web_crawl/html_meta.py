@@ -14,10 +14,27 @@ DATE_TEXT_RE = re.compile(
     r"january|february|march|april|may|june|july|august|september|october|november|december))",
     re.I,
 )
-PUBLICATION_HINTS = ("publish", "publication", "posted", "created", "datepublished", "pubdate", "опублик")
+PUBLICATION_HINTS = (
+    "publish",
+    "publication",
+    "posted",
+    "created",
+    "datepublished",
+    "pubdate",
+    "опублик",
+)
 DATE_HINTS = ("date", "time", "дата", "время")
 ARTICLE_HINTS = ("article", "entry", "post", "story", "news", "header", "headline")
-NON_PUBLICATION_HINTS = ("related", "recommend", "popular", "editor", "sidebar", "footer", "comment", "similar")
+NON_PUBLICATION_HINTS = (
+    "related",
+    "recommend",
+    "popular",
+    "editor",
+    "sidebar",
+    "footer",
+    "comment",
+    "similar",
+)
 
 
 @dataclass
@@ -59,7 +76,7 @@ def extract_html_metadata(html: str | None) -> dict:
     metas = soup.find_all("meta")
     for target, names in fields.items():
         for tag in metas:
-            key = (tag.get("property") or tag.get("name") or tag.get("itemprop") or "").strip()
+            key = str(tag.get("property") or tag.get("name") or tag.get("itemprop") or "").strip()
             if key in names and tag.get("content"):
                 out[target] = str(tag.get("content")).strip()
                 break
@@ -98,12 +115,19 @@ def extract_html_metadata(html: str | None) -> dict:
                 out.setdefault("image_url", image.get("url"))
             elif isinstance(image, list) and image:
                 first = image[0]
-                out.setdefault("image_url", first if isinstance(first, str) else first.get("url") if isinstance(first, dict) else None)
+                out.setdefault(
+                    "image_url",
+                    first
+                    if isinstance(first, str)
+                    else first.get("url")
+                    if isinstance(first, dict)
+                    else None,
+                )
             author = item.get("author")
             if isinstance(author, dict):
                 out.setdefault("author", author.get("name"))
             elif isinstance(author, list):
-                names = [a.get("name") for a in author if isinstance(a, dict) and a.get("name")]
+                names = [str(a["name"]) for a in author if isinstance(a, dict) and a.get("name")]
                 if names:
                     out.setdefault("author", ", ".join(names))
             elif isinstance(author, str):
@@ -180,18 +204,27 @@ def extract_publication_date_signal(html: str | None) -> PublicationDateSignal:
 
     # 2) OpenGraph article publication time.
     for tag in soup.find_all("meta"):
-        key = (tag.get("property") or tag.get("name") or tag.get("itemprop") or "").strip()
+        key = str(tag.get("property") or tag.get("name") or tag.get("itemprop") or "").strip()
         content = str(tag.get("content") or "").strip()
         if key == "article:published_time" and content:
-            return PublicationDateSignal(content, "open_graph", 0.98, f"article:published_time={content}")
+            return PublicationDateSignal(
+                content, "open_graph", 0.98, f"article:published_time={content}"
+            )
 
     # 3) Common machine-readable publication date meta/itemprop fields.
     reliable_keys = {
-        "datePublished", "datepublished", "pubdate", "publish-date", "publishdate",
-        "publication_date", "publication-date", "publish_date", "publish-date-time",
+        "datePublished",
+        "datepublished",
+        "pubdate",
+        "publish-date",
+        "publishdate",
+        "publication_date",
+        "publication-date",
+        "publish_date",
+        "publish-date-time",
     }
     for tag in soup.find_all("meta"):
-        key = (tag.get("property") or tag.get("name") or tag.get("itemprop") or "").strip()
+        key = str(tag.get("property") or tag.get("name") or tag.get("itemprop") or "").strip()
         content = str(tag.get("content") or "").strip()
         if key in reliable_keys and content:
             return PublicationDateSignal(content, "meta", 0.93, f"meta[{key}]={content}")
@@ -208,7 +241,9 @@ def extract_publication_date_signal(html: str | None) -> PublicationDateSignal:
     # attributes and article/header proximity instead of relying on a site's CSS.
     candidates = []
     for tag in soup.find_all(["time", "span", "p", "div"]):
-        has_semantic_attribute = any(tag.get(key) for key in ("class", "id", "itemprop", "data-testid", "data-test"))
+        has_semantic_attribute = any(
+            tag.get(key) for key in ("class", "id", "itemprop", "data-testid", "data-test")
+        )
         if tag.name != "time" and not has_semantic_attribute:
             continue
         candidate = _visible_date_candidate(tag)

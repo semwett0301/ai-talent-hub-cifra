@@ -2,14 +2,14 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from source_service.infrastructure.crawlers.news_agent.extractor import (
+from source_service.application.web_crawl.extractor import (
     ArticleExtractor,
     LLMDateGate,
 )
-from source_service.infrastructure.crawlers.news_agent.models import (
+from source_service.application.web_crawl.models import (
     ArticleCandidate,
-    RuntimeSettings,
 )
+from source_service.application.web_crawl.settings import RuntimeSettings
 
 
 class FakeClient:

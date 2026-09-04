@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from bs4 import BeautifulSoup
@@ -22,18 +23,24 @@ NEXT_TEXT_RE = re.compile(r"^(?:next|далее|дальше|следующ|olde
 class ListingLink:
     url: str
     title: str
-    published_at: object | None
+    published_at: datetime | None
 
 
 def listing_identity(url: str) -> str:
     """Identity for discovery: pagination variants are one listing hub."""
     parsed = urlparse(normalize_url(url))
-    query = [(key, value) for key, value in parse_qsl(parsed.query) if key.lower() not in {"page", "p", "paged", "offset"}]
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query)
+        if key.lower() not in {"page", "p", "paged", "offset"}
+    ]
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", urlencode(query), ""))
 
 
 def is_pagination_url(url: str) -> bool:
-    return any(key.lower() in {"page", "p", "paged", "offset"} for key, _ in parse_qsl(urlparse(url).query))
+    return any(
+        key.lower() in {"page", "p", "paged", "offset"} for key, _ in parse_qsl(urlparse(url).query)
+    )
 
 
 def _card_date(anchor, timezone: str):
@@ -49,13 +56,17 @@ def _card_date(anchor, timezone: str):
                 return value
         time_tag = node.find("time")
         if time_tag:
-            value = parse_date(str(time_tag.get("datetime") or time_tag.get_text(" ", strip=True)), timezone)
+            value = parse_date(
+                str(time_tag.get("datetime") or time_tag.get_text(" ", strip=True)), timezone
+            )
             if value is not None:
                 return value
     return None
 
 
-def listing_links(html: str, *, base_url: str, timezone: str, score_threshold: float) -> list[ListingLink]:
+def listing_links(
+    html: str, *, base_url: str, timezone: str, score_threshold: float
+) -> list[ListingLink]:
     """Article links in their visual/source order, with card-level dates when present."""
     soup = BeautifulSoup(html or "", "html.parser")
     seen: set[str] = set()
@@ -105,12 +116,14 @@ def listing_llm_snapshot(html: str, *, base_url: str) -> dict[str, object]:
         cards.append({"title": label[:220], "url": href, "context": context})
         if len(cards) == 6:
             break
-    pagination = []
+    pagination: list[dict[str, str]] = []
     for anchor in soup.find_all("a", href=True):
         href = normalize_url(str(anchor.get("href") or ""), base=base_url)
         label = re.sub(r"\s+", " ", anchor.get_text(" ", strip=True))
         rel = " ".join(anchor.get("rel") or [])
-        if not href or not (is_pagination_url(href) or "next" in rel.lower() or NEXT_TEXT_RE.match(label)):
+        if not href or not (
+            is_pagination_url(href) or "next" in rel.lower() or NEXT_TEXT_RE.match(label)
+        ):
             continue
         if href not in [item["url"] for item in pagination]:
             pagination.append({"url": href, "label": label[:80]})

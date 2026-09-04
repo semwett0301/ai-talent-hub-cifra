@@ -1,22 +1,25 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from source_service.infrastructure.crawlers.news_agent.crawl_client import is_date_probe_page
-from source_service.infrastructure.crawlers.news_agent.date_utils import (
+from source_service.application.web_crawl.date_utils import (
     is_older_than_window,
     is_recent,
     parse_date,
 )
-from source_service.infrastructure.crawlers.news_agent.url_utils import (
+from source_service.application.web_crawl.url_utils import (
     article_score,
     host_matches,
     hub_score,
     normalize_url,
 )
+from source_service.infrastructure.crawlers.crawl4ai_support import is_date_probe_page
 
 
 def test_normalize_url():
-    assert normalize_url("https://Example.com/news/?utm_source=x&a=1#top") == "https://example.com/news?a=1"
+    assert (
+        normalize_url("https://Example.com/news/?utm_source=x&a=1#top")
+        == "https://example.com/news?a=1"
+    )
 
 
 def test_domain_guard():
@@ -26,7 +29,10 @@ def test_domain_guard():
 
 def test_hub_and_article_scores():
     assert hub_score("https://example.com/press-center") >= 0.35
-    assert article_score("https://example.com/news/2026/09/03/long-important-company-announcement") >= 0.35
+    assert (
+        article_score("https://example.com/news/2026/09/03/long-important-company-announcement")
+        >= 0.35
+    )
 
 
 def test_parse_russian_date_and_recent():

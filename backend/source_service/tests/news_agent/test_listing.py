@@ -1,7 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from source_service.infrastructure.crawlers.news_agent.listing import (
+from source_service.application.web_crawl.listing import (
     is_pagination_url,
     listing_identity,
     listing_links,
@@ -24,14 +24,24 @@ def test_listing_identity_deduplicates_pagination():
 
 
 def test_listing_links_keep_card_order_and_dates():
-    links = listing_links(HTML, base_url="https://example.test/news", timezone="Europe/Moscow", score_threshold=0.18)
-    assert [link.title for link in links] == ["Fresh important news story", "Old important news story"]
+    links = listing_links(
+        HTML, base_url="https://example.test/news", timezone="Europe/Moscow", score_threshold=0.18
+    )
+    assert [link.title for link in links] == [
+        "Fresh important news story",
+        "Old important news story",
+    ]
     assert links[0].published_at == datetime(2026, 9, 4, 12, 0, tzinfo=ZoneInfo("Europe/Moscow"))
-    assert next_listing_page(HTML, base_url="https://example.test/news") == "https://example.test/news?page=1"
+    assert (
+        next_listing_page(HTML, base_url="https://example.test/news")
+        == "https://example.test/news?page=1"
+    )
 
 
 def test_listing_llm_snapshot_is_bounded_and_exposes_cards_and_pagination():
     snapshot = listing_llm_snapshot(HTML, base_url="https://example.test/news")
     assert len(snapshot["cards"]) == 2
-    assert snapshot["pagination"] == [{"url": "https://example.test/news?page=1", "label": "Дальше"}]
+    assert snapshot["pagination"] == [
+        {"url": "https://example.test/news?page=1", "label": "Дальше"}
+    ]
     assert len(str(snapshot["page_text"])) <= 1800

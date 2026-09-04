@@ -4,25 +4,81 @@ import re
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 TRACKING_PARAMS = {
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "gclid", "fbclid", "yclid", "_ga", "ref", "source",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "gclid",
+    "fbclid",
+    "yclid",
+    "_ga",
+    "ref",
+    "source",
 }
 
 HUB_TERMS = (
-    "news", "press", "press-center", "presscenter", "newsroom", "media", "blog",
-    "article", "publication", "updates", "events",
-    "новости", "пресс", "медиа", "публикац", "статьи", "события",
+    "news",
+    "press",
+    "press-center",
+    "presscenter",
+    "newsroom",
+    "media",
+    "blog",
+    "article",
+    "publication",
+    "updates",
+    "events",
+    "новости",
+    "пресс",
+    "медиа",
+    "публикац",
+    "статьи",
+    "события",
 )
 ARTICLE_TERMS = (
-    "/news/", "/article/", "/articles/", "/story/", "/post/", "/press/",
-    "/press-release/", "/publication/", "/publications/", "/blog/",
-    "/novosti/", "/statya/", "/stati/", "/publikac",
+    "/news/",
+    "/article/",
+    "/articles/",
+    "/story/",
+    "/post/",
+    "/press/",
+    "/press-release/",
+    "/publication/",
+    "/publications/",
+    "/blog/",
+    "/novosti/",
+    "/statya/",
+    "/stati/",
+    "/publikac",
 )
 LISTING_OR_JUNK_TERMS = (
-    "/tag/", "/tags/", "/category/", "/categories/", "/author/", "/authors/",
-    "/search", "/calendar", "/contacts", "/contact", "/about", "/products",
-    "/services", "/catalog", "/vacanc", "/career", "/login", "/privacy", "/terms",
-    "/newsletter", "/subscription", "/subscribe", "/feed", "/taxonomy/", "/events", "/event/",
+    "/tag/",
+    "/tags/",
+    "/category/",
+    "/categories/",
+    "/author/",
+    "/authors/",
+    "/search",
+    "/calendar",
+    "/contacts",
+    "/contact",
+    "/about",
+    "/products",
+    "/services",
+    "/catalog",
+    "/vacanc",
+    "/career",
+    "/login",
+    "/privacy",
+    "/terms",
+    "/newsletter",
+    "/subscription",
+    "/subscribe",
+    "/feed",
+    "/taxonomy/",
+    "/events",
+    "/event/",
 )
 DATE_IN_URL_RE = re.compile(r"/(20\d{2})[/-](0?[1-9]|1[0-2])[/-](0?[1-9]|[12]\d|3[01])(?:/|$)")
 NUMERIC_ID_RE = re.compile(r"/(?:\d{5,})(?:/|\.html?$|$)", re.I)
@@ -34,17 +90,25 @@ def normalize_url(url: str, base: str | None = None) -> str:
     parsed = urlparse(absolute)
     if parsed.scheme.lower() not in {"http", "https"}:
         return ""
-    query = [(k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True) if k.lower() not in TRACKING_PARAMS]
+    query = [
+        (k, v)
+        for k, v in parse_qsl(parsed.query, keep_blank_values=True)
+        if k.lower() not in TRACKING_PARAMS
+    ]
     path = re.sub(r"/{2,}", "/", parsed.path or "/")
     if path != "/":
         path = path.rstrip("/")
-    return urlunparse((parsed.scheme.lower(), parsed.netloc.lower(), path, "", urlencode(query), ""))
+    return urlunparse(
+        (parsed.scheme.lower(), parsed.netloc.lower(), path, "", urlencode(query), "")
+    )
 
 
 def host_matches(url: str, allowed_domains: list[str], seed_url: str) -> bool:
     host = (urlparse(url).hostname or "").lower().removeprefix("www.")
     seed_host = (urlparse(seed_url).hostname or "").lower().removeprefix("www.")
-    domains = [d.lower().strip().removeprefix("www.") for d in allowed_domains if d.strip()] or [seed_host]
+    domains = [d.lower().strip().removeprefix("www.") for d in allowed_domains if d.strip()] or [
+        seed_host
+    ]
     return any(host == d or host.endswith("." + d) for d in domains)
 
 
@@ -79,7 +143,9 @@ def hub_score(url: str, title: str = "", text: str = "") -> float:
     return max(0.0, min(1.0, score))
 
 
-def article_score(url: str, title: str = "", context: str = "", metadata: dict | None = None) -> float:
+def article_score(
+    url: str, title: str = "", context: str = "", metadata: dict | None = None
+) -> float:
     path = urlparse(url).path.lower()
     score = 0.0
     if any(term in path for term in LISTING_OR_JUNK_TERMS):

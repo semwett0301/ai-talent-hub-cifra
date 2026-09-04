@@ -8,10 +8,13 @@ from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
 
-from .crawl_client import Crawl4AIClient, markdown_fit
+from source_service.application.ports.news_crawler import NewsCrawler
+
 from .date_utils import is_recent, parse_date
 from .html_meta import extract_html_metadata, extract_publication_date_signal
-from .models import ArticleCandidate, ArticleRecord, RuntimeSettings
+from .models import ArticleCandidate, ArticleRecord
+from .result_utils import markdown_fit
+from .settings import RuntimeSettings
 from .url_utils import normalize_url
 
 logger = logging.getLogger(__name__)
@@ -53,7 +56,7 @@ class LLMDateGate:
 
 
 class ArticleExtractor:
-    def __init__(self, client: Crawl4AIClient, settings: RuntimeSettings):
+    def __init__(self, client: NewsCrawler, settings: RuntimeSettings):
         self.client = client
         self.settings = settings
         self.last_run_stats: dict[str, int | bool | str | None] = {}
@@ -64,7 +67,9 @@ class ArticleExtractor:
             soup = BeautifulSoup(html, "html.parser")
             node = soup.select_one(selector)
             if node is not None:
-                for noise in node.select("nav, footer, aside, form, script, style, [role=navigation]"):
+                for noise in node.select(
+                    "nav, footer, aside, form, script, style, [role=navigation]"
+                ):
                     noise.decompose()
                 text = re.sub(r"\n{3,}", "\n\n", node.get_text("\n", strip=True)).strip()
                 if _word_count(text) >= self.settings.min_article_words:
@@ -104,12 +109,16 @@ class ArticleExtractor:
         # require repeated all-old evidence before cutting off the tail.
         batch_size = max(1, self.settings.article_batch_size)
         for offset in range(0, len(urls), batch_size):
-            batch_urls = urls[offset:offset + batch_size]
+            batch_urls = urls[offset : offset + batch_size]
             batch_number = offset // batch_size + 1
             total_batches = (len(urls) + batch_size - 1) // batch_size
             logger.info(
                 "[articles] batch %d/%d: загружаю %d URL (обработано до этого %d/%d)",
-                batch_number, total_batches, len(batch_urls), offset, len(urls),
+                batch_number,
+                total_batches,
+                len(batch_urls),
+                offset,
+                len(urls),
             )
             results = await self.client.crawl_articles(batch_urls)
             stats["fetched_urls"] = int(stats["fetched_urls"] or 0) + len(batch_urls)
@@ -123,7 +132,9 @@ class ArticleExtractor:
                 candidate = by_url.get(result_url)
                 if candidate is None:
                     # Redirects may change URL; retain a best-effort candidate shell.
-                    candidate = ArticleCandidate(url=result_url or str(getattr(result, "url", "")), score=0.0)
+                    candidate = ArticleCandidate(
+                        url=result_url or str(getattr(result, "url", "")), score=0.0
+                    )
                 work.append(self._extract_one(result, candidate, source_site, llm_gate))
 
             for record, used_llm, date_scope in await asyncio.gather(*work):
@@ -134,7 +145,9 @@ class ArticleExtractor:
                     stats["resolved_recent_dates"] = int(stats["resolved_recent_dates"] or 0) + 1
                 elif date_scope == "out_of_scope":
                     batch_old_dates += 1
-                    stats["resolved_out_of_scope_dates"] = int(stats["resolved_out_of_scope_dates"] or 0) + 1
+                    stats["resolved_out_of_scope_dates"] = (
+                        int(stats["resolved_out_of_scope_dates"] or 0) + 1
+                    )
                 else:
                     stats["unknown_date_results"] = int(stats["unknown_date_results"] or 0) + 1
                 if record is not None:
@@ -143,10 +156,18 @@ class ArticleExtractor:
             resolved_dates = batch_recent_dates + batch_old_dates
             logger.info(
                 "[articles] batch %d/%d: recent=%d old=%d unknown=%d llm_date_calls=%d emitted=%d",
-                batch_number, total_batches, batch_recent_dates, batch_old_dates,
-                len(results) - resolved_dates, stats["llm_date_calls"], len(out),
+                batch_number,
+                total_batches,
+                batch_recent_dates,
+                batch_old_dates,
+                len(results) - resolved_dates,
+                stats["llm_date_calls"],
+                len(out),
             )
-            all_resolved_dates_are_old = resolved_dates >= self.settings.out_of_scope_min_resolved_dates_per_batch and batch_recent_dates == 0
+            all_resolved_dates_are_old = (
+                resolved_dates >= self.settings.out_of_scope_min_resolved_dates_per_batch
+                and batch_recent_dates == 0
+            )
             if all_resolved_dates_are_old:
                 consecutive_old_batches += 1
             else:
@@ -157,14 +178,19 @@ class ArticleExtractor:
             ):
                 stats["stopped_early"] = True
                 stats["stop_reason"] = "consecutive_out_of_scope_date_batches"
-                logger.info("[articles] STOP: %d подряд batch только со старыми датами", consecutive_old_batches)
+                logger.info(
+                    "[articles] STOP: %d подряд batch только со старыми датами",
+                    consecutive_old_batches,
+                )
                 break
 
         stats["llm_date_max_parallel"] = llm_gate.max_active
         self.last_run_stats = stats
         return out
 
-    async def _extract_one(self, result, candidate: ArticleCandidate, source_site: str, llm_gate: LLMDateGate):
+    async def _extract_one(
+        self, result, candidate: ArticleCandidate, source_site: str, llm_gate: LLMDateGate
+    ):
         crawler_meta = _crawler_metadata(result)
         html = getattr(result, "html", None) or getattr(result, "cleaned_html", None) or ""
         body = self._article_body(result, html)
@@ -183,9 +209,10 @@ class ArticleExtractor:
         # Core requirement: if the page does not expose a reliable machine-readable
         # publication date, ask the LLM to understand the visible page semantics.
         if published_at is None and self.settings.llm_date_fallback:
+
             async def extract_date():
                 try:
-                    return await self.client.llm_extract_publication_date(candidate.url)
+                    return await self.client.extract_publication_date(candidate.url)
                 except Exception:
                     logger.exception("LLM date extraction failed for %s", candidate.url)
                     return None
@@ -220,35 +247,58 @@ class ArticleExtractor:
         if not title:
             return None, used_llm, "recent"
 
-        modified = parse_date(str(html_meta.get("modified_at")), self.settings.timezone) if html_meta.get("modified_at") else None
-        final_url = normalize_url(str(getattr(result, "redirected_url", None) or getattr(result, "url", candidate.url))) or candidate.url
+        modified = (
+            parse_date(str(html_meta.get("modified_at")), self.settings.timezone)
+            if html_meta.get("modified_at")
+            else None
+        )
+        final_url = (
+            normalize_url(
+                str(
+                    getattr(result, "redirected_url", None) or getattr(result, "url", candidate.url)
+                )
+            )
+            or candidate.url
+        )
         canonical = html_meta.get("canonical_url")
         canonical = normalize_url(str(canonical), base=final_url) if canonical else None
 
-        return ArticleRecord(
-            url=final_url,
-            canonical_url=canonical,
-            source_site=source_site,
-            source_hub=candidate.source_hub,
-            title=str(title).strip(),
-            published_at=published_at,
-            modified_at=modified,
-            author=str(html_meta.get("author")).strip() if html_meta.get("author") else None,
-            section=str(html_meta.get("section")).strip() if html_meta.get("section") else None,
-            language=str(html_meta.get("language") or crawler_meta.get("language")).strip() if (html_meta.get("language") or crawler_meta.get("language")) else None,
-            description=str(html_meta.get("description") or crawler_meta.get("description")).strip() if (html_meta.get("description") or crawler_meta.get("description")) else None,
-            image_url=str(html_meta.get("image_url")).strip() if html_meta.get("image_url") else None,
-            text=body,
-            word_count=words,
-            fetched_at=datetime.now(ZoneInfo(self.settings.timezone)),
-            date_source=date_source or "crawl4ai_llm",
-            date_confidence=date_confidence,
-            date_evidence=date_evidence,
-            metadata={
-                "candidate_score": candidate.score,
-                "candidate_origin": candidate.origin,
-                "crawler_metadata": crawler_meta,
-                "html_metadata": html_meta,
-                "llm_date_fallback_used": used_llm,
-            },
-        ), used_llm, "recent"
+        return (
+            ArticleRecord(
+                url=final_url,
+                canonical_url=canonical,
+                source_site=source_site,
+                source_hub=candidate.source_hub,
+                title=str(title).strip(),
+                published_at=published_at,
+                modified_at=modified,
+                author=str(html_meta.get("author")).strip() if html_meta.get("author") else None,
+                section=str(html_meta.get("section")).strip() if html_meta.get("section") else None,
+                language=str(html_meta.get("language") or crawler_meta.get("language")).strip()
+                if (html_meta.get("language") or crawler_meta.get("language"))
+                else None,
+                description=str(
+                    html_meta.get("description") or crawler_meta.get("description")
+                ).strip()
+                if (html_meta.get("description") or crawler_meta.get("description"))
+                else None,
+                image_url=str(html_meta.get("image_url")).strip()
+                if html_meta.get("image_url")
+                else None,
+                text=body,
+                word_count=words,
+                fetched_at=datetime.now(ZoneInfo(self.settings.timezone)),
+                date_source=date_source or "crawl4ai_llm",
+                date_confidence=date_confidence,
+                date_evidence=date_evidence,
+                metadata={
+                    "candidate_score": candidate.score,
+                    "candidate_origin": candidate.origin,
+                    "crawler_metadata": crawler_meta,
+                    "html_metadata": html_meta,
+                    "llm_date_fallback_used": used_llm,
+                },
+            ),
+            used_llm,
+            "recent",
+        )

@@ -45,13 +45,6 @@ plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 warn_unused_ignores = false
 
-# The crawler is vendored infrastructure with dynamic Crawl4AI/BeautifulSoup
-# result objects. Its behaviour is covered by focused tests; type-check the
-# service boundary rather than suppressing useful checks in application code.
-[[tool.mypy.overrides]]
-module = ["source_service.infrastructure.crawling.news_agent.*"]
-ignore_errors = true
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # Tests are added later as per-service unit tests or top-level e2e.

@@ -30,14 +30,12 @@ class EnvSettings(BaseModel):
     def llm_provider(self) -> str:
         if self.news_llm_provider:
             return self.news_llm_provider
-        if self.openrouter_api_key:
-            model = self.openrouter_model or self.news_agent_model
-            return f"openrouter/{model}"
-        if self.openai_api_key:
-            return f"openai/{self.news_agent_model}"
-        # Keep the historical default for callers that configure credentials
-        # outside this settings object (for example LiteLLM environment vars).
-        return f"openrouter/{self.news_agent_model}"
+        model = self.openrouter_model or self.news_agent_model
+        candidates = (
+            (self.openrouter_api_key, f"openrouter/{model}"),
+            (self.openai_api_key, f"openai/{self.news_agent_model}"),
+        )
+        return next((provider for token, provider in candidates if token), f"openrouter/{model}")
 
     def llm_token(self) -> str | None:
         return self.news_llm_api_token or self.openrouter_api_key or self.openai_api_key

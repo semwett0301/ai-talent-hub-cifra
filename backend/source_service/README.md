@@ -4,7 +4,7 @@ Ingestion service: **CRUD sources → collect news → publish to RabbitMQ**. No
 persistent dedupe, no news storage — downstream consumes from RabbitMQ and dedupes on
 `NewsDTO.url`. Telegram (kurigram), RSS (feedparser + news-please), and WEB
 sources are implemented. WEB sources use the embedded
-`infrastructure.crawlers.news_agent` through `WebCrawlCollector`.
+`application.web_crawl` through the Crawl4AI and `WebCrawlCollector` adapters.
 Design: `../../../plans/source-service-architecture.md`,
 `../../../plans/telegram-kurigram-migration.md`.
 
@@ -25,15 +25,16 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     publisher and injects them into application (all DI lives here). Data shapes are
     shared: `Source` (ORM) from `domain.schemas`, `NewsDTO` from `domain.entities.news`.
   - `application/` — `ports/` (interfaces infra implements) + `dto/` + `services/` +
-    `parse/`: `SourceService` (CRUD over the repo port; auto-detects a source's
+    `parse/` + `web_crawl/` (crawler orchestration, discovery and extraction rules):
+    `SourceService` (CRUD over the repo port; auto-detects a source's
     `type` from its `link` via `parse/` + the `PageFetcher` port — clients never
     send `type`; an RSS feed's URL is stored in `rss_link`, scraping-only and also
     never client-supplied) and `SourceRegistry` (the runtime registrar — pull
     scheduling + push subscription, kept in sync with CRUD).
   - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a
     session per call), `rabbit/` (`RabbitConnector`), `collectors/`
-    (`Rss`/`WebCrawl`/`Telegram`), `crawlers/` (`Crawl4AiPageFetcher`, the one HTTP
-    fetch, + `FeedparserFeedReader`).
+    (`Rss`/`WebCrawl`/`Telegram`), `crawlers/` (Crawl4AI, LiteLLM and feedparser
+    adapters only).
   - `api/routes/` — FastAPI routers only: `sources.py` (CRUD), `health.py`.
 
 Notes: pull collectors run on `poll_interval_seconds`, falling back to
@@ -78,9 +79,9 @@ import asyncio
 from domain.entities.news import SourceType
 from domain.entities.source import SourceReliability
 from domain.schemas import Source
-from source_service.infrastructure.collectors import WebCrawlCollector
+from source_service.deps import build_web_collector
 source = Source(name="Crawl smoke test", link="https://example.com", type=SourceType.WEB, reliability=SourceReliability.MEDIUM)
-items = asyncio.run(WebCrawlCollector().fetch(source))
+items = asyncio.run(build_web_collector().fetch(source))
 print(f"collected={len(items)}")
 for item in items[:3]: print(item.url, item.raw["title"])
 '

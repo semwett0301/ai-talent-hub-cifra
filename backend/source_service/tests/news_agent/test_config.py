@@ -1,4 +1,4 @@
-from source_service.infrastructure.crawlers.news_agent.config import EnvSettings
+from source_service.application.web_crawl.config import EnvSettings
 
 
 def test_openrouter_model_slug_is_adapted_to_litellm_provider_name():

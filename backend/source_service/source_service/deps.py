@@ -17,12 +17,14 @@ from source_service.application.ports import (
     SourceRegistrar,
 )
 from source_service.application.services import SourceRegistry, SourceService
-from source_service.infrastructure.collectors import (
-    RssCollector,
-    TelegramCollector,
-    WebCrawlCollector,
-)
-from source_service.infrastructure.crawlers import Crawl4AiPageFetcher, FeedparserFeedReader
+from source_service.application.web_crawl.config import EnvSettings
+from source_service.application.web_crawl.settings import RuntimeSettings
+from source_service.infrastructure.collectors.rss import RssCollector
+from source_service.infrastructure.collectors.telegram import TelegramCollector
+from source_service.infrastructure.collectors.web import WebCrawlCollector
+from source_service.infrastructure.crawlers.crawl4ai_fetcher import Crawl4AiPageFetcher
+from source_service.infrastructure.crawlers.crawl4ai_news import Crawl4AIClient
+from source_service.infrastructure.crawlers.feedparser_reader import FeedparserFeedReader
 from source_service.infrastructure.rabbit.connector import RabbitConnector
 from source_service.infrastructure.repositories import SourceRepo
 
@@ -31,7 +33,30 @@ def build_pull_collectors(page_fetcher: PageFetcher) -> dict[SourceType, PullCol
     """Pull registry: SourceType → collector. The RSS collector reads feeds and fetches
     articles over the same `PageFetcher` that backs type auto-detection."""
     rss = RssCollector(FeedparserFeedReader(page_fetcher), page_fetcher)
-    return {SourceType.RSS: rss, SourceType.WEB: WebCrawlCollector()}
+    return {SourceType.RSS: rss, SourceType.WEB: build_web_collector()}
+
+
+def build_web_collector() -> WebCrawlCollector:
+    """Build the web adapter without leaking global settings into the adapter."""
+    env = EnvSettings(
+        news_agent_model=settings.news_agent_model,
+        news_llm_provider=settings.news_llm_provider,
+        news_llm_api_token=settings.news_llm_api_token,
+        news_llm_base_url=settings.news_llm_base_url,
+        openrouter_api_key=settings.openrouter_api_key,
+        openrouter_base_url=settings.openrouter_base_url,
+        openrouter_model=settings.openrouter_model,
+        openai_api_key=settings.openai_api_key,
+        openai_base_url=settings.openai_base_url,
+    )
+    use_llm = settings.web_crawl_llm_enabled and bool(env.llm_token())
+    runtime = RuntimeSettings(
+        days=max(1, settings.web_crawl_days),
+        max_article_candidates_per_site=max(0, settings.web_crawl_max_articles),
+        llm_date_fallback=use_llm,
+        listing_llm_max_calls_per_site=60 if use_llm else 0,
+    )
+    return WebCrawlCollector(runtime, lambda: Crawl4AIClient(runtime, env))
 
 
 def get_source_service(request: Request) -> SourceService:

@@ -4,15 +4,33 @@ import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from dateutil import parser as dtparser
+from dateutil import parser as dtparser  # type: ignore[import-untyped]
 
 _RU_MONTHS = {
-    "января": "January", "февраля": "February", "марта": "March", "апреля": "April",
-    "мая": "May", "июня": "June", "июля": "July", "августа": "August",
-    "сентября": "September", "октября": "October", "ноября": "November", "декабря": "December",
-    "январь": "January", "февраль": "February", "март": "March", "апрель": "April",
-    "май": "May", "июнь": "June", "июль": "July", "август": "August",
-    "сентябрь": "September", "октябрь": "October", "ноябрь": "November", "декабрь": "December",
+    "января": "January",
+    "февраля": "February",
+    "марта": "March",
+    "апреля": "April",
+    "мая": "May",
+    "июня": "June",
+    "июля": "July",
+    "августа": "August",
+    "сентября": "September",
+    "октября": "October",
+    "ноября": "November",
+    "декабря": "December",
+    "январь": "January",
+    "февраль": "February",
+    "март": "March",
+    "апрель": "April",
+    "май": "May",
+    "июнь": "June",
+    "июль": "July",
+    "август": "August",
+    "сентябрь": "September",
+    "октябрь": "October",
+    "ноябрь": "November",
+    "декабрь": "December",
 }
 
 
@@ -44,7 +62,9 @@ def is_recent(value: datetime, days: int, timezone: str, now: datetime | None = 
     return current - timedelta(days=days) <= value.astimezone(tz) <= current + timedelta(hours=12)
 
 
-def is_older_than_window(value: datetime, days: int, timezone: str, now: datetime | None = None) -> bool:
+def is_older_than_window(
+    value: datetime, days: int, timezone: str, now: datetime | None = None
+) -> bool:
     """Return true only for dates before the recent-news window, not future dates."""
     tz = ZoneInfo(timezone)
     current = (now or datetime.now(tz)).astimezone(tz)

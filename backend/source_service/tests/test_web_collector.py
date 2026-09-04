@@ -2,21 +2,21 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
-from domain.core.settings import Settings
 from domain.entities.news import SourceType
 from domain.entities.source import SourceReliability
 from domain.schemas import Source
+from source_service.application.web_crawl.models import ArticleRecord
+from source_service.application.web_crawl.settings import RuntimeSettings
 from source_service.infrastructure.collectors.web import WebCrawlCollector
-from source_service.infrastructure.crawlers.news_agent.models import ArticleRecord
 
 
 class FakePipeline:
     received_config = None
-    received_env = None
+    received_crawler = None
 
-    def __init__(self, config, env) -> None:
+    def __init__(self, config, crawler) -> None:
         type(self).received_config = config
-        type(self).received_env = env
+        type(self).received_crawler = crawler
 
     async def run(self):
         return [
@@ -44,6 +44,14 @@ class FakePipeline:
         ]
 
 
+class FakeCrawler:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return None
+
+
 @pytest.mark.asyncio
 async def test_web_collector_adapts_full_agent_record_to_news_contract():
     source = Source(
@@ -53,7 +61,12 @@ async def test_web_collector_adapts_full_agent_record_to_news_contract():
         reliability=SourceReliability.HIGH,
     )
     collector = WebCrawlCollector(
-        config=Settings(web_crawl_days=7, web_crawl_max_articles=12, web_crawl_llm_enabled=False),
+        runtime=RuntimeSettings(
+            days=7,
+            max_article_candidates_per_site=12,
+            llm_date_fallback=False,
+        ),
+        crawler_factory=FakeCrawler,
         pipeline_factory=FakePipeline,
     )
 
