@@ -1,24 +1,19 @@
 # cloud-init
 
-- `cloud-init.yaml.tftpl` — cloud-config template rendered by `templatefile()` in
-  `main.tf`. First boot **prepares the server only**: installs the SSH key for
-  both `root` and the `${deploy_user}` user (no sudo), creates `/opt/<app_name>`
-  owned by that user (**first `runcmd` step**), waits for the Docker daemon, adds
-  the user to the docker group, and configures UFW (22/80).
+- `cloud-init.yaml.tftpl` — cloud-config rendered by `templatefile()` in `main.tf`
+  and passed as the droplet's `user_data`. First boot **prepares the server only**:
+  creates the `${deploy_user}` user with the SSH key, creates `/opt/<app_name>` owned
+  by it (**first `runcmd` step**), and **installs Docker** (+ compose plugin).
 
-Notes: template vars passed from `main.tf` — `deploy_user` (`var.DEPLOY_USER`),
-`ssh_public_key`, `app_dir`, `hostname`. Docker + Compose v2 come **pre-installed
-from the Timeweb "Docker" image** (`data.twc_software.docker` in `main.tf`), not
-from this script — cloud-init only waits until the daemon is ready. It does **not**
-deploy the app — you ship `docker-compose.yml` to `/opt/<app_name>` and run it
-separately. `${...}` is substituted by Terraform; keep `#cloud-config` as the first
-line (required directive, not a comment).
+Notes: template vars from `main.tf` — `deploy_user`, `ssh_public_key`, `app_dir`,
+`hostname`. The plain `ubuntu-24-04-x64` image ships without Docker, so it's installed
+via `get.docker.com`. No host firewall step: the DO cloud firewall (`main.tf`) allows
+22/80 and the image has no active UFW/iptables rules. It does **not** deploy the app —
+you ship `docker-compose.yml` to `/opt/<app_name>` separately.
 
-**Resilience (why it's shaped this way):** the deploy dir is created **first** and
-nothing after it uses `set -e`, so a docker/ufw hiccup can't leave `/opt/<app_name>`
-uncreated (that was the `rsync mkdir … Permission denied` bug — the deploy user
-can't create it). `bootcmd` stops the `apt-daily` timers and waits for the dpkg
-lock before the packages module, so cloud-init's apt run doesn't race them and
-corrupt the cache. cloud-init runs **only on first boot**; `cloud_init` is no longer
-in `main.tf`'s `ignore_changes`, so editing this template **reprovisions (replaces)
-the server** on the next `terraform apply`.
+**Resilience:** the deploy dir is created **first** and nothing after uses `set -e`,
+so a Docker install hiccup can't leave `/opt/<app_name>` uncreated (the deploy user
+isn't a sudoer and can't create it under `/opt`). `bootcmd` stops `apt-daily` and
+waits for the dpkg lock before the packages module. Keep `#cloud-config` as the
+first line (required directive). Runs only on first boot; **any edit replaces the
+droplet** on the next apply.

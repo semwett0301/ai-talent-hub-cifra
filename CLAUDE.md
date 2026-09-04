@@ -54,7 +54,7 @@ nginx/                    # edge: serves static SPA + reverse-proxies /api/sourc
 docker-compose.yml        # root: nginx (public) + migrator + source_service + news_service + postgres + rabbitmq (internal)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
-terraform/                # Timeweb Cloud infra (Terraform + cloud-init)
+terraform/                # DigitalOcean infra (Terraform + cloud-init)
 .env.example              # THE env template for every part — backend, frontend,
                           #   nginx, compose, terraform, deploy (copy to .env)
 README.md, .mcp.json, .gitignore
