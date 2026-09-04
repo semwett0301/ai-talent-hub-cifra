@@ -55,9 +55,8 @@ resource "twc_server" "app" {
   })
 
   lifecycle {
-    # os_id/software_id are resolved from data.twc_software each plan; freeze them
-    # (and cloud_init, first-boot only) so image-id drift never reinstalls the server.
-    ignore_changes = [cloud_init, os_id, software_id]
+    # Freeze image ids (drift shouldn't reinstall); cloud_init stays live so a template edit reprovisions.
+    ignore_changes = [os_id, software_id]
   }
 }
 
