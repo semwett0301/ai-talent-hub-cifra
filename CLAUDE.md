@@ -55,6 +55,7 @@ terraform/                # Timeweb Cloud infra (Terraform + cloud-init)
 .env.example              # THE env template for every part — backend, frontend,
                           #   nginx, compose, terraform, deploy (copy to .env)
 README.md, .mcp.json, .gitignore
+gen_session.py            # one-off: interactive Telegram login → TELEGRAM_SESSION string
 ```
 
 `backend/domain` holds the shared kernel — ORM `schemas` (one DB for all), business
@@ -190,6 +191,7 @@ Two path-filtered workflows, so a change runs only the relevant job:
 - **Skills** (`.claude/skills/`): official LangChain skills for the LLM/agent
   stack.
 - **Rules** (`.claude/rules/`): `00-conventions`, `10-core`, `20-git`,
-  `30-python`, `40-monorepo`, `50-docs`. Consult the matching one before
-  implementing. `50-docs` = keep each folder's `README.md` (file map + notes)
-  current when you change files in it.
+  `30-python`, `40-monorepo`, `50-docs`, `60-logging`. Consult the matching one
+  before implementing. `50-docs` = keep each folder's `README.md` (file map +
+  notes) current when you change files in it. `60-logging` = one INFO line per
+  logical action (received / published / registered / …), library noise capped.

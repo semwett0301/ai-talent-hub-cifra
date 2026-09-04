@@ -8,12 +8,15 @@ auto-detect the source's `type` from its `link` (clients never send `type`).
 
 import uuid
 
+from domain.core.logging import get_logger
 from domain.entities.news import SourceType
 from domain.schemas import Source
 
 from source_service.application.dto.source import SourceCreate, SourceUpdate
 from source_service.application.parse import find_rss_feed_link, is_telegram_link
 from source_service.application.ports import PageFetcher, SourceRegistrar, SourceRepository
+
+logger = get_logger(__name__)
 
 
 class SourceService:
@@ -35,6 +38,8 @@ class SourceService:
         data = payload.model_dump() | {"type": source_type, "link": link}
 
         source = await self._repo.create(data)
+        logger.info("source created: id=%s type=%s link=%s", source.id, source.type, source.link)
+
         await self._registrar.register(source)
         return source
 
@@ -44,11 +49,19 @@ class SourceService:
             changes["type"], changes["link"] = await self.__detect_type(changes["link"])
 
         updated = await self._repo.update(source, changes)
+        logger.info(
+            "source updated: id=%s fields=%s link=%s", updated.id, sorted(changes), updated.link
+        )
+
         await self._registrar.register(updated)
         return updated
 
     async def delete(self, source: Source) -> None:
+        source_id, link = source.id, source.link
+
         await self._repo.delete(source)
+        logger.info("source deleted: id=%s link=%s", source_id, link)
+
         await self._registrar.unregister(source)
 
     async def __detect_type(self, link: str) -> tuple[SourceType, str]:
@@ -60,10 +73,13 @@ class SourceService:
 
         page_content = await self._page_fetcher.fetch(link)
         if page_content is None:
+            logger.info("source type detected: link=%s -> web (page unreachable)", link)
             return SourceType.WEB, link
 
         feed = find_rss_feed_link(page_content, link)
         if feed is not None:
+            logger.info("source type detected: link=%s -> rss feed=%s", link, feed.url)
             return SourceType.RSS, feed.url
 
+        logger.info("source type detected: link=%s -> web (no feed link)", link)
         return SourceType.WEB, link

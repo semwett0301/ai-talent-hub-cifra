@@ -30,3 +30,6 @@ data/*.db
 crawl4ai_cache/
 
 plans/
+
+# Local-only compose overrides (e.g. exposing postgres on the host)
+docker-compose.override.yml

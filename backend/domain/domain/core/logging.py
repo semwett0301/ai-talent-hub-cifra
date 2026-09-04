@@ -4,6 +4,20 @@ import logging
 
 from domain.core.settings import settings
 
+# Transport/protocol libraries whose DEBUG output is a firehose: aiormq/pamqp print
+# every AMQP frame, aio_pika every published message, pyrogram every raw MTProto
+# update (a user session gets them for every chat the account is in). Their INFO is
+# still useful (connect/disconnect), so they are capped, not silenced.
+NOISY_LOGGERS = (
+    "aio_pika",
+    "aiormq",
+    "pamqp",
+    "pyrogram",
+    "httpx",
+    "httpcore",
+)
+NOISY_LOGGER_LEVEL = logging.INFO
+
 
 def configure_logging() -> None:
     logging.basicConfig(
@@ -11,6 +25,9 @@ def configure_logging() -> None:
         format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+
+    for logger_name in NOISY_LOGGERS:
+        logging.getLogger(logger_name).setLevel(NOISY_LOGGER_LEVEL)
 
 
 def get_logger(name: str | None = None) -> logging.Logger:

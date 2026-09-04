@@ -13,7 +13,10 @@ for all services, so migrations live here (not per service): the migrator runs
 - `migrations/versions/` — the single linear revision history (`0001_initial_source`
   creates the `source` table; `0002_seed_sources` seeds the starting source list;
   `0003_source_uuid_id` switches the surrogate id from a serial int to a
-  DB-generated UUID and shrinks `link` to varchar(255)).
+  DB-generated UUID and shrinks `link` to varchar(255); `0004_source_reliability`
+  adds the `reliability` column, defaulting existing rows to `medium`;
+  `0005_seed_test_source` seeds the `Тест` Telegram channel used for manual
+  end-to-end checks).
 - `pyproject.toml` — runtime deps `domain` + `alembic` + `psycopg2-binary`. Every
   ORM model comes from `domain.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.

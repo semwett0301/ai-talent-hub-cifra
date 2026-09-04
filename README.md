@@ -129,6 +129,9 @@ How each consumer picks it up:
 Leave all three empty and the collector degrades to a no-op (it logs
 `telegram creds absent; collector disabled` at startup) — the service still boots.
 
+`TELEGRAM_SESSION` is generated once with `uv run --project backend python
+gen_session.py` (interactive login; prints the string, writes nothing to disk).
+
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
 | `TELEGRAM_API_ID` | MTProto app id from https://my.telegram.org. | empty | **yes** |

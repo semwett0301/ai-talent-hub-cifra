@@ -28,18 +28,31 @@ class RabbitConnector(NewsPublisher):
         logger.info("rabbit connected, exchange=%s", self._exchange_name)
 
     async def publish_news(self, items: list[NewsDTO]) -> int:
-        if self._exchange is None:
+        exchange = self._exchange
+        if exchange is None:
             logger.warning("rabbit not connected; dropping %d items", len(items))
             return 0
 
-        for item in items:
-            message = aio_pika.Message(
-                item.model_dump_json().encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
-            )
-            await self._exchange.publish(message, routing_key=routing_key(item.source_type))
+        if not items:
+            return 0
 
+        for item in items:
+            key = routing_key(item.source_type)
+            await exchange.publish(self.__to_message(item), routing_key=key)
+            logger.debug("news item published: key=%s url=%s", key, item.url)
+
+        logger.info("news published: exchange=%s items=%d", self._exchange_name, len(items))
         return len(items)
 
     async def close(self) -> None:
-        if self._connection is not None:
-            await self._connection.close()
+        if self._connection is None:
+            return
+
+        await self._connection.close()
+        logger.info("rabbit connection closed")
+
+    @staticmethod
+    def __to_message(item: NewsDTO) -> aio_pika.Message:
+        return aio_pika.Message(
+            item.model_dump_json().encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+        )
