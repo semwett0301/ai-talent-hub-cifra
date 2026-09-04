@@ -7,7 +7,13 @@ from common.enums import SourceType
 from sqlalchemy import Boolean, DateTime, Enum, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-_SOURCE_TYPE = Enum(SourceType, native_enum=False, length=16, name="source_type")
+_SOURCE_TYPE = Enum(
+    SourceType,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+    native_enum=False,
+    length=16,
+    name="source_type",
+)
 
 
 class Source(Base):
