@@ -17,14 +17,20 @@ logger = get_logger(__name__)
 # Startup/shutdown lifecycle: build collaborators via deps, connect infra, start
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # Startup — build infra, connect, then load + start the aggregators.
     rabbit = deps.build_rabbit()
     await rabbit.connect()
+
+    telegram = deps.build_telegram_collector(rabbit)
+    await telegram.start()
+
     scheduler = deps.build_scheduler(rabbit)
-    subscriptions = deps.build_subscriptions()
+    subscriptions = deps.build_subscriptions(telegram)
+
     await scheduler.load()
     await subscriptions.load()
     scheduler.start()
+
     logger.info("source_service started")
 
     # Serve until shutdown, then tear down
@@ -32,6 +38,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         scheduler.shutdown()
+        await telegram.stop()
         await rabbit.close()
 
 

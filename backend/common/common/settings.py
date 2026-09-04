@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"
     news_exchange: str = "news"
 
+    # Telegram (MTProto user session for channel monitoring)
+    telegram_api_id: int | None = None
+    telegram_api_hash: str | None = None
+    telegram_session: str = ""  # exported session string of a pre-authorized user account
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def async_database_url(self) -> str:

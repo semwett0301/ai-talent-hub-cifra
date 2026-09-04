@@ -9,6 +9,7 @@ dependencies = [
     "uvicorn[standard]==0.34.0",
     "aio-pika==9.5.4",
     "apscheduler==3.11.0",
+    "kurigram==2.2.25",
 ]
 
 [build-system]
