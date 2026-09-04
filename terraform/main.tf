@@ -22,9 +22,11 @@ resource "twc_ssh_key" "deploy" {
   body = var.SSH_PUBLIC_KEY
 }
 
-resource "twc_floating_ip" "app" {
-  availability_zone = var.AVAILABILITY_ZONE
-}
+# Floating IP disabled — Timeweb daily create limit (403). Server uses its own
+# main_ipv4; re-enable this and floating_ip_id below once the limit resets.
+# resource "twc_floating_ip" "app" {
+#   availability_zone = var.AVAILABILITY_ZONE
+# }
 
 resource "twc_server" "app" {
   name     = var.SERVER_NAME
@@ -34,7 +36,7 @@ resource "twc_server" "app" {
   software_id = data.twc_software.docker.id
 
   availability_zone = var.AVAILABILITY_ZONE
-  floating_ip_id    = twc_floating_ip.app.id
+  # floating_ip_id    = twc_floating_ip.app.id
 
   configuration {
     configurator_id = data.twc_configurator.main.id
