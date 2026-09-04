@@ -12,6 +12,8 @@ dependencies = [
     "kurigram==2.2.25",
     "crawl4ai==0.9.3",
     "aiohttp==3.14.3",
+    "feedparser==6.0.14",
+    "news-please==1.6.16",
 ]
 
 [build-system]

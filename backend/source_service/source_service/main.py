@@ -25,13 +25,13 @@ async def lifespan(app: FastAPI):
     telegram = deps.build_telegram_collector(rabbit)
     await telegram.start()
 
-    # CRUD reaches this via app.state to auto-detect a source's type on create/update.
+    # CRUD reaches this via app.state to auto-detect a source's type; RSS pulls share it.
     page_fetcher = deps.build_page_fetcher()
     await page_fetcher.start()
     app.state.page_fetcher = page_fetcher
 
     # Registry: CRUD reaches it via app.state to (un)schedule/(un)subscribe live.
-    registry = deps.build_registry(rabbit, telegram)
+    registry = deps.build_registry(rabbit, telegram, page_fetcher)
     await registry.load()
 
     registry.start()

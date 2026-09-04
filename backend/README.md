@@ -8,8 +8,8 @@ directories (no `services/` wrapper).
   `domain/domain/`, imported as `domain`): `core/` = settings + logging + DB infra,
   `entities/` = business shapes (grouped by domain, e.g. `entities/news`), `schemas/`
   = the shared ORM models. Because the DB is one for all services, schemas live here.
-- `source_service/` — ingestion service: CRUD sources, collect news (stub
-  collectors), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
+- `source_service/` — ingestion service: CRUD sources, collect news (Telegram push
+  + RSS pull implemented, Web crawl a stub), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
 - `migrator/` — one-shot Alembic runner that owns the shared DB schema history (one
   database for all services). Runs `upgrade head` on boot, then exits.
 - `pyproject.toml` — virtual workspace root: `[tool.uv.workspace] members` (domain +
@@ -47,12 +47,12 @@ source_service/                 # the importable package
     ports/                      # collectors.py, repositories.py, publisher.py, registrar.py, crawler.py (Protocols)
     dto/source/                 # SourceCreate / SourceOut / SourceUpdate
     services/                   # SourceService (CRUD), SourceRegistry (runtime registrar)
-    parse/                      # pure link/page recognition — telegram.py, rss.py
+    parse/                      # pure parsing — telegram.py, rss.py (recognition), article.py (news-please)
   infrastructure/
     repositories/               # SourceRepo → implements SourceRepository (session per call)
     rabbit/connector.py         # RabbitConnector → implements NewsPublisher
     collectors/                 # RssCollector / WebCrawlCollector / TelegramCollector
-    crawling/                   # Crawl4AiPageFetcher → implements PageFetcher
+    crawlers/                   # Crawl4AiPageFetcher → PageFetcher; FeedparserFeedReader → FeedReader
   api/routes/                   # health.py, sources.py (FastAPI routers)
   deps.py                       # composition root — DI wiring
   main.py                       # FastAPI app + lifespan

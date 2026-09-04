@@ -11,8 +11,8 @@ logger = get_logger(__name__)
 
 
 class Crawl4AiPageFetcher(PageFetcher):
-    """Lightweight HTTP-only fetch (no browser/Playwright) — enough to read a
-    page's `<head>` for an RSS `<link>` tag."""
+    """Lightweight HTTP-only fetch (no browser/Playwright): feed XML, article HTML,
+    or a page's `<head>` for an RSS `<link>` tag."""
 
     def __init__(self) -> None:
         self.__crawler = AsyncWebCrawler(crawler_strategy=AsyncHTTPCrawlerStrategy())
@@ -26,7 +26,8 @@ class Crawl4AiPageFetcher(PageFetcher):
         logger.info("page fetcher closed")
 
     async def fetch(self, url: str) -> str | None:
-        run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS)
+        # crawl4ai narrates every fetch to stdout unless told not to; we log it ourselves.
+        run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, verbose=False)
         try:
             result = await self.__crawler.arun(url, config=run_config)
         except (aiohttp.ClientError, TimeoutError) as exc:
