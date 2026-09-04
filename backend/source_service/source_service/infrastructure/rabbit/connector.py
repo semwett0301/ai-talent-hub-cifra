@@ -30,7 +30,7 @@ class RabbitConnector(NewsPublisher):
         logger.info("rabbit connected, exchange=%s", self._exchange_name)
 
     async def publish_news(
-        self, source_id: int, source_type: SourceType, items: list[NewsItem]
+        self, source_link: str, source_type: SourceType, items: list[NewsItem]
     ) -> int:
         if self._exchange is None:
             logger.warning("rabbit not connected; dropping %d items", len(items))
@@ -38,7 +38,7 @@ class RabbitConnector(NewsPublisher):
         key = routing_key(source_type)
         for item in items:
             event = NewsDTO(
-                source_id=source_id,
+                source_link=source_link,
                 source_type=source_type,
                 url=item.url,
                 text=item.text,

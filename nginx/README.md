@@ -29,3 +29,8 @@ sibling location per new service. No `upstream` block — `proxy_pass
 http://source_service:8000` directly (compose DNS); nginx `depends_on`
 source_service so the host resolves at startup. Backend and DB have no host ports;
 all external traffic goes through here.
+
+`merge_slashes off` is set at `server` scope: a source's id is its `link` (a full
+URL), so `/api/sources/{link}` legitimately contains `//` (e.g.
+`/api/sources/https://t.me/x`) — nginx's default `merge_slashes on` would collapse
+that before location matching and break the route.

@@ -93,11 +93,14 @@ class TelegramCollector(PushCollector):
     async def stop(self) -> None:
         if self.__client is not None:
             await self.__client.stop()
+            logger.info("telegram client stopped")
 
     async def subscribe(self, source: Source) -> None:
         if self.__client is None:
+            logger.debug("telegram disabled; skip subscribe: %s", source.link)
             return
 
+        logger.info("telegram subscribing: %s", source.link)
         await self.__client.join_chat(source.link)
         chat = await self.__client.get_chat(source.link)
 
@@ -110,8 +113,10 @@ class TelegramCollector(PushCollector):
 
     async def unsubscribe(self, source: Source) -> None:
         if self.__client is None:
+            logger.debug("telegram disabled; skip unsubscribe: %s", source.link)
             return
 
+        logger.info("telegram unsubscribing: %s", source.link)
         chat = await self.__client.get_chat(source.link)
         if chat is not None and chat.id is not None:
             self.__sources.pop(chat.id, None)
@@ -120,12 +125,20 @@ class TelegramCollector(PushCollector):
         logger.info("telegram unsubscribed: %s", source.link)
 
     async def __on_message(self, _: Client, message: Message) -> None:
-        if message.chat is None or message.chat.id is None:
+        chat = message.chat
+        if chat is None or chat.id is None:
+            logger.debug("telegram message without chat; skipped")
             return
 
-        source = self.__sources.get(message.chat.id)
+        source = self.__sources.get(chat.id)
         if source is None:
+            logger.debug("telegram message from untracked chat: %s", chat.id)
             return
 
-        item = _to_news_item(message.chat, message)
-        await self.__publisher.publish_news(source.id, source.type, [item])
+        logger.info(
+            "telegram post received: source=%s chat=%s msg=%s", source.link, chat.id, message.id
+        )
+
+        item = _to_news_item(chat, message)
+        await self.__publisher.publish_news(source.link, source.type, [item])
+        logger.info("telegram post published: source=%s url=%s", source.link, item.url)

@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict
 class SourceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
     type: SourceType
     name: str
     link: str

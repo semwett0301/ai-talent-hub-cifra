@@ -58,15 +58,15 @@ class SourceRegistry(SourceRegistrar):
 
     async def unregister(self, source: Source) -> None:
         if source.type in self._pull_collectors:
-            self.__unschedule(source.id)
+            self.__unschedule(source.link)
         elif source.type in self._push_collectors:
             await self._push_collectors[source.type].unsubscribe(source)
 
     def __apply_schedule(self, source: Source) -> None:
         if source.is_enabled:
-            self.__schedule(source.id, source.poll_interval_seconds)
+            self.__schedule(source.link, source.poll_interval_seconds)
         else:
-            self.__unschedule(source.id)
+            self.__unschedule(source.link)
 
     async def __apply_subscription(self, source: Source) -> None:
         collector = self._push_collectors[source.type]
@@ -75,29 +75,29 @@ class SourceRegistry(SourceRegistrar):
         else:
             await collector.unsubscribe(source)
 
-    def __schedule(self, source_id: int, interval: int | None) -> None:
+    def __schedule(self, link: str, interval: int | None) -> None:
         self._scheduler.add_job(
             self.__run,
             "interval",
             seconds=interval or DEFAULT_INTERVAL_SECONDS,
-            args=[source_id],
-            id=self.__job_id(source_id),
+            args=[link],
+            id=self.__job_id(link),
             replace_existing=True,
         )
 
-    def __unschedule(self, source_id: int) -> None:
-        if self._scheduler.get_job(self.__job_id(source_id)) is not None:
-            self._scheduler.remove_job(self.__job_id(source_id))
+    def __unschedule(self, link: str) -> None:
+        if self._scheduler.get_job(self.__job_id(link)) is not None:
+            self._scheduler.remove_job(self.__job_id(link))
 
-    def __job_id(self, source_id: int) -> str:
-        return f"{JOB_ID_PREFIX}{source_id}"
+    def __job_id(self, link: str) -> str:
+        return f"{JOB_ID_PREFIX}{link}"
 
-    async def __run(self, source_id: int) -> None:
-        source = await self._repository.get(source_id)
+    async def __run(self, link: str) -> None:
+        source = await self._repository.get(link)
         if source is None or not source.is_enabled:
             return
         collector = self._pull_collectors.get(source.type)
         if collector is None:
             return
         items = await collector.fetch(source)
-        await self._publisher.publish_news(source.id, source.type, items)
+        await self._publisher.publish_news(source.link, source.type, items)

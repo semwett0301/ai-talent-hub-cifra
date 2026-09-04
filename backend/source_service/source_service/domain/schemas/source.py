@@ -19,10 +19,9 @@ _SOURCE_TYPE = Enum(
 class Source(Base):
     __tablename__ = "source"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     type: Mapped[SourceType] = mapped_column(_SOURCE_TYPE)
     name: Mapped[str] = mapped_column(String(255))
-    link: Mapped[str] = mapped_column(String(1024))
+    link: Mapped[str] = mapped_column(String(1024), primary_key=True)
     # How often to poll a pull source (RSS/Web), seconds. Null for push (Telegram).
     poll_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")

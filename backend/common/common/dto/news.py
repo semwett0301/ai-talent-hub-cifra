@@ -11,8 +11,8 @@ from common.enums import SourceType
 class NewsDTO(BaseModel):
     """A single collected news item as published to the `news` exchange."""
 
-    schema_version: int = 1
-    source_id: int
+    schema_version: int = 2
+    source_link: str
     source_type: SourceType
     url: str
     text: str

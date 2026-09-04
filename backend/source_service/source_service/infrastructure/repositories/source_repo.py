@@ -18,7 +18,7 @@ class SourceRepo(SourceRepository):
 
     async def list_all(self) -> list[Source]:
         async with async_session_factory() as session:
-            result = await session.execute(select(Source).order_by(Source.id))
+            result = await session.execute(select(Source).order_by(Source.link))
             return list(result.scalars().all())
 
     async def list_enabled(self, type: SourceType | None = None) -> list[Source]:
@@ -29,9 +29,9 @@ class SourceRepo(SourceRepository):
             result = await session.execute(stmt)
             return list(result.scalars().all())
 
-    async def get(self, source_id: int) -> Source | None:
+    async def get(self, link: str) -> Source | None:
         async with async_session_factory() as session:
-            return await session.get(Source, source_id)
+            return await session.get(Source, link)
 
     async def create(self, data: dict) -> Source:
         async with async_session_factory() as session:

@@ -18,8 +18,8 @@ class SourceService:
     async def list(self) -> list[Source]:
         return await self._repo.list_all()
 
-    async def get(self, source_id: int) -> Source | None:
-        return await self._repo.get(source_id)
+    async def get(self, link: str) -> Source | None:
+        return await self._repo.get(link)
 
     async def create(self, payload: SourceCreate) -> Source:
         source = await self._repo.create(payload.model_dump())

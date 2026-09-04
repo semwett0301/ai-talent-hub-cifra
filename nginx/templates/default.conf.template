@@ -14,6 +14,10 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # A source is identified by its link (a full URL, e.g. https://t.me/x), so
+    # /api/sources/{link} contains a raw "//" — don't let nginx collapse it.
+    merge_slashes off;
+
     # Forwarded to every proxied backend (inherited by the /api locations below).
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;

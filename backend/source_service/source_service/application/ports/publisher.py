@@ -11,5 +11,5 @@ class NewsPublisher(Protocol):
     """Publishes collected news items to the bus; returns the count published."""
 
     async def publish_news(
-        self, source_id: int, source_type: SourceType, items: list[NewsItem]
+        self, source_link: str, source_type: SourceType, items: list[NewsItem]
     ) -> int: ...
