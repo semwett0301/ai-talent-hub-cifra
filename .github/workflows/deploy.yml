@@ -100,15 +100,6 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-      # Only when infra ran (fresh provisioning): wait for cloud-init to create /opt/<app>.
-      - name: Wait for cloud-init (deploy dir ready)
-        if: needs.changes.outputs.terraform == 'true' || github.event_name == 'workflow_dispatch'
-        env:
-          SSH_HOST: ${{ steps.host.outputs.host }}
-        run: |
-          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$SSH_HOST" \
-            "cloud-init status --wait || true; test -w '$DEPLOY_PATH'"
-
       - name: Rsync to deploy path
         env:
           SSH_HOST: ${{ steps.host.outputs.host }}
