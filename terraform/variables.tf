@@ -25,13 +25,13 @@ variable "APP_NAME" {
 variable "LOCATION" {
   description = "Location: ru-1 (spb), ru-2 (nsk), ru-3 (msk), de-1 (fra), kz-1, nl-1."
   type        = string
-  default     = "de-1"
+  default     = "ru-1"
 }
 
 variable "AVAILABILITY_ZONE" {
   description = "Availability zone; must match the location (ru-1=spb-3, ru-2=nsk-1, ru-3=msk-1, de-1=fra-1, kz-1=ala-1, nl-1=ams-1)."
   type        = string
-  default     = "fra-1"
+  default     = "spb-3"
 }
 
 variable "OS_NAME" {
