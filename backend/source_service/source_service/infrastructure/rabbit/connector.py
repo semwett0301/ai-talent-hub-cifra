@@ -8,12 +8,13 @@ from common.core.logging import get_logger
 from common.dto import NewsDTO, routing_key
 from common.enums import SourceType
 
+from source_service.application.ports import NewsPublisher
 from source_service.domain.schemas import NewsItem
 
 logger = get_logger(__name__)
 
 
-class RabbitConnector:
+class RabbitConnector(NewsPublisher):
     def __init__(self, url: str, exchange_name: str) -> None:
         self._url = url
         self._exchange_name = exchange_name
