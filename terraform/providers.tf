@@ -6,7 +6,9 @@ terraform {
   backend "s3" {
     bucket = "cifra-tfstate"
     key    = "cifra/terraform.tfstate"
-    region = "us-east-1" # placeholder required by the backend; Spaces ignores it
+    # The bucket lives in ams3 (see endpoints). `region` is the AWS SDK signing region
+    # and must be a real AWS name — DO docs prescribe us-east-1 for every Spaces region.
+    region = "us-east-1"
 
     endpoints = {
       s3 = "https://ams3.digitaloceanspaces.com"

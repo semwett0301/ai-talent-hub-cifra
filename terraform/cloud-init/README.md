@@ -3,13 +3,16 @@
 - `cloud-init.yaml.tftpl` — cloud-config rendered by `templatefile()` in `main.tf`
   and passed as the droplet's `user_data`. First boot **prepares the server only**:
   creates the `${deploy_user}` user with the SSH key, creates `/opt/<app_name>` owned
-  by it (**first `runcmd` step**), and **installs Docker** (+ compose plugin).
+  by it (**first `runcmd` step**), enables **UFW (22 only)**, and **installs Docker**
+  (+ compose plugin).
 
 Notes: template vars from `main.tf` — `deploy_user`, `ssh_public_key`, `app_dir`,
 `hostname`. The plain `ubuntu-24-04-x64` image ships without Docker, so it's installed
-via `get.docker.com`. No host firewall step: the DO cloud firewall (`main.tf`) allows
-22/80 and the image has no active UFW/iptables rules. It does **not** deploy the app —
-you ship `docker-compose.yml` to `/opt/<app_name>` separately.
+via `get.docker.com`. UFW allows only 22: Docker-published ports (nginx's 80) go through
+Docker's own `DOCKER` iptables chain, which UFW does not filter, so 80 stays reachable
+without a UFW rule — the DO cloud firewall (`main.tf`, 22/80) is what actually gates
+it. It does **not** deploy the app — you ship `docker-compose.yml` to `/opt/<app_name>`
+separately.
 
 **Resilience:** the deploy dir is created **first** and nothing after uses `set -e`,
 so a Docker install hiccup can't leave `/opt/<app_name>` uncreated (the deploy user

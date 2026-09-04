@@ -10,6 +10,7 @@ packages:
   - ca-certificates
   - curl
   - gnupg
+  - ufw
 
 users:
   - default
@@ -32,6 +33,14 @@ bootcmd:
 runcmd:
   # Deploy dir first (rsync target; deploy user can't mkdir under /opt) — never abort before it.
   - [ install, -d, -o, "${deploy_user}", -g, "${deploy_user}", "${app_dir}" ]
+
+  # Host firewall: SSH only. Docker publishes 80 via its own iptables chain, bypassing UFW.
+  - |
+    set -ux
+    ufw default deny incoming || true
+    ufw default allow outgoing || true
+    ufw allow 22/tcp || true
+    ufw --force enable || true
 
   # Install Docker + compose plugin (the plain Ubuntu image ships without Docker).
   - |

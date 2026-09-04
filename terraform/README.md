@@ -15,14 +15,15 @@ Manual console setup (one-time, before the first `init`): `../plans/digitalocean
 - `main.tf` — `digitalocean_ssh_key` + `digitalocean_droplet` (cloud-init as
   `user_data`) + `digitalocean_reserved_ip` + `digitalocean_firewall` (22/80 in, all out).
 - `outputs.tf` — `server_ipv4` (= the reserved IP), `ssh_command`, `app_url`.
-- `cloud-init/` — first-boot prep: `deploy` user, `/opt/<app_name>`, installs Docker.
+- `cloud-init/` — first-boot prep: `deploy` user, `/opt/<app_name>`, UFW (22), Docker.
 - `.gitignore` — keeps state/tfvars/plans out of git.
 
 Inputs come from the **repo-root `.env`** as `TF_VAR_*` (see `../.env.example` and
 the variable reference in `../README.md`) — there is no `terraform.tfvars`.
 
-Notes: only ports 22/80 are open (cloud firewall; the Ubuntu image has no active host
-firewall). **Editing `cloud-init/` replaces the droplet** — `user_data` is immutable on
+Notes: only ports 22/80 are open. The cloud firewall is the real gate; UFW on the host
+allows just 22, and Docker exposes nginx's 80 through its own iptables chain (UFW
+does not filter Docker-published ports). **Editing `cloud-init/` replaces the droplet** — `user_data` is immutable on
 DO — but the reserved IP re-attaches to the new droplet, so `server_ipv4` is stable.
 Data on the old droplet is lost; `/opt/<app_name>/.env` must be recreated by hand.
 After apply, ship `docker-compose.yml` to `/opt/<app_name>` and `docker compose up -d`.
