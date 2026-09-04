@@ -100,6 +100,14 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
+      # Wait for first-boot cloud-init to create /opt/<app> before rsync writes there.
+      - name: Wait for cloud-init (deploy dir ready)
+        env:
+          SSH_HOST: ${{ steps.host.outputs.host }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$SSH_HOST" \
+            "cloud-init status --wait || true; test -w '$DEPLOY_PATH'"
+
       - name: Rsync to deploy path
         env:
           SSH_HOST: ${{ steps.host.outputs.host }}
