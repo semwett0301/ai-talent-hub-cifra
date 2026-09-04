@@ -49,7 +49,7 @@ frontend/                 # React SPA — Vite + TypeScript + React Router
   .oxlintrc.json          #   linter config
 nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service
   Dockerfile              #   multi-stage: node build → nginx serving dist/
-  nginx.conf
+  templates/default.conf.template
 docker-compose.yml        # root: nginx (public) + migrator + source_service + postgres + rabbitmq (internal)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
@@ -81,8 +81,12 @@ README.md, .mcp.json, .gitignore
   `/api/sources/openapi.json` → `/openapi.json`), so the OpenAPI spec is reachable
   at `/api/sources/openapi.json`. New services get a sibling
   `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
-  There is **no separate frontend container**. Edit `nginx/nginx.conf` and
-  `nginx/Dockerfile`.
+  There is **no separate frontend container**. Edit
+  `nginx/templates/default.conf.template` and `nginx/Dockerfile`. The `/api/sources`
+  prefix itself is a single source of truth — the `x-sources-api-prefix` anchor in
+  `docker-compose.yml` — shared as `SOURCES_API_PREFIX` with both nginx (envsubst'd
+  into the template) and `source_service` (`common.settings.settings.sources_api_prefix`,
+  used as FastAPI's `root_path`); change it there, not in either file directly.
 
 ## Architecture rules (backend)
 

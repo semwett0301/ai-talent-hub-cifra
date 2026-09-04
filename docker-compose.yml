@@ -5,6 +5,11 @@
 # on the internal compose network (no host ports) — the rest stays closed.
 name: cifra
 
+# Single source of truth for the nginx location source_service is mounted
+# under; nginx substitutes it into its config template and source_service
+# reads it back as FastAPI's root_path — change it once, here.
+x-sources-api-prefix: &sources_api_prefix "/api/sources"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -56,6 +61,7 @@ services:
     environment:
       POSTGRES_HOST: postgres
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      SOURCES_API_PREFIX: *sources_api_prefix
     expose:
       - "8000"
     depends_on:
@@ -72,6 +78,8 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+    environment:
+      SOURCES_API_PREFIX: *sources_api_prefix
     ports:
       - "80:80"
     depends_on:

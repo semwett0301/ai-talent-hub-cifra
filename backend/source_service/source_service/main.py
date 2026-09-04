@@ -4,6 +4,7 @@
 from contextlib import asynccontextmanager
 
 from common.core.logging import configure_logging, get_logger
+from common.settings import settings
 from fastapi import FastAPI
 
 from source_service import deps
@@ -42,11 +43,15 @@ async def lifespan(app: FastAPI):
         await rabbit.close()
 
 
-# Routers own paths from the root; nginx exposes them under /api/sources/*.
+# Routers own paths from the root; nginx exposes them under settings.sources_api_prefix
+# and strips it before proxying. root_path tells FastAPI about that prefix so /docs
+# and the generated openapi.json use the right absolute URLs — kept in sync with
+# nginx via the same SOURCES_API_PREFIX env var (see docker-compose.yml).
 app = FastAPI(
     title="source_service",
     version="0.1.0",
     lifespan=lifespan,
+    root_path=settings.sources_api_prefix,
 )
 app.include_router(health.router)
 app.include_router(sources.router)

@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"
     news_exchange: str = "news"
 
+    # Edge routing — the nginx location each service is mounted under. Kept in
+    # sync with nginx via the same env var (see docker-compose.yml); FastAPI's
+    # root_path uses it so /docs and openapi.json resolve behind the proxy.
+    sources_api_prefix: str = "/api/sources"
+
     # Telegram (MTProto user session for channel monitoring)
     telegram_api_id: int | None = None
     telegram_api_hash: str | None = None
