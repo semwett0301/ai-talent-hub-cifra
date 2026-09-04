@@ -1,11 +1,12 @@
 # domain
 
-The innermost layer — business entities and the rules around them. **No
-dependencies** (no I/O, no framework, no other layer); every other layer may depend
-on it.
+The innermost layer — the service's data shapes and the rules around them. Every
+other layer may depend on it; it never imports `application`/`infrastructure`/`api`.
 
-- `entities/` — business entities (`NewsItem`), plus their invariants/errors as they
-  appear.
+- `schemas/` — the data shapes: `Source` (DB-backed SQLAlchemy ORM, the table this
+  service owns) and `NewsItem` (a plain in-memory shape collectors emit). They sit
+  together and differ only in whether they hit the DB.
 
-Notes: no imports of `application`/`infrastructure`/`api` here. New business concepts
-(entities, value objects, domain errors) live under `entities/` or a sibling package.
+Notes: because DB-backed schemas live here, `domain` may depend on SQLAlchemy /
+`common.core.base` (pragmatic — no separate ORM-vs-entity split). New business
+concepts (value objects, domain errors) live under `schemas/` or a sibling package.

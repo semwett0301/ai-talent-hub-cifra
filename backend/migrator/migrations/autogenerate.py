@@ -15,7 +15,7 @@ from alembic.config import Config
 # only for autogenerate (see load_service_models). Each service ships a uniquely
 # named top-level package, so all can coexist — append the next service's models
 # module here once it lands.
-SERVICE_MODEL_MODULES: tuple[str, ...] = ("source_service.infrastructure.persistence.schemas",)
+SERVICE_MODEL_MODULES: tuple[str, ...] = ("source_service.domain.schemas",)
 
 
 def is_autogenerate(config: Config) -> bool:

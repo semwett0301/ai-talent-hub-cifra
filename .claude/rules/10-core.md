@@ -35,6 +35,7 @@ This is the most important rule: **Do not mimic the style and patterns of existi
 - **Separation of Concerns**: UI contains no business logic, business logic contains no UI code, data access is a separate layer
 - **Unidirectional Dependencies**: Upper layers depend on lower layers, never the reverse. UI -> Business Logic -> Data Layer
 - **Program to Interfaces**: Modules communicate through interfaces/protocols, not concrete implementations
+- **Inject interfaces, not callables**: A collaborator is injected as a named interface (`Protocol`), never as a bare `Callable`/lambda or a concrete class. If a port already exists (e.g. `SourceRepository`), depend on it and call its methods — do not wrap it in a `load_x`/`get_x` function to pass around
 - **Composition Over Inheritance**: Use composition unless there is a clear is-a relationship
 
 ## Error Handling

@@ -2,7 +2,7 @@
 
 from common.core.logging import get_logger
 
-from source_service.infrastructure.persistence.schemas import Source
+from source_service.domain.schemas import Source
 
 logger = get_logger(__name__)
 

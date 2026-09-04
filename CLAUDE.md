@@ -78,9 +78,8 @@ README.md, .mcp.json, .gitignore
   gives each backend its own **`/api/<service>/` namespace**. Currently it
   **reverse-proxies `/api/sources/*` → `source_service:8000`** with the whole
   `/api/sources` prefix stripped (so `/api/sources` → `/`,
-  `/api/sources/openapi.json` → `/openapi.json`); the service sets
-  `root_path=/api/sources` (via `settings.api_root_path`) so its OpenAPI/Swagger
-  links resolve back through the proxy. New services get a sibling
+  `/api/sources/openapi.json` → `/openapi.json`), so the OpenAPI spec is reachable
+  at `/api/sources/openapi.json`. New services get a sibling
   `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
   There is **no separate frontend container**. Edit `nginx/nginx.conf` and
   `nginx/Dockerfile`.

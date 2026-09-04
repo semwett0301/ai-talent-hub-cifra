@@ -13,19 +13,20 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
   uniquely named top-level package `source_service`.
 - `source_service/`
   - `main.py` — FastAPI app + lifespan; builds collaborators via `deps` and runs
-    them. `root_path` comes from `settings.api_root_path` (`/api/sources` behind
-    nginx, which strips that prefix); routers own paths from the root, so default
-    OpenAPI/Swagger resolve publicly at `/api/sources/openapi.json` and
-    `/api/sources/docs`.
+    them. Routers own paths from the root; nginx maps `/api/sources/*` onto them, so
+    the OpenAPI spec is reachable at `/api/sources/openapi.json`. (No `root_path`, so
+    the Swagger UI at `/api/sources/docs` won't auto-load the spec through nginx —
+    use it against the service directly in dev.)
   - `deps.py` — **composition root**: builds collector registries + repository +
     publisher and injects them into application (all DI lives here).
-  - `domain/entities/` — business entities (`NewsItem`); no I/O, no dependencies.
+  - `domain/schemas/` — the data shapes: `Source` (DB-backed ORM) + `NewsItem`
+    (plain shape); they differ only in whether they hit the DB.
   - `application/` — `ports/` (interfaces infra implements) + `dto/` + `services/`:
     `SourceService` (CRUD over the repo port), `SchedulerService` (pull aggregator),
     `SubscriptionService` (push aggregator).
-  - `infrastructure/` — port implementations: `persistence/schemas/` (ORM `Source`),
-    `persistence/repositories/` (`SourceRepo`), `rabbit/` (`RabbitConnector`),
-    `collectors/` (`Rss`/`WebCrawl`/`Telegram`).
+  - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a
+    session per call), `rabbit/` (`RabbitConnector`), `collectors/`
+    (`Rss`/`WebCrawl`/`Telegram`).
   - `api/routes/` — FastAPI routers only: `sources.py` (CRUD), `health.py`.
 
 Notes: pull collectors run on `poll_interval_seconds` (default 300s); push sources
