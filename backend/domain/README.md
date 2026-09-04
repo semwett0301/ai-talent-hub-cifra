@@ -9,10 +9,12 @@ A regular workspace member: the `pyproject.toml` here declares the `domain` pack
 whose code lives in the nested `domain/` dir (like every service's `<name>/<name>/`).
 
 - `pyproject.toml` — the `domain` package + its runtime deps (pydantic, SQLAlchemy,
-  asyncpg); services depend on it via `{ workspace = true }`.
-- `domain/core/` — base infra every service uses: `settings` (pydantic-settings,
-  reads `.env`), logging, declarative `Base`, async engine/session factory
-  (`get_session`).
+  asyncpg, aio-pika); services depend on it via `{ workspace = true }`.
+- `domain/core/` — base infra every service uses, one subpackage per concern:
+  `settings/` (pydantic-settings over `.env`), `logging/`, `db/` (declarative `Base`,
+  async engine/session factory), `errors/` (domain-wide error types such as
+  `BatchStoreError`), `rabbit/` (the shared batch consumer any bus consumer service
+  reuses).
 - `domain/entities/` — business shapes, **grouped by domain** (not by technical kind).
   `entities/news/` holds `NewsDTO`, its `SourceType`, and the routing key — all in
   `dto.py`.

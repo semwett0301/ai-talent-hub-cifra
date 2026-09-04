@@ -7,11 +7,13 @@ Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py
   (sets `is_alert = true`, None when the id is unknown), and `add_many` — the batch
   insert the consumer path uses (one transaction, duplicates by `url` skipped,
   returns the inserted count; raises `NewsStoreError` on failure).
-- `ingest.py` — `NewsBatchHandler` (`handle_batch`): the inward-facing port the bus
-  consumer calls with one batch of `NewsDTO`s. Implemented by `NewsIngestor`
-  (application), consumed by `RabbitNewsConsumer` (infrastructure).
+- `batch_handler.py` — `NewsBatchHandler`: the shared `domain.core.rabbit.BatchHandler`
+  narrowed to `NewsDTO` — the inward-facing port the bus consumer calls with one
+  batch. Implemented by `NewsIngestor` (application), consumed by the shared
+  `RabbitBatchConsumer` (domain).
 
 Notes: ports reference `domain.schemas.News` and the shared
 `domain.entities.news.NewsDTO` contract directly. `add_many` / `handle_batch` **raise**
-`NewsStoreError` rather than returning a sentinel — the consumer needs a hard signal to
-requeue the whole batch, and a count of `0` legitimately means "all duplicates".
+`NewsStoreError` (a `BatchStoreError`) rather than returning a sentinel — the consumer
+needs a hard signal to requeue the whole batch, and a count of `0` legitimately means
+"all duplicates".

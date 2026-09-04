@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Integer, String, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.core.base import Base
+from domain.core.db import Base
 from domain.entities.news import SourceType
 from domain.entities.source import SourceReliability
 from domain.schemas.types import SOURCE_RELIABILITY, SOURCE_TYPE

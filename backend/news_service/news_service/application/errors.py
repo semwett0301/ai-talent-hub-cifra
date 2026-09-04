@@ -1,5 +1,7 @@
 """Application errors — raised by use cases / repositories, mapped by the outer layers."""
 
+from domain.core.errors import BatchStoreError
 
-class NewsStoreError(RuntimeError):
-    """A batch could not be written; the caller decides whether to retry (requeue)."""
+
+class NewsStoreError(BatchStoreError):
+    """A news batch could not be written; the shared consumer nacks it (requeue by default)."""

@@ -1,4 +1,4 @@
-"""Read-side use cases over stored news: list everything, dismiss one item."""
+"""NewsFeed — the read side of stored news: list everything, dismiss one item."""
 
 import uuid
 
@@ -10,7 +10,7 @@ from news_service.application.ports import NewsRepository
 logger = get_logger(__name__)
 
 
-class NewsService:
+class NewsFeed:
     def __init__(self, repo: NewsRepository) -> None:
         self.__repo = repo
 

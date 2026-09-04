@@ -6,11 +6,13 @@ entities), never on concrete infra. Collaborators are injected by the compositio
 root (`deps.py`).
 
 - `ports/` — the interfaces (Protocols): `NewsRepository` (data access) and
-  `NewsBatchHandler` (what the bus consumer hands a batch to).
+  `NewsBatchHandler` (the shared `domain.core.rabbit.BatchHandler` narrowed to
+  `NewsDTO` — what the bus consumer hands a batch to).
 - `dto/` — the response DTO (Pydantic) for the read API.
-- `services/` — `NewsService` (list / dismiss) and `NewsIngestor` (batch ingest, implements
+- `services/` — `NewsFeed` (list / dismiss) and `NewsIngestor` (batch ingest, implements
   `NewsBatchHandler`), one class per module.
-- `errors.py` — `NewsStoreError` (a batch write failed; consumer requeues).
+- `errors.py` — `NewsStoreError` (subclasses `BatchStoreError`: a batch write failed;
+  the shared consumer nacks it — requeue by default, `NEWS_REQUEUE_ON_STORE_ERROR`).
 
 Notes: import ports (`application.ports`), not infra classes. `NewsBatchHandler` is
 unusual in pointing *inward* — infrastructure (the consumer) calls it, application

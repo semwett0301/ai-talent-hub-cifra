@@ -917,6 +917,7 @@ name = "domain"
 version = "0.1.0"
 source = { editable = "domain" }
 dependencies = [
+    { name = "aio-pika" },
     { name = "asyncpg" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -925,6 +926,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aio-pika", specifier = "==9.5.4" },
     { name = "asyncpg", specifier = "==0.30.0" },
     { name = "pydantic", specifier = "==2.10.4" },
     { name = "pydantic-settings", specifier = "==2.7.1" },

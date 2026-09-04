@@ -16,17 +16,20 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     Routers own paths from the root; nginx maps `/api/news/*` onto them
     (`root_path = settings.news_api_prefix`, so `/api/news/docs` works behind nginx).
   - `deps.py` — **composition root**: builds `NewsRepo`, `NewsIngestor`, and the
-    `RabbitNewsConsumer`; provides `get_news_service` for the routes.
+    shared `domain.core.rabbit.RabbitBatchConsumer[NewsDTO]` (bound with
+    `NEWS_BINDING_KEY` = `news.raw.#`); provides `get_news_feed` for the routes.
   - `application/` — `ports/` (`NewsRepository`, `NewsBatchHandler`) + `dto/news/` +
-    `services/` (`NewsService` list/dismiss, `NewsIngestor` batch store) + `errors.py`.
+    `services/` (`NewsFeed` list/dismiss, `NewsIngestor` batch store) + `errors.py`.
   - `infrastructure/` — port implementations: `repositories/` (`NewsRepo`, a session
-    per call, one-statement batch insert), `rabbit/` (`RabbitNewsConsumer` with the
-    buffer-and-ack-later batching, `MessageBatch`, `RabbitConsumerConfig`).
+    per call, one-statement batch insert). No rabbit code here — the batching
+    consumer is the shared one in `domain/core/rabbit/`.
   - `api/routes/` — FastAPI routers only: `news.py` (`GET /`, `POST /{id}/dismiss`),
     `health.py`.
 
-Notes: batching = `prefetch_count == NEWS_BATCH_SIZE` (100) + a flush every
-`NEWS_BATCH_INTERVAL_SECONDS` (15) **or** when the buffer is full, whichever first —
-one transaction per batch, acks only after commit, nack+requeue on a failed write.
+Notes: batching (in `domain.core.rabbit`) = `prefetch_count == NEWS_BATCH_SIZE` (100)
++ a flush every `NEWS_BATCH_INTERVAL_SECONDS` (15) **or** when the buffer is full,
+whichever first — one transaction per batch, acks only after commit, nack on
+`NewsStoreError` (a `BatchStoreError`) — requeued while `NEWS_REQUEUE_ON_STORE_ERROR`
+is `true` (default), dropped otherwise.
 The `News` table and every ORM model live in the shared `domain.schemas` (one DB for
 all services); the DB schema history is applied by `../migrator`.

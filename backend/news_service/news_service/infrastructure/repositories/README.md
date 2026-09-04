@@ -11,6 +11,6 @@ over SQLAlchemy.
   raised as `NewsStoreError`.
 
 Notes: `NewsRepo` **inherits** the `NewsRepository` port (explicit conformance) and is
-re-exported from `__init__.py`. Sessions come from `domain.core.session`. The
+re-exported from `__init__.py`. Sessions come from `domain.core.db`. The
 `insert` is the **PostgreSQL dialect** one (`sqlalchemy.dialects.postgresql`) — the
 generic `sqlalchemy.insert` has no `on_conflict_do_nothing`.

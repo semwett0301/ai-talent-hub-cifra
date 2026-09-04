@@ -6,7 +6,7 @@ repo files.
 ```
 backend/     all Python — its own uv workspace (root pyproject = virtual workspace root, no package)
   domain/    shared kernel, its own pyproject; package at domain/domain (imported as `domain`)
-             core/ (settings/logging/db) + entities/ (business shapes) + schemas/ (shared ORM models)
+             core/ (settings/logging/db/errors/rabbit subpackages) + entities/ (business shapes) + schemas/ (shared ORM models)
   source_service/, news_service/, migrator/   one package per service, siblings of domain (no services/ wrapper)
 frontend/    React SPA (Vite, TypeScript, React Router) — built to static files
 nginx/       edge image: serves static SPA + proxies /api/* → source_service

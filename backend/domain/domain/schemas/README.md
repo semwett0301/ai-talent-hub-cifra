@@ -15,7 +15,7 @@ class per module (re-exported from `__init__.py`).
 - `types.py` — `SOURCE_TYPE` / `SOURCE_RELIABILITY`: the enum-backed VARCHAR column
   types both models share (a constants-only module, not a class).
 
-Notes: models inherit `domain.core.base.Base`. These live in `domain` (not a
+Notes: models inherit `domain.core.db.Base`. These live in `domain` (not a
 service) because the DB is shared — every service and the `migrator` import the same
 models. The schema history is applied by `../../../migrator`, whose Alembic env imports
 `domain.schemas` so `Base.metadata` sees every table.

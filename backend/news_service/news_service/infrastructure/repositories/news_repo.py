@@ -2,7 +2,7 @@
 
 import uuid
 
-from domain.core.session import async_session_factory
+from domain.core.db import async_session_factory
 from domain.entities.news import NewsDTO
 from domain.schemas import News
 from sqlalchemy import select
