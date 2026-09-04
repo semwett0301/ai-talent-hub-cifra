@@ -1,5 +1,38 @@
+# ---- OCI access (from the API signing key; see plans/oci-console-setup.md) ----
+variable "OCI_TENANCY_OCID" {
+  description = "Tenancy OCID."
+  type        = string
+}
+
+variable "OCI_USER_OCID" {
+  description = "User OCID that owns the API signing key."
+  type        = string
+}
+
+variable "OCI_FINGERPRINT" {
+  description = "Fingerprint of the uploaded API signing key."
+  type        = string
+}
+
+variable "OCI_PRIVATE_KEY" {
+  description = "PEM contents of the API signing private key."
+  type        = string
+  sensitive   = true
+}
+
+variable "OCI_REGION" {
+  description = "OCI region id, e.g. eu-frankfurt-1."
+  type        = string
+}
+
+variable "OCI_COMPARTMENT_OCID" {
+  description = "Compartment OCID where resources are created (tenancy OCID for root)."
+  type        = string
+}
+
+# ---- Deploy / app ----
 variable "SSH_PUBLIC_KEY" {
-  description = "Public SSH key (OpenSSH format); uploaded to Timeweb by Terraform."
+  description = "Public SSH key (OpenSSH format) added to the instance."
   type        = string
   sensitive   = true
 }
@@ -11,7 +44,7 @@ variable "DEPLOY_USER" {
 }
 
 variable "SERVER_NAME" {
-  description = "Display name of the server in the panel."
+  description = "Display name of the instance."
   type        = string
   default     = "myapp-prod"
 }
@@ -22,50 +55,39 @@ variable "APP_NAME" {
   default     = "myapp"
 }
 
-variable "LOCATION" {
-  description = "Location: ru-1 (spb), ru-2 (nsk), ru-3 (msk), de-1 (fra), kz-1, nl-1."
+# ---- Shape (Always Free defaults: ARM A1.Flex 4 OCPU / 24 GB) ----
+variable "SHAPE" {
+  description = "Instance shape. A1.Flex (ARM) is Always Free; E2.1.Micro (x86) is the fallback."
   type        = string
-  default     = "ru-1"
+  default     = "VM.Standard.A1.Flex"
 }
 
-variable "AVAILABILITY_ZONE" {
-  description = "Availability zone; must match the location (ru-1=spb-3, ru-2=nsk-1, ru-3=msk-1, de-1=fra-1, kz-1=ala-1, nl-1=ams-1)."
-  type        = string
-  default     = "spb-3"
+variable "OCPUS" {
+  description = "OCPUs for a flexible shape (ignored by fixed shapes like E2.1.Micro)."
+  type        = number
+  default     = 4
 }
 
-variable "OS_NAME" {
-  description = "OS family name for the data lookup."
+variable "MEMORY_GB" {
+  description = "Memory (GB) for a flexible shape."
+  type        = number
+  default     = 24
+}
+
+variable "BOOT_VOLUME_GB" {
+  description = "Boot volume size in GB (Always Free total block storage is 200 GB)."
+  type        = number
+  default     = 50
+}
+
+variable "OS" {
+  description = "Image operating system for the oci_core_images lookup."
   type        = string
-  default     = "ubuntu"
+  default     = "Canonical Ubuntu"
 }
 
 variable "OS_VERSION" {
-  description = "OS version; must exist paired with the Docker software image."
+  description = "Image OS version for the lookup."
   type        = string
   default     = "24.04"
 }
-
-variable "CPU" {
-  description = "Number of vCPU; configurator minimum is 2."
-  type        = number
-  default     = 2
-}
-
-variable "RAM_MB" {
-  description = "RAM in MB; must be a multiple of 1024."
-  type        = number
-  default     = 4096
-
-  validation {
-    condition     = var.RAM_MB % 1024 == 0
-    error_message = "RAM must be a multiple of 1024 MB."
-  }
-}
-
-variable "DISK_MB" {
-  description = "System disk size in MB; configurator requires 40960-2048000 in steps of 5120."
-  type        = number
-  default     = 40960
-}
-

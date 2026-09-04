@@ -1,4 +1,16 @@
+# Copy to terraform.tfvars and fill in (gitignored). See plans/oci-console-setup.md.
+OCI_TENANCY_OCID     = "ocid1.tenancy.oc1..aaaa..."
+OCI_USER_OCID        = "ocid1.user.oc1..aaaa..."
+OCI_FINGERPRINT      = "aa:bb:cc:dd:..."
+OCI_PRIVATE_KEY      = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+OCI_REGION           = "eu-frankfurt-1"
+OCI_COMPARTMENT_OCID = "ocid1.compartment.oc1..aaaa..." # or tenancy OCID for root
+
 SSH_PUBLIC_KEY = "ssh-ed25519 AAAA... deploy"
-SERVER_NAME    = "myapp-prod"
 APP_NAME       = "myapp"
-LOCATION       = "ru-1"
+SERVER_NAME    = "myapp-prod"
+
+# Always Free ARM default; fallback: SHAPE="VM.Standard.E2.1.Micro", OCPUS=1, MEMORY_GB=1
+SHAPE     = "VM.Standard.A1.Flex"
+OCPUS     = 4
+MEMORY_GB = 24

@@ -38,9 +38,15 @@ jobs:
       run:
         working-directory: terraform
     env:
-      TWC_TOKEN: ${{ secrets.TWC_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      OCI_NAMESPACE: ${{ vars.OCI_NAMESPACE }}
+      TF_VAR_OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      TF_VAR_OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      TF_VAR_OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      TF_VAR_OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+      TF_VAR_OCI_REGION: ${{ secrets.OCI_REGION }}
+      TF_VAR_OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
       TF_VAR_SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_APP_NAME: ${{ secrets.APP_NAME }}
       TF_VAR_DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -49,9 +55,15 @@ jobs:
 
       - name: Check required config
         run: |
-          test -n "$TWC_TOKEN" || { echo "::error::secret TWC_TOKEN is not set"; exit 1; }
           test -n "$AWS_ACCESS_KEY_ID" || { echo "::error::secret TF_STATE_ACCESS_KEY is not set"; exit 1; }
           test -n "$AWS_SECRET_ACCESS_KEY" || { echo "::error::secret TF_STATE_SECRET_KEY is not set"; exit 1; }
+          test -n "$OCI_NAMESPACE" || { echo "::error::variable OCI_NAMESPACE is not set"; exit 1; }
+          test -n "$TF_VAR_OCI_TENANCY_OCID" || { echo "::error::secret OCI_TENANCY_OCID is not set"; exit 1; }
+          test -n "$TF_VAR_OCI_USER_OCID" || { echo "::error::secret OCI_USER_OCID is not set"; exit 1; }
+          test -n "$TF_VAR_OCI_FINGERPRINT" || { echo "::error::secret OCI_FINGERPRINT is not set"; exit 1; }
+          test -n "$TF_VAR_OCI_PRIVATE_KEY" || { echo "::error::secret OCI_PRIVATE_KEY is not set"; exit 1; }
+          test -n "$TF_VAR_OCI_REGION" || { echo "::error::secret OCI_REGION is not set"; exit 1; }
+          test -n "$TF_VAR_OCI_COMPARTMENT_OCID" || { echo "::error::secret OCI_COMPARTMENT_OCID is not set"; exit 1; }
           test -n "$TF_VAR_SSH_PUBLIC_KEY" || { echo "::error::secret SSH_PUBLIC_KEY is not set"; exit 1; }
           test -n "$TF_VAR_APP_NAME" || { echo "::error::secret APP_NAME is not set"; exit 1; }
 
@@ -61,7 +73,16 @@ jobs:
           terraform_wrapper: false
 
       - run: terraform fmt -check -recursive
-      - run: terraform init -input=false
+
+      # OCI Object Storage S3 endpoint is region/tenancy-specific → pass at init.
+      - name: terraform init
+        run: |
+          cat > backend.hcl <<EOF
+          region = "$TF_VAR_OCI_REGION"
+          endpoints = { s3 = "https://$OCI_NAMESPACE.compat.objectstorage.$TF_VAR_OCI_REGION.oraclecloud.com" }
+          EOF
+          terraform init -input=false -backend-config=backend.hcl
+
       - run: terraform validate
       - run: terraform apply -input=false -auto-approve
 
@@ -76,6 +97,8 @@ jobs:
       DEPLOY_PATH: /opt/${{ secrets.APP_NAME }}
       AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      OCI_NAMESPACE: ${{ vars.OCI_NAMESPACE }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
     steps:
       - uses: actions/checkout@v4
 
@@ -88,7 +111,11 @@ jobs:
         id: host
         working-directory: terraform
         run: |
-          terraform init -input=false
+          cat > backend.hcl <<EOF
+          region = "$OCI_REGION"
+          endpoints = { s3 = "https://$OCI_NAMESPACE.compat.objectstorage.$OCI_REGION.oraclecloud.com" }
+          EOF
+          terraform init -input=false -backend-config=backend.hcl
           echo "host=$(terraform output -raw server_ipv4)" >> "$GITHUB_OUTPUT"
 
       - name: Set up SSH

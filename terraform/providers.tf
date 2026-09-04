@@ -1,12 +1,13 @@
 terraform {
   required_version = ">= 1.5.0"
 
+  # State in OCI Object Storage (S3-compatible). region + endpoints.s3 are
+  # tenancy/region-specific, so they're passed at `init` via -backend-config
+  # (see .github/workflows/deploy.yml and terraform/backend.hcl.example).
   backend "s3" {
     bucket = "cifra-tfstate"
-    key    = "cifra/terraform.tfstate"
-    region = "ru-1"
+    key    = "cifra/oci.tfstate"
 
-    endpoints                   = { s3 = "https://s3.twcstorage.ru" }
     use_path_style              = true
     skip_credentials_validation = true
     skip_region_validation      = true
@@ -16,11 +17,17 @@ terraform {
   }
 
   required_providers {
-    twc = {
-      source  = "timeweb-cloud/timeweb-cloud"
-      version = "~> 1.8"
+    oci = {
+      source  = "oracle/oci"
+      version = "~> 6.0"
     }
   }
 }
 
-provider "twc" {}
+provider "oci" {
+  tenancy_ocid = var.OCI_TENANCY_OCID
+  user_ocid    = var.OCI_USER_OCID
+  fingerprint  = var.OCI_FINGERPRINT
+  private_key  = var.OCI_PRIVATE_KEY
+  region       = var.OCI_REGION
+}

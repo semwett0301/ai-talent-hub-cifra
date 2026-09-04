@@ -10,16 +10,9 @@ packages:
   - ca-certificates
   - curl
   - gnupg
-  - ufw
-  - fail2ban
-
-disable_root: false
 
 users:
   - default
-  - name: root
-    ssh_authorized_keys:
-      - ${ssh_public_key}
   - name: ${deploy_user}
     shell: /bin/bash
     ssh_authorized_keys:
@@ -40,26 +33,19 @@ runcmd:
   # Deploy dir first (rsync target; deploy user can't mkdir under /opt) — never abort before it.
   - [ install, -d, -o, "${deploy_user}", -g, "${deploy_user}", "${app_dir}" ]
 
-  # Wait for the Timeweb-provided Docker unit, then enable it.
+  # Install Docker + compose plugin (OCI images ship without Docker).
   - |
     set -ux
-    for _ in $(seq 1 60); do
-      systemctl list-unit-files docker.service >/dev/null 2>&1 && break
-      sleep 5
-    done
+    curl -fsSL https://get.docker.com | sh || true
     systemctl enable --now docker || true
-    docker compose version || true
     usermod -aG docker "${deploy_user}" || true
 
+  # OCI Ubuntu images block all but 22 in local iptables; open 80 (security list allows it).
   - |
     set -ux
-    ufw --force reset || true
-    ufw default deny incoming || true
-    ufw default allow outgoing || true
-    ufw allow 22/tcp || true
-    ufw allow 80/tcp || true
-    ufw --force enable || true
+    iptables -I INPUT -p tcp --dport 80 -j ACCEPT || true
+    netfilter-persistent save 2>/dev/null || true
 
   - [ touch, /var/lib/cloud/bootstrap-complete ]
 
-final_message: "cloud-init finished. uptime=$UPTIME sec. App dir ready: ${app_dir}"
+final_message: "cloud-init finished. App dir ready: ${app_dir}"

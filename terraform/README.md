@@ -1,65 +1,60 @@
 # terraform
 
-Timeweb Cloud infra (Terraform + cloud-init). **No-domain / HTTP-by-IP** variant:
-provisions **one server** (Docker + a `deploy` user + firewall). The application
-is deployed **separately** via Docker Compose — Terraform does not run it. See
-`../plans/timeweb-terraform-cloudinit.md` for the walkthrough.
+Oracle Cloud (OCI) infra + cloud-init. **No-domain / HTTP-by-IP** variant:
+provisions **one Always-Free instance** (Docker + a `deploy` user + firewall). The
+app is deployed **separately** via Docker Compose — Terraform does not run it.
+Manual console setup: `../plans/oci-console-setup.md`. Full plan:
+`../plans/oracle-cloud-migration.md`.
 
-- `providers.tf` — Terraform + `timeweb-cloud/timeweb-cloud` provider (`~> 1.8`) +
-  `backend "s3"` storing state in Timeweb S3 (`cifra-tfstate`).
-- `variables.tf` — inputs (`SSH_PUBLIC_KEY`, server size/location, `APP_NAME`).
-- `main.tf` — data lookups (configurator, Docker software) + `twc_ssh_key` +
-  `twc_server`. (`twc_floating_ip` is commented out — Timeweb daily create limit;
-  the server uses its own `main_ipv4` until it's re-enabled.)
-- `outputs.tf` — `server_ipv4` (= `twc_server.main_ipv4`), `ssh_command`, `app_url`.
-- `cloud-init/` — first-boot server prep (Docker + Compose v2, `deploy` user,
-  UFW 22/80, creates `/opt/<app_name>` ready for a compose project).
-- `terraform.tfvars.example` — copy to `terraform.tfvars` and fill in.
-- `.gitignore` — keeps state/tfvars/plans out of git.
+- `providers.tf` — `oracle/oci` provider (`~> 6.0`) + `backend "s3"` on **OCI Object
+  Storage** (bucket `cifra-tfstate`, key `cifra/oci.tfstate`; region + endpoint passed
+  at `init` via `-backend-config`, they're tenancy/region-specific).
+- `variables.tf` — OCI access (`OCI_*`), deploy/app (`SSH_PUBLIC_KEY`, `APP_NAME`,
+  `DEPLOY_USER`), and shape (`SHAPE`/`OCPUS`/`MEMORY_GB`, default A1.Flex 4/24).
+- `network.tf` — VCN + internet gateway + route table + subnet + security list (22/80).
+- `main.tf` — availability-domain + newest-Ubuntu lookups + `oci_core_instance`
+  (flexible shape, public IP, cloud-init as base64 `user_data`).
+- `outputs.tf` — `server_ipv4` (= instance `public_ip`), `ssh_command`, `app_url`.
+- `cloud-init/` — first-boot prep: `deploy` user, `/opt/<app_name>`, **installs
+  Docker**, opens port 80 in host iptables.
+- `terraform.tfvars.example`, `backend.hcl.example` — copy + fill for local runs.
 
-Notes: pass the API token via `export TWC_TOKEN=...` and the S3 state keys via
-`export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...` (never commit them). Run:
-`terraform init && terraform plan -out=tfplan && terraform apply tfplan`. Only ports
-22 and 80 are open. After apply, deploy the app: copy your `docker-compose.yml` to
-`/opt/<app_name>` and `docker compose up -d`. Domain + HTTPS is a later step (see
-the plan's section 7). **Editing `cloud-init/` reprovisions the server** —
-`cloud_init` is not in the server's `ignore_changes`, so a template change replaces
-the instance on the next apply (the floating IP is a separate resource and stays).
+Notes: Always Free ARM (A1.Flex) can hit "Out of host capacity" — retry, change
+region/AD, or fall back to `SHAPE=VM.Standard.E2.1.Micro` (x86, 1 GB). Images are
+mostly multi-arch, so aarch64 is fine. Only ports 22/80 are open (security list +
+host iptables). After apply, ship `docker-compose.yml` to `/opt/<app_name>` and
+`docker compose up -d`.
 
 ## Inputs: local vs GitHub Actions
 
-Two ways to feed variables — they don't mix:
+- **Local** — `terraform.tfvars` (copy `terraform.tfvars.example`) +
+  `terraform init -backend-config=backend.hcl` (copy `backend.hcl.example`, set
+  namespace/region) + `export AWS_ACCESS_KEY_ID/SECRET` (the OCI Customer Secret Key).
+- **GitHub Actions** (`.github/workflows/deploy.yml`, `infra` job) — all inputs come
+  from repo **Secrets** as `TF_VAR_*`; the S3 endpoint is built from
+  `secrets.OCI_REGION` + repo **variable** `vars.OCI_NAMESPACE`.
 
-- **Local run** — values from `terraform.tfvars` (copy from
-  `terraform.tfvars.example`; set `SSH_PUBLIC_KEY` or
-  `export TF_VAR_SSH_PUBLIC_KEY="$(cat deploy-key.pub)"`) plus `export TWC_TOKEN=...`
-  and the S3 state keys (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) in the shell.
-- **GitHub Actions** (`.github/workflows/deploy.yml`, `infra` job) —
-  `terraform.tfvars` is **not used** (it's gitignored, absent on the runner). All
-  inputs come from repo **Secrets**, injected as `TF_VAR_*`.
+Secrets/vars — repo → Settings → Secrets and variables → Actions:
 
-Set them in **repo → Settings → Secrets and variables → Actions** (all Secrets):
+| Name | Kind | Maps to |
+|------|------|---------|
+| `OCI_TENANCY_OCID` | secret | `TF_VAR_OCI_TENANCY_OCID` |
+| `OCI_USER_OCID` | secret | `TF_VAR_OCI_USER_OCID` |
+| `OCI_FINGERPRINT` | secret | `TF_VAR_OCI_FINGERPRINT` |
+| `OCI_PRIVATE_KEY` | secret | `TF_VAR_OCI_PRIVATE_KEY` |
+| `OCI_REGION` | secret | `TF_VAR_OCI_REGION` + S3 endpoint |
+| `OCI_COMPARTMENT_OCID` | secret | `TF_VAR_OCI_COMPARTMENT_OCID` |
+| `OCI_NAMESPACE` | **variable** | Object Storage namespace (S3 endpoint) |
+| `TF_STATE_ACCESS_KEY` | secret | `AWS_ACCESS_KEY_ID` (Customer Secret Key) |
+| `TF_STATE_SECRET_KEY` | secret | `AWS_SECRET_ACCESS_KEY` (Customer Secret Key) |
+| `SSH_PUBLIC_KEY` | secret | `TF_VAR_SSH_PUBLIC_KEY` |
+| `APP_NAME` | secret | `TF_VAR_APP_NAME` |
+| `DEPLOY_USER` | secret | `TF_VAR_DEPLOY_USER` (default `deploy`) |
 
-| Name                  | Maps to                             | Required |
-|-----------------------|-------------------------------------|----------|
-| `TWC_TOKEN`           | provider token                      | yes      |
-| `TF_STATE_ACCESS_KEY` | `AWS_ACCESS_KEY_ID` (S3 state)      | yes      |
-| `TF_STATE_SECRET_KEY` | `AWS_SECRET_ACCESS_KEY` (S3 state)  | yes      |
-| `SSH_PUBLIC_KEY`      | `TF_VAR_SSH_PUBLIC_KEY`             | yes      |
-| `APP_NAME`            | `TF_VAR_APP_NAME`                   | yes      |
-| `DEPLOY_USER`         | `TF_VAR_DEPLOY_USER` (default `deploy`)| no    |
+## Remote state (OCI Object Storage, S3-compatible)
 
-CI/CD lives in a single `deploy.yml`: the `infra` job runs `terraform apply` (only
-when `terraform/**` changed, or on manual dispatch), then the `deploy` job ships the
-app over SSH — reading the server IP from `terraform output` (S3 state), so there's
-no `SSH_HOST` secret. To expose more knobs (`SERVER_NAME`, `LOCATION`, size) in CI,
-add matching `TF_VAR_*` lines to the `infra` job.
-
-## Remote state (Timeweb S3)
-
-State lives in the `cifra-tfstate` bucket (`backend "s3"` in `providers.tf`,
-endpoint `s3.twcstorage.ru`, region `ru-1`). The bucket and its access/secret keys
-must be created in the Timeweb panel **before** `terraform init`. Locally, export
-`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`; in CI they come from the
-`TF_STATE_ACCESS_KEY` / `TF_STATE_SECRET_KEY` secrets. Note: Timeweb S3 has no
-state locking — don't run local and CI applies at the same time.
+Bucket `cifra-tfstate`, key `cifra/oci.tfstate`, endpoint
+`https://<namespace>.compat.objectstorage.<region>.oraclecloud.com`. Bucket +
+Customer Secret Key are created in the OCI console **before** `terraform init` (see
+`../plans/oci-console-setup.md`). No state locking — don't run local and CI applies
+at once.

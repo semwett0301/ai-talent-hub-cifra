@@ -8,6 +8,10 @@ crash.log
 *.tfvars.json
 !*.tfvars.example
 
+# local backend config (generated in CI; contains no secrets but tenancy-specific)
+backend.hcl
+!backend.hcl.example
+
 *.tfplan
 tfplan
 
