@@ -4,7 +4,9 @@ Base infrastructure shared by every service: settings, logging, and the DB layer
 
 - `settings.py` — `Settings` (pydantic-settings, reads the repo-root `.env`) +
   the `settings` singleton. Read config only through it (never `os.environ`).
-- `logging.py` — `configure_logging()` + `get_logger()` over stdlib `logging`.
+- `logging.py` — `configure_logging()` + `get_logger()` over stdlib `logging`;
+  caps `NOISY_LOGGERS` (aio_pika/aiormq/pamqp, pyrogram, httpx) at INFO so
+  `DEBUG=true` doesn't drown business logs in AMQP frames and MTProto updates.
 - `base.py` — `Base` (DeclarativeBase) that every ORM model inherits.
 - `session.py` — async `engine`, `async_session_factory`, and `get_session`
   (per-request dependency; caller commits/rolls back).

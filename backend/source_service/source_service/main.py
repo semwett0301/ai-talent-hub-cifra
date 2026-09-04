@@ -44,10 +44,14 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        logger.info("source_service stopping")
+
         registry.shutdown()
         await telegram.stop()
         await page_fetcher.close()
         await rabbit.close()
+
+        logger.info("source_service stopped")
 
 
 # Routers own paths from the root; nginx exposes them under settings.sources_api_prefix

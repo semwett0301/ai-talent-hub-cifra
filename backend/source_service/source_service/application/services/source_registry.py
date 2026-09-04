@@ -49,16 +49,35 @@ class SourceRegistry(SourceRegistrar):
         self._scheduler.shutdown(wait=False)
 
     async def load(self) -> None:
-        for source in await self._repository.list_enabled():
+        sources = await self._repository.list_enabled()
+        logger.info("registry loading: sources=%d", len(sources))
+
+        for source in sources:
             await self.register(source)
 
+        logger.info("registry loaded: sources=%d", len(sources))
+
     async def register(self, source: Source) -> None:
+        logger.info(
+            "source registering: id=%s type=%s link=%s enabled=%s",
+            source.id,
+            source.type,
+            source.link,
+            source.is_enabled,
+        )
+
         if source.type in self._pull_collectors:
             self.__apply_schedule(source)
         elif source.type in self._push_collectors:
             await self.__apply_subscription(source)
+        else:
+            logger.warning("source has no collector: type=%s link=%s", source.type, source.link)
 
     async def unregister(self, source: Source) -> None:
+        logger.info(
+            "source unregistering: id=%s type=%s link=%s", source.id, source.type, source.link
+        )
+
         if source.type in self._pull_collectors:
             self.__unschedule(source.id)
         elif source.type in self._push_collectors:
@@ -78,18 +97,24 @@ class SourceRegistry(SourceRegistrar):
             await collector.unsubscribe(source)
 
     def __schedule(self, source_id: uuid.UUID, interval: int | None) -> None:
+        seconds = interval or DEFAULT_INTERVAL_SECONDS
+        logger.info("pull source scheduled: id=%s every=%ss", source_id, seconds)
+
         self._scheduler.add_job(
             self.__run,
             "interval",
-            seconds=interval or DEFAULT_INTERVAL_SECONDS,
+            seconds=seconds,
             args=[source_id],
             id=self.__job_id(source_id),
             replace_existing=True,
         )
 
     def __unschedule(self, source_id: uuid.UUID) -> None:
-        if self._scheduler.get_job(self.__job_id(source_id)) is not None:
-            self._scheduler.remove_job(self.__job_id(source_id))
+        if self._scheduler.get_job(self.__job_id(source_id)) is None:
+            return
+
+        self._scheduler.remove_job(self.__job_id(source_id))
+        logger.info("pull source unscheduled: id=%s", source_id)
 
     def __job_id(self, source_id: uuid.UUID) -> str:
         return f"{JOB_ID_PREFIX}{source_id}"
@@ -97,9 +122,16 @@ class SourceRegistry(SourceRegistrar):
     async def __run(self, source_id: uuid.UUID) -> None:
         source = await self._repository.get(source_id)
         if source is None or not source.is_enabled:
+            logger.info("pull run skipped: id=%s (gone or disabled)", source_id)
             return
+
         collector = self._pull_collectors.get(source.type)
         if collector is None:
+            logger.warning("pull run skipped: no collector for type=%s", source.type)
             return
+
         items = await collector.fetch(source)
-        await self._publisher.publish_news(items)
+        logger.info("pull run fetched: link=%s items=%d", source.link, len(items))
+
+        published = await self._publisher.publish_news(items)
+        logger.info("pull run published: link=%s items=%d", source.link, published)

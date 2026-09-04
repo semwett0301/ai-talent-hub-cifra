@@ -19,9 +19,11 @@ class Crawl4AiPageFetcher(PageFetcher):
 
     async def start(self) -> None:
         await self.__crawler.start()
+        logger.info("page fetcher started")
 
     async def close(self) -> None:
         await self.__crawler.close()
+        logger.info("page fetcher closed")
 
     async def fetch(self, url: str) -> str | None:
         run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS)
@@ -35,4 +37,5 @@ class Crawl4AiPageFetcher(PageFetcher):
             logger.warning("crawl unsuccessful: %s (%s)", url, result.error_message)
             return None
 
+        logger.info("page fetched: %s (%d bytes)", url, len(result.html or ""))
         return result.html
