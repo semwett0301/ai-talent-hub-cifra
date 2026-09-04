@@ -30,3 +30,23 @@ jobs:
 
       - name: Ruff format check
         run: ruff format --check backend
+
+  mypy:
+    name: Mypy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Mypy
+        run: uv run mypy .
