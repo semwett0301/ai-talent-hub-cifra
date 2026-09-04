@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "domain",
     "migrator",
+    "news-service",
     "source-service",
 ]
 
@@ -2156,6 +2157,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1a/26/8052b1f3ce5de49b5595645c735c50107fe6c676d3cd5841a7b5ee711330/news_please-1.6.16.tar.gz", hash = "sha256:845f9442e83fe7647455f702ce68270dcdff6d9ec89b40639e571efd504d6e33", size = 76080, upload-time = "2025-09-21T12:24:28.189Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/aa/360b191e2d470059b4216f8bdc29953f665833bb91c7253037c3325b9265/news_please-1.6.16-py3-none-any.whl", hash = "sha256:ea542de0cf7e24e11ccef38546106ffa93419559556e9a2b31b8af1a4c2be63c", size = 96572, upload-time = "2025-09-21T12:24:25.944Z" },
+]
+
+[[package]]
+name = "news-service"
+version = "0.1.0"
+source = { editable = "news_service" }
+dependencies = [
+    { name = "aio-pika" },
+    { name = "domain" },
+    { name = "fastapi" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aio-pika", specifier = "==9.5.4" },
+    { name = "domain", editable = "domain" },
+    { name = "fastapi", specifier = "==0.115.6" },
+    { name = "uvicorn", extras = ["standard"], specifier = "==0.34.0" },
 ]
 
 [[package]]

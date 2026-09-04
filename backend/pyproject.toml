@@ -2,7 +2,7 @@
 # lives in `common/` as a regular member (its own pyproject); each service is a
 # sibling dir. Run uv from here.
 [tool.uv.workspace]
-members = ["domain", "source_service", "migrator"]
+members = ["domain", "source_service", "news_service", "migrator"]
 
 [tool.uv.sources]
 domain = { workspace = true }

@@ -85,8 +85,35 @@ services:
       migrator:
         condition: service_completed_successfully
 
+  # Consumes the `news` exchange in batches into the shared DB; serves CRUD on /api/news.
+  news_service:
+    build:
+      context: ./backend
+      dockerfile: news_service/Dockerfile
+    environment:
+      <<: *postgres-env
+      APP_NAME: ${APP_NAME:-AI Analytical Center}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      DEBUG: ${DEBUG:-true}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      NEWS_EXCHANGE: ${NEWS_EXCHANGE:-news}
+      NEWS_QUEUE: ${NEWS_QUEUE:-news.raw}
+      NEWS_BATCH_SIZE: ${NEWS_BATCH_SIZE:-100}
+      NEWS_BATCH_INTERVAL_SECONDS: ${NEWS_BATCH_INTERVAL_SECONDS:-15}
+      NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+
   # Edge: builds the SPA (VITE_* are baked in at build time), serves it static
-  # and reverse-proxies /api/* to the internal source_service.
+  # and reverse-proxies /api/<service>/* to the internal backend services.
   nginx:
     build:
       context: .
@@ -95,10 +122,12 @@ services:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     environment:
       SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
+      NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
     ports:
       - "80:80"
     depends_on:
       - source_service
+      - news_service
 
 volumes:
   pgdata:

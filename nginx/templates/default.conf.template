@@ -2,8 +2,9 @@
 # files and proxies /api to the backend (internal, closed network).
 #
 # .template: processed by the nginx image's built-in docker-entrypoint envsubst
-# step at container start, substituting ${SOURCES_API_PREFIX} (and any other env
-# var actually set in the container) into /etc/nginx/conf.d/default.conf. nginx's
+# step at container start, substituting ${SOURCES_API_PREFIX} / ${NEWS_API_PREFIX}
+# (and any other env var actually set in the container) into
+# /etc/nginx/conf.d/default.conf. nginx's
 # own $-variables ($host, $remote_addr, $scheme, $uri, $1, ...) are left alone —
 # envsubst only touches names that exist in the environment.
 
@@ -29,6 +30,13 @@ server {
 
         rewrite ^${SOURCES_API_PREFIX}(?:/(.*))?$ /$1 break;
         proxy_pass $sources_backend;
+    }
+
+    location ~ ^${NEWS_API_PREFIX}(?:/(.*))?$ {
+        set $news_backend http://news_service:8000;
+
+        rewrite ^${NEWS_API_PREFIX}(?:/(.*))?$ /$1 break;
+        proxy_pass $news_backend;
     }
 
     # SPA: serve static assets, fall back to index.html for client-side routes.
