@@ -1,5 +1,5 @@
 [project]
-name = "common"
+name = "domain"
 version = "0.1.0"
 description = "Shared library for all services (config, logging, contracts; grows as needed)"
 requires-python = ">=3.12"

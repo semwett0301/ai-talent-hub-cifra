@@ -1,7 +1,7 @@
 """Telegram collector (push) — a PushCollector over a kurigram user session.
 
 Subscribes to public channels via MTProto: joins each channel and, on every new
-post, maps it to a `NewsItem` and publishes it to RabbitMQ through the injected
+post, maps it to a `NewsDTO` and publishes it to RabbitMQ through the injected
 `NewsPublisher`. Degrades to a no-op when API credentials or an authorized
 session are absent (so the service still boots without Telegram configured).
 
@@ -13,7 +13,9 @@ calls it without a session string, and catches `RPCError` for a stale one, so
 a headless container never blocks on stdin.
 """
 
-from common.core.logging import get_logger
+from domain.core.logging import get_logger
+from domain.entities.news import NewsDTO
+from domain.schemas import Source
 from pyrogram import filters
 from pyrogram.client import Client
 from pyrogram.errors import RPCError
@@ -21,8 +23,6 @@ from pyrogram.handlers import MessageHandler
 from pyrogram.types import Chat, Message
 
 from source_service.application.ports import NewsPublisher, PushCollector
-from source_service.domain.entities import NewsItem
-from source_service.domain.schemas import Source
 
 TELEGRAM_BASE_URL = "https://t.me"
 CLIENT_SESSION_NAME = "source_service"
@@ -38,8 +38,10 @@ def _message_url(chat: Chat, message: Message) -> str:
     return f"{TELEGRAM_BASE_URL}/c/{chat.id}/{message.id}"
 
 
-def _to_news_item(chat: Chat, message: Message) -> NewsItem:
-    return NewsItem(
+def _to_news_dto(source: Source, chat: Chat, message: Message) -> NewsDTO:
+    return NewsDTO(
+        source_link=source.link,
+        source_type=source.type,
         url=_message_url(chat, message),
         text=message.text or message.caption or "",
         published_at=message.date,
@@ -139,6 +141,6 @@ class TelegramCollector(PushCollector):
             "telegram post received: source=%s chat=%s msg=%s", source.link, chat.id, message.id
         )
 
-        item = _to_news_item(chat, message)
-        await self.__publisher.publish_news(source.id, source.type, [item])
+        item = _to_news_dto(source, chat, message)
+        await self.__publisher.publish_news([item])
         logger.info("telegram post published: source=%s url=%s", source.link, item.url)

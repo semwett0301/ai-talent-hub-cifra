@@ -3,9 +3,8 @@
 import uuid
 from typing import Protocol
 
-from common.enums import SourceType
-
-from source_service.domain.schemas import Source
+from domain.entities.news import SourceType
+from domain.schemas import Source
 
 
 class SourceRepository(Protocol):

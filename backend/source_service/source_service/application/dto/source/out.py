@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from common.enums import SourceType
+from domain.entities.news import SourceType
 from pydantic import BaseModel, ConfigDict
 
 

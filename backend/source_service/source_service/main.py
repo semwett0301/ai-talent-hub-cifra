@@ -3,8 +3,8 @@
 # Imports
 from contextlib import asynccontextmanager
 
-from common.core.logging import configure_logging, get_logger
-from common.settings import settings
+from domain.core.logging import configure_logging, get_logger
+from domain.core.settings import settings
 from fastapi import FastAPI
 
 from source_service import deps

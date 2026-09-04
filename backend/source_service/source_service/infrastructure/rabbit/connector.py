@@ -1,17 +1,13 @@
 """RabbitConnector — implements the NewsPublisher port over the `news` exchange.
 
-`publish_news` maps `NewsItem` → `common.dto.NewsDTO` and publishes it.
+`publish_news` publishes each `domain.entities.news.NewsDTO` with its per-type routing key.
 """
 
-import uuid
-
 import aio_pika
-from common.core.logging import get_logger
-from common.dto import NewsDTO, routing_key
-from common.enums import SourceType
+from domain.core.logging import get_logger
+from domain.entities.news import NewsDTO, routing_key
 
 from source_service.application.ports import NewsPublisher
-from source_service.domain.entities import NewsItem
 
 logger = get_logger(__name__)
 
@@ -31,26 +27,17 @@ class RabbitConnector(NewsPublisher):
         )
         logger.info("rabbit connected, exchange=%s", self._exchange_name)
 
-    async def publish_news(
-        self, source_id: uuid.UUID, source_type: SourceType, items: list[NewsItem]
-    ) -> int:
+    async def publish_news(self, items: list[NewsDTO]) -> int:
         if self._exchange is None:
             logger.warning("rabbit not connected; dropping %d items", len(items))
             return 0
-        key = routing_key(source_type)
+
         for item in items:
-            event = NewsDTO(
-                source_id=source_id,
-                source_type=source_type,
-                url=item.url,
-                text=item.text,
-                published_at=item.published_at,
-                raw=item.raw,
-            )
             message = aio_pika.Message(
-                event.model_dump_json().encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+                item.model_dump_json().encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
             )
-            await self._exchange.publish(message, routing_key=key)
+            await self._exchange.publish(message, routing_key=routing_key(item.source_type))
+
         return len(items)
 
     async def close(self) -> None:

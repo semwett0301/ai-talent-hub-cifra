@@ -1,0 +1,24 @@
+# domain
+
+The shared package imported as `domain` — the **shared kernel** every service builds
+on. Because all services run on **one database**, this holds not just cross-service
+infra and contracts but the **ORM schemas** too, so every service (and the migrator)
+uses the same table definitions.
+
+A regular workspace member: the `pyproject.toml` here declares the `domain` package,
+whose code lives in the nested `domain/` dir (like every service's `<name>/<name>/`).
+
+- `pyproject.toml` — the `domain` package + its runtime deps (pydantic, SQLAlchemy,
+  asyncpg); services depend on it via `{ workspace = true }`.
+- `domain/core/` — base infra every service uses: `settings` (pydantic-settings,
+  reads `.env`), logging, declarative `Base`, async engine/session factory
+  (`get_session`).
+- `domain/entities/` — business shapes, **grouped by domain** (not by technical kind).
+  `entities/news/` holds `NewsDTO`, its `SourceType`, and the routing key — all in
+  `dto.py`.
+- `domain/schemas/` — the SQLAlchemy ORM models for the shared DB (`Source`, …). One
+  history for all, applied by the `migrator`, which imports `domain.schemas`.
+- (later) `domain/llm/` etc. as services need them.
+
+Notes: keep this coherent — it's the one place every service shares. New tables go in
+`domain/schemas/`; new business shapes in `domain/entities/`.

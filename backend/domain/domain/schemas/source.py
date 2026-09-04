@@ -3,10 +3,11 @@
 import uuid
 from datetime import datetime
 
-from common.core.base import Base
-from common.enums import SourceType
 from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
+
+from domain.core.base import Base
+from domain.entities.news import SourceType
 
 _SOURCE_TYPE = Enum(
     SourceType,

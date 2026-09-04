@@ -4,7 +4,7 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
-    "common",
+    "domain",
     "migrator",
     "source-service",
 ]
@@ -145,9 +145,18 @@ wheels = [
 ]
 
 [[package]]
-name = "common"
+name = "distlib"
+version = "0.4.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/02/bd72be9134d25ed783ecbbc38a539ffaefbf90c78418c7fb7229600dbac7/distlib-0.4.3.tar.gz", hash = "sha256:f152097224a0ae24be5a0f6bae1b9359af82133bce63f98a95f86cae1aede9ed", size = 615141, upload-time = "2026-06-12T08:04:52.847Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl", hash = "sha256:4b0ce306c966eb73bc3a7b6abad017c556dadd92c44701562cd528ac7fde4d5b", size = 470628, upload-time = "2026-06-12T08:04:50.506Z" },
+]
+
+[[package]]
+name = "domain"
 version = "0.1.0"
-source = { editable = "common" }
+source = { editable = "domain" }
 dependencies = [
     { name = "asyncpg" },
     { name = "pydantic" },
@@ -161,15 +170,6 @@ requires-dist = [
     { name = "pydantic", specifier = "==2.10.4" },
     { name = "pydantic-settings", specifier = "==2.7.1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.36" },
-]
-
-[[package]]
-name = "distlib"
-version = "0.4.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c9/02/bd72be9134d25ed783ecbbc38a539ffaefbf90c78418c7fb7229600dbac7/distlib-0.4.3.tar.gz", hash = "sha256:f152097224a0ae24be5a0f6bae1b9359af82133bce63f98a95f86cae1aede9ed", size = 615141, upload-time = "2026-06-12T08:04:52.847Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl", hash = "sha256:4b0ce306c966eb73bc3a7b6abad017c556dadd92c44701562cd528ac7fde4d5b", size = 470628, upload-time = "2026-06-12T08:04:50.506Z" },
 ]
 
 [[package]]
@@ -440,24 +440,16 @@ version = "0.1.0"
 source = { virtual = "migrator" }
 dependencies = [
     { name = "alembic" },
-    { name = "common" },
+    { name = "domain" },
     { name = "psycopg2-binary" },
-]
-
-[package.dev-dependencies]
-autogen = [
-    { name = "source-service" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = "==1.14.0" },
-    { name = "common", editable = "common" },
+    { name = "domain", editable = "domain" },
     { name = "psycopg2-binary", specifier = "==2.9.10" },
 ]
-
-[package.metadata.requires-dev]
-autogen = [{ name = "source-service", editable = "source_service" }]
 
 [[package]]
 name = "multidict"
@@ -986,7 +978,7 @@ source = { editable = "source_service" }
 dependencies = [
     { name = "aio-pika" },
     { name = "apscheduler" },
-    { name = "common" },
+    { name = "domain" },
     { name = "fastapi" },
     { name = "kurigram" },
     { name = "uvicorn", extra = ["standard"] },
@@ -996,7 +988,7 @@ dependencies = [
 requires-dist = [
     { name = "aio-pika", specifier = "==9.5.4" },
     { name = "apscheduler", specifier = "==3.11.0" },
-    { name = "common", editable = "common" },
+    { name = "domain", editable = "domain" },
     { name = "fastapi", specifier = "==0.115.6" },
     { name = "kurigram", specifier = "==2.2.25" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.34.0" },

@@ -2,12 +2,12 @@
 
 import uuid
 
+from domain.schemas import Source
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from source_service.application.dto.source import SourceCreate, SourceOut, SourceUpdate
 from source_service.application.services import SourceService
 from source_service.deps import get_source_service
-from source_service.domain.schemas import Source
 
 router = APIRouter(tags=["sources"])
 

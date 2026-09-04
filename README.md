@@ -17,14 +17,14 @@ media, regulators, and Telegram channels.
 
 ## Structure
 
-- `backend/` — Python (uv workspace): `common` shared lib + `source_service`
-  (FastAPI) + `migrator` (Alembic), as sibling packages. Services follow **onion
-  architecture** (domain → application → infrastructure → api, wired in `deps.py`);
-  see `backend/README.md`.
+- `backend/` — Python (uv workspace): `domain` shared kernel (core + entities +
+  shared ORM schemas) + `source_service` (FastAPI) + `migrator` (Alembic), as sibling
+  packages. Services follow **onion architecture** (application → infrastructure →
+  api, wired in `deps.py`); see `backend/README.md`.
 - `frontend/` — React SPA (Vite, TypeScript, React Router).
 - `nginx/` — edge: builds the SPA, serves it static, proxies `/api`; the only
   service exposed to the host.
-- `docker-compose.yml` — nginx (public) + api + postgres (internal).
+- `docker-compose.yml` — nginx (public) + api (3 replicas) + postgres (internal).
 
 ## Run
 
@@ -47,13 +47,10 @@ uv run alembic -c alembic.ini upgrade head                     # apply migration
 uv run alembic -c alembic.ini revision --autogenerate -m "msg" # after a model change
 ```
 
-Autogenerate imports each service's models (listed in `SERVICE_MODEL_MODULES` in
-`migrations/autogenerate.py`) to diff against the DB — so run it via `uv` where the whole
-workspace is installed, then review the emitted revision. `upgrade` never reads
-models, so the shipped migrator image carries no service packages. Adding a
-service's first table: add the service to the `autogen` dependency group in
-`migrator/pyproject.toml` and append its models module to `SERVICE_MODEL_MODULES`.
-Each service ships a uniquely named package (e.g. `source_service`), so all coexist.
+Autogenerate diffs the DB against `Base.metadata` — the `migrator`'s `env.py` imports
+`domain.schemas` (where every ORM model lives), so run it via `uv` and review the
+emitted revision. Adding a table: define the model in `domain/schemas/`, re-export it
+from `domain.schemas.__init__`, then autogenerate — no migrator change needed.
 See `backend/migrator/README.md`.
 
 ## Environment variables
@@ -72,7 +69,7 @@ values live as **GitHub Actions Secrets** (mapping table at the end).
 
 How each consumer picks it up:
 
-- **Backend** — `common.settings.Settings` loads the repo-root `.env` by absolute
+- **Backend** — `domain.core.settings.Settings` loads the repo-root `.env` by absolute
   path, so `uv run …` works from any directory. Never read `os.environ` directly.
 - **Compose** — loads the root `.env` automatically for `${VAR}` substitution, and
   hands each service only the variables it needs (so infra/deploy secrets never
@@ -114,6 +111,12 @@ How each consumer picks it up:
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
 | `SOURCES_API_PREFIX` | The nginx location `source_service` is mounted under, and the same value as FastAPI's `root_path` (so `/docs` and `openapi.json` resolve behind the proxy). Consumed by **both** containers — change it here only. | `/api/sources` | no |
+
+### Scaling
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `SOURCE_SERVICE_REPLICAS` | How many `source_service` containers Compose runs behind nginx. | `3` | no |
 
 ### Frontend (build time)
 

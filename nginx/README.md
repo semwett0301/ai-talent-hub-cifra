@@ -19,13 +19,17 @@ docker-entrypoint envsubst step at container start (`*.template` under
 alone since they aren't set as env vars. `SOURCES_API_PREFIX` is defined **once**,
 in the repo-root `.env` (see `../.env.example`), and shared with
 `source_service` (which reads it back as FastAPI's `root_path` via
-`common.settings.settings.sources_api_prefix`) — change the prefix there, not here.
+`domain.core.settings.settings.sources_api_prefix`) — change the prefix there, not here.
 
 The API location is a regex (`~ ^${SOURCES_API_PREFIX}(?:/(.*))?$` + `rewrite …
 break`) so it matches the bare collection and sub-paths without a trailing-slash
 redirect and never catches `/api/sourcesXYZ`. Common `proxy_set_header`s sit at
 `server` scope so each service location only needs `rewrite` + `proxy_pass`; add a
-sibling location per new service. No `upstream` block — `proxy_pass
-http://source_service:8000` directly (compose DNS); nginx `depends_on`
-source_service so the host resolves at startup. Backend and DB have no host ports;
-all external traffic goes through here.
+sibling location per new service. No `upstream` block — the backend address goes
+through a variable (`set $sources_backend ...` + `proxy_pass $sources_backend`)
+with `resolver 127.0.0.11` (Docker's embedded DNS), so nginx re-resolves it per
+request and spreads traffic over the `source_service` replicas instead of pinning
+to the single IP it saw at startup. Because `proxy_pass` has a variable and no URI
+part, the URI produced by the preceding `rewrite ... break` is what gets passed —
+hence `set` must come before the `rewrite`. Backend and DB have no host ports; all
+external traffic goes through here.

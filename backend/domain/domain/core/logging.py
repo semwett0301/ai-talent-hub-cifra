@@ -2,7 +2,7 @@
 
 import logging
 
-from common.settings import settings
+from domain.core.settings import settings
 
 
 def configure_logging() -> None:

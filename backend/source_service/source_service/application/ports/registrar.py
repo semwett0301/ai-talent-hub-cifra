@@ -8,7 +8,7 @@ mechanics (and easy to fake in tests).
 
 from typing import Protocol
 
-from source_service.domain.schemas import Source
+from domain.schemas import Source
 
 
 class SourceRegistrar(Protocol):

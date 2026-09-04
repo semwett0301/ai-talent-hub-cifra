@@ -5,8 +5,9 @@ repo files.
 
 ```
 backend/     all Python — its own uv workspace (root pyproject = virtual workspace root, no package)
-  common/    shared library, its own pyproject; package at common/common (imported as `common`)
-  source_service/, migrator/   one package per service, siblings of common (no services/ wrapper)
+  domain/    shared kernel, its own pyproject; package at domain/domain (imported as `domain`)
+             core/ (settings/logging/db) + entities/ (business shapes) + schemas/ (shared ORM models)
+  source_service/, migrator/   one package per service, siblings of domain (no services/ wrapper)
 frontend/    React SPA (Vite, TypeScript, React Router) — built to static files
 nginx/       edge image: serves static SPA + proxies /api/* → source_service
 docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
@@ -18,32 +19,31 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
   is a **virtual workspace root** — it declares no package of its own, only
   `[tool.uv.workspace]` members plus the shared dev tooling (ruff/mypy/pytest). Run
   uv from `backend/`.
-- One shared library only — `backend/common/`, a regular workspace member with its
-  own `pyproject.toml` (package code at `common/common/`). Do not add a `libs/`
+- One shared kernel only — `backend/domain/`, a regular workspace member with its
+  own `pyproject.toml` (package code at `domain/domain/`). Do not add a `libs/`
   wrapper.
-- **`common` holds only what ≥2 services use.** If something is used by a single
-  service, it lives **in that service**; promote it to `common` only when a second
-  consumer appears. This applies to everything (models, schemas, helpers).
-- **Models live in the owning service.** A model moves to `common.models` only once
-  ≥2 services share the table. The DB is one for all services, so the **Alembic
-  history is centralized in the `migrator` service** — not per service.
-- Shared-by-≥2 code (config, db infra, event/message contracts, LLM) goes in
-  `common`; service dirs hold that service's own logic. **No cross-service
-  imports** — services communicate only through `common` (contracts) and the
-  message bus, never importing each other. The one exception is `migrator`, which
-  imports every service's models to build the full schema.
-- Each service is a sibling dir of `common` with its own **uniquely named**
+- **The DB is one for all services, so ORM schemas are shared.** Every ORM model
+  lives in `domain/schemas/` (re-exported from `domain.schemas`), not per service —
+  every service and the `migrator` import the same tables. The Alembic history is
+  centralized in the `migrator`, which imports `domain.schemas`.
+- **`domain` holds:** `core/` (settings, logging, db infra), `entities/` (business
+  shapes, grouped by domain — e.g. `entities/news`), and `schemas/` (shared ORM
+  models). Service dirs hold only that service's own logic (use cases, ports,
+  collectors, routes). **No cross-service imports** — services communicate only
+  through `domain` and the message bus, never importing each other; the `migrator`
+  imports only `domain.schemas`.
+- Each service is a sibling dir of `domain` with its own **uniquely named**
   importable package (e.g. `source_service`, not a generic `app`), `pyproject.toml`
-  (depending on `common`), and `Dockerfile`. New service = copy
+  (depending on `domain`), and `Dockerfile`. New service = copy
   `backend/source_service`, add it to `[tool.uv.workspace] members` in
   `backend/pyproject.toml`, and add a block to `docker-compose.yml`.
 - **Project names match the directory — no `cifra-` (or any) prefix.** The
   `[project] name` is the folder name (`source-service`, `migrator`), and the
   importable package is its underscored form (`source_service`). Packages are
   workspace-resolved (`{ workspace = true }`) and never published, so no namespacing
-  prefix is needed; keep name = folder for clarity. This holds for `common` too —
-  its `[project] name` is `common`, matching its folder, with the package at
-  `common/common/` (like every service). The virtual workspace root
+  prefix is needed; keep name = folder for clarity. This holds for `domain` too —
+  its `[project] name` is `domain`, matching its folder, with the package at
+  `domain/domain/` (like every service). The virtual workspace root
   (`backend/pyproject.toml`) is the only `pyproject.toml` that declares no package.
 - Lint from the repo root with `uvx ruff@0.14.0 check backend`.
 
