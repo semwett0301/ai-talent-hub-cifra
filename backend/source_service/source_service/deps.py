@@ -22,16 +22,16 @@ from source_service.infrastructure.collectors import (
     TelegramCollector,
     WebCrawlCollector,
 )
-from source_service.infrastructure.crawling import Crawl4AiPageFetcher
+from source_service.infrastructure.crawlers import Crawl4AiPageFetcher, FeedparserFeedReader
 from source_service.infrastructure.rabbit.connector import RabbitConnector
 from source_service.infrastructure.repositories import SourceRepo
 
-# Pull registry: SourceType → collector. Push collectors need the publisher, so
-# they are built per-run (see `build_telegram_collector`), not as a constant.
-PULL_COLLECTORS: dict[SourceType, PullCollector] = {
-    SourceType.RSS: RssCollector(),
-    SourceType.WEB: WebCrawlCollector(),
-}
+
+def build_pull_collectors(page_fetcher: PageFetcher) -> dict[SourceType, PullCollector]:
+    """Pull registry: SourceType → collector. The RSS collector reads feeds and fetches
+    articles over the same `PageFetcher` that backs type auto-detection."""
+    rss = RssCollector(FeedparserFeedReader(page_fetcher), page_fetcher)
+    return {SourceType.RSS: rss, SourceType.WEB: WebCrawlCollector()}
 
 
 def get_source_service(request: Request) -> SourceService:
@@ -47,8 +47,9 @@ def build_rabbit() -> RabbitConnector:
 
 
 def build_page_fetcher() -> Crawl4AiPageFetcher:
-    """Backs `SourceService`'s type auto-detection. Owns a `start`/`stop` lifecycle
-    the caller must drive around serving."""
+    """One HTTP fetcher for the whole service: type auto-detection in `SourceService`
+    and every RSS feed/article fetch. Owns a `start`/`stop` lifecycle the caller must
+    drive around serving."""
     return Crawl4AiPageFetcher()
 
 
@@ -63,7 +64,10 @@ def build_telegram_collector(publisher: NewsPublisher) -> TelegramCollector:
     )
 
 
-def build_registry(publisher: RabbitConnector, telegram: TelegramCollector) -> SourceRegistry:
+def build_registry(
+    publisher: RabbitConnector, telegram: TelegramCollector, page_fetcher: PageFetcher
+) -> SourceRegistry:
     """The runtime registry: pull scheduling + push subscription behind one registrar."""
     push_collectors: dict[SourceType, PushCollector] = {SourceType.TELEGRAM: telegram}
-    return SourceRegistry(publisher, PULL_COLLECTORS, push_collectors, SourceRepo())
+    pull_collectors = build_pull_collectors(page_fetcher)
+    return SourceRegistry(publisher, pull_collectors, push_collectors, SourceRepo())
