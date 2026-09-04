@@ -1,0 +1,25 @@
+# Pre-commit hooks — mirror the backend CI (ruff + mypy), scoped to backend/.
+# Setup once:  uv run --directory backend pre-commit install
+# Run on all:  uv run --directory backend pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.0
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      # mypy needs the whole package to resolve cross-module imports, so it runs
+      # over the synced workspace (not just staged files) via uv.
+      - id: mypy
+        name: mypy (backend)
+        entry: bash -c 'cd backend && uv run mypy .'
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+        require_serial: true

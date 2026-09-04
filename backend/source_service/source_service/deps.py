@@ -8,7 +8,7 @@ background aggregators). Everything else depends only on ports.
 from common.enums import SourceType
 from common.settings import settings
 
-from source_service.application.ports import PullCollector, PushCollector
+from source_service.application.ports import NewsPublisher, PullCollector, PushCollector
 from source_service.application.services import (
     SchedulerService,
     SourceService,
@@ -22,13 +22,11 @@ from source_service.infrastructure.collectors import (
 from source_service.infrastructure.rabbit.connector import RabbitConnector
 from source_service.infrastructure.repositories import SourceRepo
 
-# Registries: SourceType → collector implementation. Injected into the aggregators.
+# Pull registry: SourceType → collector. Push collectors need the publisher, so
+# they are built per-run (see `build_telegram_collector`), not as a constant.
 PULL_COLLECTORS: dict[SourceType, PullCollector] = {
     SourceType.RSS: RssCollector(),
     SourceType.WEB: WebCrawlCollector(),
-}
-PUSH_COLLECTORS: dict[SourceType, PushCollector] = {
-    SourceType.TELEGRAM: TelegramCollector(),
 }
 
 
@@ -45,5 +43,17 @@ def build_scheduler(publisher: RabbitConnector) -> SchedulerService:
     return SchedulerService(publisher, PULL_COLLECTORS, SourceRepo())
 
 
-def build_subscriptions() -> SubscriptionService:
-    return SubscriptionService(PUSH_COLLECTORS, SourceRepo())
+def build_telegram_collector(publisher: NewsPublisher) -> TelegramCollector:
+    """Push collector; publishes incoming posts through `publisher`. Owns a client
+    lifecycle (`start`/`stop`) the caller must drive around serving."""
+    return TelegramCollector(
+        publisher,
+        settings.telegram_api_id,
+        settings.telegram_api_hash,
+        settings.telegram_session,
+    )
+
+
+def build_subscriptions(telegram: TelegramCollector) -> SubscriptionService:
+    push_collectors: dict[SourceType, PushCollector] = {SourceType.TELEGRAM: telegram}
+    return SubscriptionService(push_collectors, SourceRepo())

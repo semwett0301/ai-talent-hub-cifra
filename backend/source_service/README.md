@@ -1,16 +1,17 @@
 # source_service
 
 Ingestion service: **CRUD sources → collect news → publish to RabbitMQ**. No
-dedupe, no news storage — downstream consumes from RabbitMQ. Collectors are
-**stubs** for now (return no items). Design:
-`../../../plans/source-service-architecture.md`.
+dedupe, no news storage — downstream consumes from RabbitMQ. Pull collectors
+(RSS/Web) are **stubs**; the Telegram push collector is **implemented** (kurigram).
+Design: `../../../plans/source-service-architecture.md`,
+`../../../plans/telegram-kurigram-migration.md`.
 
 Structured as **onion architecture** (layers depend inward; see `../README.md`):
 
 - `Dockerfile` — image (FastAPI + Uvicorn). Multi-stage: uv builds a self-contained
   `.venv`, copied onto a clean `python:3.12-slim`. Migrations live in `migrator`.
-- `pyproject.toml` — deps on `common` + fastapi, aio-pika, apscheduler. Ships a
-  uniquely named top-level package `source_service`.
+- `pyproject.toml` — deps on `common` + fastapi, aio-pika, apscheduler, kurigram.
+  Ships a uniquely named top-level package `source_service`.
 - `source_service/`
   - `main.py` — FastAPI app + lifespan; builds collaborators via `deps` and runs
     them. Routers own paths from the root; nginx maps `/api/sources/*` onto them, so

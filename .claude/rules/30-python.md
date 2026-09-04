@@ -12,8 +12,15 @@
 - Classes: `PascalCase` (`UserService`, `DataProcessor`)
 - Functions and variables: `snake_case` (`get_user_by_id`, `is_valid`)
 - Constants: `UPPER_SNAKE_CASE` (`MAX_RETRY_COUNT`)
-- Private members: single underscore prefix `_internal_method`
-- No double-underscore name mangling (`__private`) unless there is a clear reason
+- **Prefer the narrowest visibility a member can have.** Inside a class:
+  - **Private** (internal-only helpers and state not meant to be overridden or touched
+    by subclasses): double-underscore prefix `__build_client`, `__client`. Use this
+    wherever a member is purely internal — which is most of them.
+  - **Protected** (a subclass legitimately relies on it): single-underscore prefix
+    `_method`. Use only when subclass access is actually intended.
+  - **Public** (the type's API — e.g. a port's methods): no prefix.
+- Module-level privates use a **single** underscore (`_helper`); name mangling only
+  applies to class attributes, so `__` is meaningless at module scope.
 
 ## Type Annotations
 

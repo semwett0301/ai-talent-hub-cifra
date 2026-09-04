@@ -20,6 +20,17 @@ This is the most important rule: **Do not mimic the style and patterns of existi
 - At most one comment line directly above a line/block of code; if one line is not
   enough, the code needs a clearer name or a split, not a longer comment
 
+## Formatting & Readability
+
+- **Breathe the code into blocks.** Group statements into small logical blocks of
+  ~2–3 lines separated by a blank line; each block does one small step (e.g. resolve,
+  then act, then record). Never write long unbroken walls of code — they are unreadable.
+- Optionally put **one** comment line above a block to explain its intent (this is the
+  same one-comment budget as above). Prefer a clearer name/split over a comment.
+- **File layout for a module built around one class**, top to bottom: module docstring
+  → imports → module-level **constants** at the very top → free **utilities**
+  (functions that live outside the class) → the **class** itself.
+
 ## Naming
 
 - Names must be semantic; the purpose should be clear from the name alone
@@ -35,6 +46,7 @@ This is the most important rule: **Do not mimic the style and patterns of existi
 - **Separation of Concerns**: UI contains no business logic, business logic contains no UI code, data access is a separate layer
 - **Unidirectional Dependencies**: Upper layers depend on lower layers, never the reverse. UI -> Business Logic -> Data Layer
 - **Program to Interfaces**: Modules communicate through interfaces/protocols, not concrete implementations
+- **Implement a port by inheriting its `Protocol`**, not just structurally — e.g. `class RabbitConnector(NewsPublisher):`. Nominal + structural is a double guard: the type checker verifies conformance at the definition site, not only where the object is used. (mypy runs in CI and as a pre-commit hook.)
 - **Inject interfaces, not callables**: A collaborator is injected as a named interface (`Protocol`), never as a bare `Callable`/lambda or a concrete class. If a port already exists (e.g. `SourceRepository`), depend on it and call its methods — do not wrap it in a `load_x`/`get_x` function to pass around
 - **Composition Over Inheritance**: Use composition unless there is a clear is-a relationship
 
