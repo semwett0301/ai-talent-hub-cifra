@@ -163,6 +163,25 @@ gen_session.py` (interactive login; prints the string, writes nothing to disk).
 | `TELEGRAM_API_HASH` | MTProto app hash from the same page. | empty | **yes** |
 | `TELEGRAM_SESSION` | Exported **kurigram/pyrogram** session string of a pre-authorized user account (not interchangeable with a Telethon `StringSession`). Equivalent to full access to that account — use a dedicated one. | empty | **yes** |
 
+### WEB crawler
+
+The `WEB` source collector uses the included Crawl4AI news agent. The first
+Docker build installs Chromium, so it is noticeably larger than the previous
+API-only image. An LLM is optional: with a configured token it is used only for
+ambiguous dates and listing-page relevance; otherwise deterministic HTML and
+Crawl4AI extraction continues.
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `WEB_CRAWL_DAYS` | Freshness window for collected web articles. | `3` | no |
+| `WEB_CRAWL_MAX_ARTICLES` | Per-source upper bound on article candidates in one scheduled run. | `50` | no |
+| `WEB_CRAWL_LLM_ENABLED` | Enables LLM fallbacks when credentials exist. | `true` | no |
+| `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | OpenRouter credentials and compatible API base URL. | empty / OpenRouter v1 | **yes** |
+| `OPENROUTER_MODEL` | OpenRouter model slug without a prefix, for example `deepinfra/fp8`; the collector sends it as `openrouter/deepinfra/fp8`. | empty | no |
+| `NEWS_AGENT_MODEL` | Legacy/default OpenRouter model slug, used when `OPENROUTER_MODEL` is empty. | `deepseek/deepseek-v4-flash` | no |
+| `NEWS_LLM_PROVIDER`, `NEWS_LLM_API_TOKEN`, `NEWS_LLM_BASE_URL` | Explicit LiteLLM provider settings; take precedence over OpenRouter/OpenAI aliases. | empty | `*_TOKEN` yes |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | OpenAI-compatible fallback credentials and base URL; set `NEWS_AGENT_MODEL` to that provider's model name. | empty | **yes** |
+
 ### Terraform — provider and remote state
 
 Values from the DigitalOcean console (`plans/digitalocean-setup.md`).

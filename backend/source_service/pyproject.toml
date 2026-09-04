@@ -14,6 +14,9 @@ dependencies = [
     "aiohttp==3.14.3",
     "feedparser==6.0.14",
     "news-please==1.6.16",
+    "beautifulsoup4==4.15.0",
+    "python-dateutil==2.9.0.post0",
+    "litellm==1.95.1",
 ]
 
 [build-system]

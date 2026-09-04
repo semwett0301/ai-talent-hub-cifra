@@ -54,6 +54,21 @@ class Settings(BaseSettings):
     telegram_api_hash: str | None = None
     telegram_session: str = ""  # exported session string of a pre-authorized user account
 
+    # Web-news crawler. A source is scanned independently, hence these are
+    # global operational limits rather than fields on the Source ORM model.
+    web_crawl_days: int = 3
+    web_crawl_max_articles: int = 50
+    web_crawl_llm_enabled: bool = True
+    news_agent_model: str = "deepseek/deepseek-v4-flash"
+    news_llm_provider: str | None = None
+    news_llm_api_token: str | None = None
+    news_llm_base_url: str | None = None
+    openrouter_api_key: str | None = None
+    openrouter_base_url: str | None = None
+    openrouter_model: str | None = None
+    openai_api_key: str | None = None
+    openai_base_url: str | None = None
+
     @field_validator("telegram_api_id", mode="before")
     @classmethod
     def _blank_to_none(cls, raw: object) -> object:

@@ -2,6 +2,7 @@
 .git
 .github
 .claude
+.codex
 .idea
 .vscode
 backend
