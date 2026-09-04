@@ -11,6 +11,7 @@ import uuid
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from domain.core.logging import get_logger
+from domain.core.settings import settings
 from domain.entities.news import SourceType
 from domain.schemas import Source
 
@@ -24,7 +25,6 @@ from source_service.application.ports import (
 
 logger = get_logger(__name__)
 
-DEFAULT_INTERVAL_SECONDS = 300
 JOB_ID_PREFIX = "src-"
 
 
@@ -97,7 +97,7 @@ class SourceRegistry(SourceRegistrar):
             await collector.unsubscribe(source)
 
     def __schedule(self, source_id: uuid.UUID, interval: int | None) -> None:
-        seconds = interval or DEFAULT_INTERVAL_SECONDS
+        seconds = interval or settings.source_poll_interval_seconds
         logger.info("pull source scheduled: id=%s every=%ss", source_id, seconds)
 
         self._scheduler.add_job(

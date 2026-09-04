@@ -108,6 +108,12 @@ How each consumer picks it up:
 | `RABBITMQ_URL` | AMQP connection URL. Compose overrides it to the internal `rabbitmq` host. | `amqp://guest:guest@localhost:5672/` | **yes** |
 | `NEWS_EXCHANGE` | Exchange collected news is published to. | `news` | no |
 
+### source_service scheduler
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `SOURCE_POLL_INTERVAL_SECONDS` | How often a pull source (RSS/Web) is fetched when its row has no `poll_interval_seconds` of its own. | `300` | no |
+
 ### news_service consumer
 
 | Variable | Meaning | Default | Secret |

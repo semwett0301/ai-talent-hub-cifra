@@ -3,8 +3,9 @@
 - `settings.py` — `Settings` (pydantic-settings, reads the repo-root `.env`; `ENV_FILE`
   is resolved relative to this file, six levels up) and the cached `settings`
   singleton (`get_settings()`). Holds every service's knobs — the Postgres / RabbitMQ
-  URLs, the `*_api_prefix` values shared with nginx, the `news_*` batch settings
-  `news_service` reads, and the Telegram credentials.
+  URLs, the `*_api_prefix` values shared with nginx, the `source_poll_interval_seconds`
+  fallback `source_service` schedules on, the `news_*` batch settings `news_service`
+  reads, and the Telegram credentials.
 - `__init__.py` — re-exports `settings`, `Settings`, `get_settings`, `ENV_FILE`.
 
 Notes: add a field to `Settings` for every new variable and declare it in the root

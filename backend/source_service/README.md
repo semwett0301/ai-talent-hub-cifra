@@ -35,7 +35,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     fetch, + `FeedparserFeedReader`).
   - `api/routes/` — FastAPI routers only: `sources.py` (CRUD), `health.py`.
 
-Notes: pull collectors run on `poll_interval_seconds` (default 300s); push sources
+Notes: pull collectors run on `poll_interval_seconds`, falling back to
+`SOURCE_POLL_INTERVAL_SECONDS` (300s) when the row has none; push sources
 are subscribed at startup. CRUD stays live — create/update/delete reconcile the
 runtime through the `SourceRegistry` composite (stored on `app.state.registrar`), so
 sources (un)schedule/(un)subscribe without a restart. Filling in a collector =

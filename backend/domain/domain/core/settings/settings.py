@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     sources_api_prefix: str = "/api/sources"
     news_api_prefix: str = "/api/news"
 
+    # source_service scheduler: how often a pull source (RSS/Web) is polled when the
+    # row's own `poll_interval_seconds` is null.
+    source_poll_interval_seconds: int = 300
+
     # news_service consumer: the queue bound to the exchange, and the batch limits — a
     # batch is flushed to the DB when either is hit (size doubles as the prefetch).
     news_queue: str = "news.raw"
