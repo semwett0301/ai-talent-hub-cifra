@@ -9,9 +9,8 @@ is deployed **separately** via Docker Compose — Terraform does not run it. See
   `backend "s3"` storing state in Timeweb S3 (`cifra-tfstate`).
 - `variables.tf` — inputs (`SSH_PUBLIC_KEY`, server size/location, `APP_NAME`).
 - `main.tf` — data lookups (configurator, Docker software) + `twc_ssh_key` +
-  `twc_server`. (`twc_floating_ip` is commented out — Timeweb daily create limit;
-  the server uses its own `main_ipv4` until it's re-enabled.)
-- `outputs.tf` — `server_ipv4` (= `twc_server.main_ipv4`), `ssh_command`, `app_url`.
+  `twc_floating_ip` (public IPv4, bound at boot) + `twc_server`.
+- `outputs.tf` — `server_ipv4`, `ssh_command`, `app_url` (http://IP).
 - `cloud-init/` — first-boot server prep (Docker + Compose v2, `deploy` user,
   UFW 22/80, creates `/opt/<app_name>` ready for a compose project).
 - `terraform.tfvars.example` — copy to `terraform.tfvars` and fill in.
