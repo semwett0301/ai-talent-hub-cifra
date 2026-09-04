@@ -25,7 +25,7 @@ media, regulators, and Telegram channels.
 - `frontend/` — React SPA (Vite, TypeScript, React Router).
 - `nginx/` — edge: builds the SPA, serves it static, proxies `/api`; the only
   service exposed to the host.
-- `docker-compose.yml` — nginx (public) + source_service (3 replicas) + news_service
+- `docker-compose.yml` — nginx (public) + source_service + news_service
   + migrator + postgres + rabbitmq (internal).
 
 ## Run
@@ -129,12 +129,6 @@ How each consumer picks it up:
 |---|---|---|---|
 | `SOURCES_API_PREFIX` | The nginx location `source_service` is mounted under, and the same value as FastAPI's `root_path` (so `/docs` and `openapi.json` resolve behind the proxy). Consumed by **both** containers — change it here only. | `/api/sources` | no |
 | `NEWS_API_PREFIX` | Same for `news_service`. | `/api/news` | no |
-
-### Scaling
-
-| Variable | Meaning | Default | Secret |
-|---|---|---|---|
-| `SOURCE_SERVICE_REPLICAS` | How many `source_service` containers Compose runs behind nginx. | `3` | no |
 
 ### Frontend (build time)
 

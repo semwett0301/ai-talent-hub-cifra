@@ -28,8 +28,8 @@ redirect and never catches `/api/sourcesXYZ`. Common `proxy_set_header`s sit at
 sibling location per new service. No `upstream` block — the backend address goes
 through a variable (`set $sources_backend ...` + `proxy_pass $sources_backend`)
 with `resolver 127.0.0.11` (Docker's embedded DNS), so nginx re-resolves it per
-request and spreads traffic over the `source_service` replicas instead of pinning
-to the single IP it saw at startup. Because `proxy_pass` has a variable and no URI
+request and follows a restarted container's new IP instead of pinning to the one it
+saw at startup. Because `proxy_pass` has a variable and no URI
 part, the URI produced by the preceding `rewrite ... break` is what gets passed —
 hence `set` must come before the `rewrite`. Backend and DB have no host ports; all
 external traffic goes through here.

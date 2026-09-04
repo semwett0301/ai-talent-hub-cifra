@@ -73,11 +73,6 @@ services:
       TELEGRAM_SESSION: ${TELEGRAM_SESSION:-}
     expose:
       - "8000"
-    # Three interchangeable instances behind nginx (compose DNS round-robins the
-    # `source_service` name). Works only because the service publishes no host
-    # port and has no container_name.
-    deploy:
-      replicas: ${SOURCE_SERVICE_REPLICAS:-3}
     depends_on:
       postgres:
         condition: service_healthy
