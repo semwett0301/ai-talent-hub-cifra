@@ -21,7 +21,8 @@ from pyrogram.handlers import MessageHandler
 from pyrogram.types import Chat, Message
 
 from source_service.application.ports import NewsPublisher, PushCollector
-from source_service.domain.schemas import NewsItem, Source
+from source_service.domain.entities import NewsItem
+from source_service.domain.schemas import Source
 
 TELEGRAM_BASE_URL = "https://t.me"
 CLIENT_SESSION_NAME = "source_service"

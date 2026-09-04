@@ -1,10 +1,8 @@
-"""Domain schemas — the service's data shapes.
+"""Domain schemas — DB-backed data shapes (SQLAlchemy ORM).
 
-`Source` is DB-backed (SQLAlchemy ORM); `NewsItem` is a plain in-memory shape
-(collectors emit it, never stored). Same layer — they differ only in DB usage.
+Plain in-memory shapes (no DB involvement) live in `../entities/` instead.
 """
 
-from source_service.domain.schemas.news_item import NewsItem
 from source_service.domain.schemas.source import Source
 
-__all__ = ["NewsItem", "Source"]
+__all__ = ["Source"]
