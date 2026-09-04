@@ -4,6 +4,7 @@
 from contextlib import asynccontextmanager
 
 from common.core.logging import configure_logging, get_logger
+from common.settings import settings
 from fastapi import FastAPI
 
 from source_service import deps
@@ -35,8 +36,12 @@ async def lifespan(app: FastAPI):
         await rabbit.close()
 
 
-# App assembly and routes
-app = FastAPI(title="source_service", version="0.1.0", lifespan=lifespan)
+# root_path (/api/sources behind nginx) fixes OpenAPI/docs links; routers own paths from root.
+app = FastAPI(
+    title="source_service",
+    version="0.1.0",
+    lifespan=lifespan,
+    root_path=settings.api_root_path,
+)
 app.include_router(health.router)
-# Served at /sources; nginx exposes it publicly as /api/sources.
 app.include_router(sources.router)

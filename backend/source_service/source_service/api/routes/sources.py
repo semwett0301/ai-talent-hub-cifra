@@ -6,7 +6,7 @@ from source_service.application.dto.source import SourceCreate, SourceOut, Sourc
 from source_service.application.services import SourceService
 from source_service.deps import get_source_service
 
-router = APIRouter(prefix="/sources", tags=["sources"])
+router = APIRouter(tags=["sources"])
 
 
 async def _get_or_404(service: SourceService, source_id: int):
@@ -16,12 +16,12 @@ async def _get_or_404(service: SourceService, source_id: int):
     return source
 
 
-@router.get("", response_model=list[SourceOut])
+@router.get("/", response_model=list[SourceOut])
 async def list_sources(service: SourceService = Depends(get_source_service)) -> list[SourceOut]:
     return await service.list()
 
 
-@router.post("", response_model=SourceOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=SourceOut, status_code=status.HTTP_201_CREATED)
 async def create_source(
     payload: SourceCreate, service: SourceService = Depends(get_source_service)
 ) -> SourceOut:

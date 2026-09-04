@@ -47,7 +47,7 @@ frontend/                 # React SPA — Vite + TypeScript + React Router
   public/                 #   static assets served as-is
   .env.example            #   VITE_-prefixed (public) config
   .oxlintrc.json          #   linter config
-nginx/                    # edge: serves static SPA + reverse-proxies /api/* → source_service
+nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service
   Dockerfile              #   multi-stage: node build → nginx serving dist/
   nginx.conf
 docker-compose.yml        # root: nginx (public) + migrator + source_service + postgres + rabbitmq (internal)
@@ -75,11 +75,15 @@ README.md, .mcp.json, .gitignore
   `postgres`, and `rabbitmq` are reachable only on the internal compose network
   (`expose`, no host ports) — everything else stays closed.
 - The `nginx` image serves the static React SPA (fallback to `index.html`) and
-  **reverse-proxies `/api/*` → `source_service:8000`** (the `/api` prefix is
-  stripped, so `/api/sources` → `/sources`). Other services stay internal until a
-  full API gateway lands (`plans/api-gateway.md`). There is
-  **no separate frontend container**. Edit
-  `nginx/nginx.conf` and `nginx/Dockerfile`.
+  gives each backend its own **`/api/<service>/` namespace**. Currently it
+  **reverse-proxies `/api/sources/*` → `source_service:8000`** with the whole
+  `/api/sources` prefix stripped (so `/api/sources` → `/`,
+  `/api/sources/openapi.json` → `/openapi.json`); the service sets
+  `root_path=/api/sources` (via `settings.api_root_path`) so its OpenAPI/Swagger
+  links resolve back through the proxy. New services get a sibling
+  `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
+  There is **no separate frontend container**. Edit `nginx/nginx.conf` and
+  `nginx/Dockerfile`.
 
 ## Architecture rules (backend)
 
