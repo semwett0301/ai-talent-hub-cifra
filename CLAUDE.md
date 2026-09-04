@@ -55,6 +55,7 @@ terraform/                # Timeweb Cloud infra (Terraform + cloud-init)
 .env.example              # THE env template for every part — backend, frontend,
                           #   nginx, compose, terraform, deploy (copy to .env)
 README.md, .mcp.json, .gitignore
+gen_session.py            # one-off: interactive Telegram login → TELEGRAM_SESSION string
 ```
 
 `backend/domain` holds the shared kernel — ORM `schemas` (one DB for all), business
