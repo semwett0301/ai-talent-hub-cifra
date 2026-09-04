@@ -191,6 +191,7 @@ Two path-filtered workflows, so a change runs only the relevant job:
 - **Skills** (`.claude/skills/`): official LangChain skills for the LLM/agent
   stack.
 - **Rules** (`.claude/rules/`): `00-conventions`, `10-core`, `20-git`,
-  `30-python`, `40-monorepo`, `50-docs`. Consult the matching one before
-  implementing. `50-docs` = keep each folder's `README.md` (file map + notes)
-  current when you change files in it.
+  `30-python`, `40-monorepo`, `50-docs`, `60-logging`. Consult the matching one
+  before implementing. `50-docs` = keep each folder's `README.md` (file map +
+  notes) current when you change files in it. `60-logging` = one INFO line per
+  logical action (received / published / registered / …), library noise capped.

@@ -28,3 +28,4 @@ enforceable specifics here.
 - `30-python.md` — Python guidelines.
 - `40-monorepo.md` — repo structure, backend/frontend split, networking.
 - `50-docs.md` — keep each folder's `README.md` current.
+- `60-logging.md` — log every logical action; keep library noise capped.
