@@ -44,13 +44,15 @@ ports. The ports type against the shared `domain.schemas.Source` and
 ```
 source_service/                 # the importable package
   application/
-    ports/                      # collectors.py, repositories.py, publisher.py, registrar.py (Protocols)
+    ports/                      # collectors.py, repositories.py, publisher.py, registrar.py, crawler.py (Protocols)
     dto/source/                 # SourceCreate / SourceOut / SourceUpdate
     services/                   # SourceService (CRUD), SourceRegistry (runtime registrar)
+    parse/                      # pure link/page recognition — telegram.py, rss.py
   infrastructure/
     repositories/               # SourceRepo → implements SourceRepository (session per call)
     rabbit/connector.py         # RabbitConnector → implements NewsPublisher
     collectors/                 # RssCollector / WebCrawlCollector / TelegramCollector
+    crawling/                   # Crawl4AiPageFetcher → implements PageFetcher
   api/routes/                   # health.py, sources.py (FastAPI routers)
   deps.py                       # composition root — DI wiring
   main.py                       # FastAPI app + lifespan

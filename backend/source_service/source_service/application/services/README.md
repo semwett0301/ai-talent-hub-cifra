@@ -4,7 +4,9 @@ Application services — use cases and background aggregators, one public class 
 module (re-exported from `__init__.py`).
 
 - `source_service.py` — `SourceService`: CRUD use-cases over `SourceRepository`; each
-  mutation reconciles the runtime through the injected `SourceRegistrar`.
+  mutation reconciles the runtime through the injected `SourceRegistrar`. `create`
+  and (when `link` changes) `update` auto-detect `type` via the injected
+  `PageFetcher` + `application.parse` — clients never send `type`.
 - `source_registry.py` — `SourceRegistry`: the sole `SourceRegistrar`. Dispatches by
   source type — pull → APScheduler job, push → subscription; injected publisher +
   pull/push collectors + `SourceRepository`. Owns `start`/`shutdown`/`load` lifecycle
