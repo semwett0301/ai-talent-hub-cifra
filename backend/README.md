@@ -5,7 +5,7 @@ package); the shared kernel and each deployable service are sibling member
 directories (no `services/` wrapper).
 
 - `domain/` — shared kernel member (its own `pyproject.toml`; package at
-  `domain/domain/`, imported as `domain`): `core/` = settings + logging + DB infra,
+  `domain/domain/`, imported as `domain`): `core/` = settings + logging + DB + shared Rabbit batch consumer,
   `entities/` = business shapes (grouped by domain, e.g. `entities/news`), `schemas/`
   = the shared ORM models. Because the DB is one for all services, schemas live here.
 - `source_service/` — ingestion service: CRUD sources, collect news (Telegram push
@@ -62,9 +62,11 @@ source_service/                 # the importable package
 ```
 
 `news_service/` mirrors it, with the bus as an *entry point* instead of an exit: the
-consumer (`infrastructure/rabbit/consumer.py`) calls the inward-facing port
-`application.ports.NewsBatchHandler`, implemented by `application.services.NewsIngestor`,
-which writes through `NewsRepository` (`infrastructure/repositories/news_repo.py`).
+shared `domain.core.rabbit.RabbitBatchConsumer` (built in `deps.py`) calls the
+inward-facing port `application.ports.NewsBatchHandler`, implemented by
+`application.services.NewsIngestor`, which writes through `NewsRepository`
+(`infrastructure/repositories/news_repo.py`). The consumer mechanism lives in `domain`
+so the next bus consumer service only supplies its model, handler, and config.
 
 Notes: run uv from here (`uv sync --all-packages`). Each service is its own package
 (`pyproject.toml` depending on `domain`, plus a `Dockerfile`), and ships a

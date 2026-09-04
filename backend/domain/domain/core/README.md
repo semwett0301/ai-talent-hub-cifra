@@ -1,21 +1,19 @@
 # domain.core
 
-Base infrastructure shared by every service: settings, logging, and the DB layer.
+Base infrastructure shared by every service, one subpackage per concern. Import from
+the subpackage (`from domain.core.settings import settings`), not from the modules
+inside it.
 
-- `settings.py` — `Settings` (pydantic-settings, reads the repo-root `.env`) +
-  the `settings` singleton. Read config only through it (never `os.environ`).
-  Holds every service's knobs — e.g. the `news_*` batch settings `news_service`
-  reads and the `*_api_prefix` values shared with nginx.
-- `logging.py` — `configure_logging()` + `get_logger()` over stdlib `logging`;
-  caps `NOISY_LOGGERS` (aio_pika/aiormq/pamqp, pyrogram, httpx, urllib3,
-  charset_normalizer, newspaper, readability) at INFO so `DEBUG=true` doesn't
-  drown business logs in AMQP frames, MTProto updates and extractor DOM scoring;
-  `CHATTY_LOGGERS` (newsplease, which announces its pipeline at INFO on every
-  article) are capped at WARNING.
-- `base.py` — `Base` (DeclarativeBase) that every ORM model inherits.
-- `session.py` — async `engine`, `async_session_factory`, and `get_session`
-  (per-request dependency; caller commits/rolls back).
+- `settings/` — `Settings` + the `settings` singleton (pydantic-settings over the
+  repo-root `.env`). The only way to read config — never `os.environ`.
+- `logging/` — `configure_logging()` / `get_logger()` over stdlib `logging`, with the
+  noisy-library caps (`NOISY_LOGGERS`, `CHATTY_LOGGERS`).
+- `db/` — the declarative `Base` every ORM model inherits, plus the async `engine`,
+  `async_session_factory`, and `get_session`.
+- `rabbit/` — the shared RabbitMQ **batch consumer** (`RabbitBatchConsumer[T]`,
+  `BatchHandler[T]`, `BatchConsumerConfig`, `BatchStoreError`): a service supplies a
+  pydantic message model + a handler, the mechanism (prefetch, buffer, ack-after-store,
+  requeue) lives here once.
 
-Notes: log via `get_logger` (no `print`). URL comes from `settings.async_database_url`
-(asyncpg); Alembic uses the sync URL (psycopg2) — the schema history lives in the
-`migrator` service.
+Notes: `settings` is imported by `logging` and `db`, so it must stay dependency-free
+within `core`. Alembic uses `settings.sync_database_url`; everything else the async one.

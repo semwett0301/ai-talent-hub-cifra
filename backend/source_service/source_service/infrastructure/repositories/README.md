@@ -10,4 +10,4 @@ over SQLAlchemy.
   to update/delete is `merge`d into the fresh session first.
 
 Notes: `SourceRepo` **inherits** the `SourceRepository` port (explicit conformance)
-and is re-exported from `__init__.py`. Sessions come from `domain.core.session`.
+and is re-exported from `__init__.py`. Sessions come from `domain.core.db`.

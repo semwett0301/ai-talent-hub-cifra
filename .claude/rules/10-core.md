@@ -34,6 +34,13 @@ This is the most important rule: **Do not mimic the style and patterns of existi
 ## Naming
 
 - Names must be semantic; the purpose should be clear from the name alone
+- **A class name states what the class does or is** — its role, not a vague category
+  or the layer it lives in. `NewsBatchHandler`, `RssPullCollector`, `SourceRepo` are
+  good; `IngestPort`, `NewsService`, `Manager`, `Helper` say nothing about purpose
+- **A file is named after its main entity.** The module name is the `snake_case` of the
+  single public class it holds (`NewsBatchHandler` → `batch_handler.py` inside `ports/`);
+  never a workflow verb or a topic word (`ingest.py`, `utils.py`, `common.py`). Rename
+  the file when you rename the class (details in `30-python.md` → Module Organization)
 - No meaningless names: `data1`, `temp`, `info`, `obj`, `result`, `item` (except loop variables)
 - Boolean values use `is`/`has`/`can`/`should` prefixes: `isLoading`, `hasPermission`
 - Function names start with a verb: `fetchUser`, `validateInput`, `calculateTotal`

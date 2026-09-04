@@ -14,7 +14,7 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.core.base import Base
+from domain.core.db import Base
 from domain.entities.news import SourceType
 from domain.entities.source import SourceReliability
 from domain.schemas.types import SOURCE_RELIABILITY, SOURCE_TYPE

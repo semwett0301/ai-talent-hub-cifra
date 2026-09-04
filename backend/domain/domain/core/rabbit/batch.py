@@ -5,35 +5,36 @@ from collections.abc import Awaitable
 from aio_pika.abc import AbstractIncomingMessage
 from aio_pika.exceptions import AMQPError
 from aiormq.exceptions import ChannelInvalidStateError
+from pydantic import BaseModel, ValidationError
+
 from domain.core.logging import get_logger
-from domain.entities.news import NewsDTO
-from pydantic import ValidationError
 
 logger = get_logger(__name__)
 
 # Settling can fail only when the channel was reset underneath us (robust reconnect);
-# the broker then redelivers the run, which the unique `url` absorbs harmlessly.
+# the broker then redelivers the run, which an idempotent handler absorbs harmlessly.
 SETTLE_ERRORS = (AMQPError, ChannelInvalidStateError)
 
 
-class MessageBatch:
-    """Splits deliveries into parsed `NewsDTO`s and unparseable ones.
+class MessageBatch[T: BaseModel]:
+    """Splits deliveries into parsed `model` instances and unparseable ones.
 
     Delivery tags grow monotonically on a channel, so acking/nacking the **last** valid
     message with `multiple=True` settles every earlier unacked delivery of this run in
     one frame — no per-message round trips.
     """
 
-    def __init__(self, messages: list[AbstractIncomingMessage]) -> None:
+    def __init__(self, messages: list[AbstractIncomingMessage], model: type[T]) -> None:
+        self.__model = model
         self.__valid: list[AbstractIncomingMessage] = []
         self.__invalid: list[AbstractIncomingMessage] = []
-        self.__items: list[NewsDTO] = []
+        self.__items: list[T] = []
 
         for message in messages:
             self.__parse(message)
 
     @property
-    def items(self) -> list[NewsDTO]:
+    def items(self) -> list[T]:
         return self.__items
 
     async def reject_invalid(self) -> None:
@@ -42,7 +43,11 @@ class MessageBatch:
             await self.__settle(message.reject(requeue=False), "reject")
 
         if self.__invalid:
-            logger.warning("news messages dropped: count=%d (invalid payload)", len(self.__invalid))
+            logger.warning(
+                "messages dropped: model=%s count=%d (invalid payload)",
+                self.__model.__name__,
+                len(self.__invalid),
+            )
 
     async def ack(self) -> None:
         if not self.__valid:
@@ -58,10 +63,13 @@ class MessageBatch:
 
     def __parse(self, message: AbstractIncomingMessage) -> None:
         try:
-            item = NewsDTO.model_validate_json(message.body)
+            item = self.__model.model_validate_json(message.body)
         except ValidationError as error:
             logger.warning(
-                "news message rejected: key=%s errors=%d", message.routing_key, error.error_count()
+                "message rejected: model=%s key=%s errors=%d",
+                self.__model.__name__,
+                message.routing_key,
+                error.error_count(),
             )
             self.__invalid.append(message)
             return

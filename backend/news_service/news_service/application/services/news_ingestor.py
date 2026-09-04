@@ -1,9 +1,9 @@
 """Batch ingest use case — stores one batch of consumed news through the repository port.
 
-Implements `NewsBatchHandler`: the bus consumer hands over a batch, this dedupes it
-by `url` within the batch (the DB skips urls it already holds) and writes it in one
-transaction. Storage failures propagate as `NewsStoreError` so the consumer can
-requeue the batch.
+Implements `NewsBatchHandler`: the shared bus consumer hands over a batch, this
+dedupes it by `url` within the batch (the DB skips urls it already holds) and writes it
+in one transaction. Storage failures propagate as `NewsStoreError` (a `BatchStoreError`)
+so the consumer requeues the batch.
 """
 
 from domain.core.logging import get_logger

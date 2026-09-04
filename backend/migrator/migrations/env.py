@@ -9,7 +9,7 @@ from logging.config import fileConfig
 
 import domain.schemas  # noqa: F401 — import registers every ORM model on Base.metadata
 from alembic import context
-from domain.core.base import Base
+from domain.core.db import Base
 from domain.core.settings import settings
 from sqlalchemy import engine_from_config, pool
 

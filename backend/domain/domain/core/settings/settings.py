@@ -7,8 +7,8 @@ from pydantic import computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # The one .env for the whole repo (see .env.example) — this file lives at
-# <root>/backend/common/common/core/settings.py, hence five levels up.
-ENV_FILE = Path(__file__).resolve().parents[4] / ".env"
+# <root>/backend/domain/domain/core/settings/settings.py, hence six levels up.
+ENV_FILE = Path(__file__).resolve().parents[5] / ".env"
 
 
 class Settings(BaseSettings):

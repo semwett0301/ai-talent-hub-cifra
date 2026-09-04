@@ -16,4 +16,4 @@ Notes: classes here implement the ports (they inherit the `Protocol`); `deps.py`
 constructs them and injects them where a port is expected. Adapters that need HTTP
 take the `PageFetcher` port rather than opening their own client — one place owns
 timeouts, headers, and the session lifecycle. DB engine/session come
-from `domain.core.session`.
+from `domain.core.db`.

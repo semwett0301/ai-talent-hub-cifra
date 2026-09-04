@@ -30,7 +30,7 @@ repo files.
 ```
 backend/                  # all Python — a single uv workspace (services are siblings)
   domain/                 # shared kernel (one DB → shared schemas), its own pyproject
-    domain/               #   importable package: core (settings/logging/db), entities, schemas
+    domain/               #   importable package: core (settings/logging/db/rabbit), entities, schemas
     pyproject.toml        #   the `domain` package
   source_service/         # project source-service — FastAPI ingestion service
     source_service/       #   importable package (uniquely named, not generic `app`)

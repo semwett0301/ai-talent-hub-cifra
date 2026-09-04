@@ -1,30 +1,35 @@
 """Composition root — wire infrastructure implementations into application.
 
 The one place that knows every layer: it builds the concrete repository and the
-RabbitMQ consumer, and hands the application use cases to them. Everything else
-depends only on ports.
+shared RabbitMQ batch consumer, and hands the application use cases to them.
+Everything else depends only on ports.
 """
 
+from domain.core.rabbit import BatchConsumerConfig, RabbitBatchConsumer
 from domain.core.settings import settings
+from domain.entities.news import ROUTING_PREFIX, NewsDTO
 
-from news_service.application.services import NewsIngestor, NewsService
-from news_service.infrastructure.rabbit import RabbitConsumerConfig, RabbitNewsConsumer
+from news_service.application.services import NewsFeed, NewsIngestor
 from news_service.infrastructure.repositories import NewsRepo
 
+# Every per-type routing key (`news.raw.telegram`, `news.raw.rss`, …).
+NEWS_BINDING_KEY = f"{ROUTING_PREFIX}.#"
 
-def get_news_service() -> NewsService:
+
+def get_news_feed() -> NewsFeed:
     """FastAPI use case. NewsRepo opens a session per call, so no request binding."""
-    return NewsService(NewsRepo())
+    return NewsFeed(NewsRepo())
 
 
-def build_consumer() -> RabbitNewsConsumer:
+def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
     """The bus entry point; owns a `start`/`stop` lifecycle the caller drives around
-    serving. Feeds batches to `NewsIngestor` through the `NewsBatchHandler` port."""
-    config = RabbitConsumerConfig(
+    serving. Parses deliveries into `NewsDTO` and feeds batches to `NewsIngestor`."""
+    config = BatchConsumerConfig(
         url=settings.rabbitmq_url,
         exchange_name=settings.news_exchange,
         queue_name=settings.news_queue,
+        binding_key=NEWS_BINDING_KEY,
         batch_size=settings.news_batch_size,
         batch_interval_seconds=settings.news_batch_interval_seconds,
     )
-    return RabbitNewsConsumer(config, NewsIngestor(NewsRepo()))
+    return RabbitBatchConsumer(config, NewsIngestor(NewsRepo()), NewsDTO)
