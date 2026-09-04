@@ -24,8 +24,9 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
   - `application/` — `ports/` (interfaces infra implements) + `dto/` + `services/` +
     `parse/`: `SourceService` (CRUD over the repo port; auto-detects a source's
     `type` from its `link` via `parse/` + the `PageFetcher` port — clients never
-    send `type`) and `SourceRegistry` (the runtime registrar — pull scheduling +
-    push subscription, kept in sync with CRUD).
+    send `type`; an RSS feed's URL is stored in `rss_link`, scraping-only and also
+    never client-supplied) and `SourceRegistry` (the runtime registrar — pull
+    scheduling + push subscription, kept in sync with CRUD).
   - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a
     session per call), `rabbit/` (`RabbitConnector`), `collectors/`
     (`Rss`/`WebCrawl`/`Telegram`), `crawling/` (`Crawl4AiPageFetcher`).

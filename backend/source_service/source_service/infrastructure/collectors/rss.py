@@ -12,5 +12,5 @@ logger = get_logger(__name__)
 class RssCollector(PullCollector):
     async def fetch(self, source: Source) -> list[NewsDTO]:
         # TODO: parse the feed with feedparser; emit entries newer than the cursor.
-        logger.info("rss stub fetch: %s", source.link)
+        logger.info("rss stub fetch: %s", source.rss_link)
         return []

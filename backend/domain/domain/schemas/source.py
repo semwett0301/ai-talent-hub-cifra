@@ -36,6 +36,8 @@ class Source(Base):
     type: Mapped[SourceType] = mapped_column(_SOURCE_TYPE)
     name: Mapped[str] = mapped_column(String(255))
     link: Mapped[str] = mapped_column(String(255))
+    # Feed URL for RSS sources only; DB-enforced by a CHECK constraint, not the app.
+    rss_link: Mapped[str | None] = mapped_column(String(255), nullable=True)
     reliability: Mapped[SourceReliability] = mapped_column(
         _SOURCE_RELIABILITY, default=SourceReliability.MEDIUM, server_default="medium"
     )

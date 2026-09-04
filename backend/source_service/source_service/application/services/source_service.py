@@ -34,11 +34,17 @@ class SourceService:
         return await self._repo.get(source_id)
 
     async def create(self, payload: SourceCreate) -> Source:
-        source_type, link = await self.__detect_type(payload.link)
-        data = payload.model_dump() | {"type": source_type, "link": link}
+        source_type, link, rss_link = await self.__detect_type(payload.link)
+        data = payload.model_dump() | {"type": source_type, "link": link, "rss_link": rss_link}
 
         source = await self._repo.create(data)
-        logger.info("source created: id=%s type=%s link=%s", source.id, source.type, source.link)
+        logger.info(
+            "source created: id=%s type=%s link=%s rss_link=%s",
+            source.id,
+            source.type,
+            source.link,
+            source.rss_link,
+        )
 
         await self._registrar.register(source)
         return source
@@ -46,7 +52,9 @@ class SourceService:
     async def update(self, source: Source, payload: SourceUpdate) -> Source:
         changes = payload.model_dump(exclude_unset=True)
         if "link" in changes:
-            changes["type"], changes["link"] = await self.__detect_type(changes["link"])
+            changes["type"], changes["link"], changes["rss_link"] = await self.__detect_type(
+                changes["link"]
+            )
 
         updated = await self._repo.update(source, changes)
         logger.info(
@@ -64,22 +72,22 @@ class SourceService:
 
         await self._registrar.unregister(source)
 
-    async def __detect_type(self, link: str) -> tuple[SourceType, str]:
-        """Telegram link -> TELEGRAM, unchanged. Else crawl the page: an RSS feed
-        link -> RSS with `link` rewritten to the feed URL; otherwise, or if the
-        page can't be fetched, -> WEB with `link` unchanged."""
+    async def __detect_type(self, link: str) -> tuple[SourceType, str, str | None]:
+        """Telegram link -> TELEGRAM, `link` unchanged. Else crawl the page: an RSS
+        feed link -> RSS, `link` unchanged and the feed URL returned separately as
+        `rss_link`; otherwise, or if the page can't be fetched, -> WEB, no feed."""
         if is_telegram_link(link):
-            return SourceType.TELEGRAM, link
+            return SourceType.TELEGRAM, link, None
 
         page_content = await self._page_fetcher.fetch(link)
         if page_content is None:
             logger.info("source type detected: link=%s -> web (page unreachable)", link)
-            return SourceType.WEB, link
+            return SourceType.WEB, link, None
 
         feed = find_rss_feed_link(page_content, link)
         if feed is not None:
             logger.info("source type detected: link=%s -> rss feed=%s", link, feed.url)
-            return SourceType.RSS, feed.url
+            return SourceType.RSS, link, feed.url
 
         logger.info("source type detected: link=%s -> web (no feed link)", link)
-        return SourceType.WEB, link
+        return SourceType.WEB, link, None

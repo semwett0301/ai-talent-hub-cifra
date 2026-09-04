@@ -3,7 +3,8 @@
 Collector implementations of the application collector ports — the per-source-type
 "how to get news" (external I/O). Re-exported from `__init__.py`.
 
-- `rss.py` — `RssCollector` (pull, feedparser). **Stub**.
+- `rss.py` — `RssCollector` (pull, feedparser), polls `source.rss_link` (the
+  detected feed URL, distinct from `source.link`). **Stub**.
 - `web.py` — `WebCrawlCollector` (pull, crawl4ai/Playwright). **Stub**.
 - `telegram.py` — `TelegramCollector` (push, kurigram — a Pyrogram fork, imported as
   `pyrogram`): joins channels and publishes each new post as a `domain.entities.news.NewsDTO`
