@@ -1,4 +1,4 @@
-"""Source model — owned by source_service (only this service uses it)."""
+"""Source — DB-backed schema (SQLAlchemy ORM), owned by source_service."""
 
 from datetime import datetime
 

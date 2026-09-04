@@ -6,8 +6,7 @@ domain entity). `NewsItem` is the domain entity every collector emits.
 
 from typing import Protocol
 
-from source_service.domain.entities import NewsItem
-from source_service.infrastructure.persistence.schemas import Source
+from source_service.domain.schemas import NewsItem, Source
 
 
 class PullCollector(Protocol):

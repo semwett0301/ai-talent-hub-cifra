@@ -8,8 +8,7 @@ The edge — the only service exposed to the host (port 80).
   each backend under its own `/api/<service>/` namespace. Currently `/api/sources/*`
   → `source_service:8000` with the **whole `/api/sources` prefix stripped**
   (`/api/sources` → `/`, `/api/sources/5` → `/5`, `/api/sources/openapi.json` →
-  `/openapi.json`). The service sets `root_path=/api/sources` so its OpenAPI/Swagger
-  links resolve back through here.
+  `/openapi.json`), so the OpenAPI spec is reachable at `/api/sources/openapi.json`.
 
 Notes: the API location is a regex (`~ ^/api/sources(?:/(.*))?$` + `rewrite … break`)
 so it matches the bare collection and sub-paths without a trailing-slash redirect and

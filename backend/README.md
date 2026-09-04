@@ -24,32 +24,31 @@ concrete wiring happens once, at the composition root.
 
 | Layer | Holds | Depends on |
 |-------|-------|-----------|
-| `domain/` | Business entities, value objects, business rules, domain errors. No I/O. | nothing |
+| `domain/` | Data **schemas** — the DB-backed ORM (`Source`) and plain in-memory shapes (`NewsItem`) — plus business rules. | SQLAlchemy (for the ORM) |
 | `application/` | Use cases / orchestration, the **ports** (interfaces) infra implements, and DTOs. | domain |
-| `infrastructure/` | Implementations of the ports: ORM schemas, repositories, RabbitMQ, collectors (feedparser / Playwright / aiogram), external APIs. | application, domain |
+| `infrastructure/` | Implementations of the ports: repositories, RabbitMQ, collectors (feedparser / Playwright / aiogram), external APIs. | application, domain |
 | `api/` | FastAPI routes / controllers and HTTP-only types. | application |
 | `deps.py` | **Composition root** — builds the concrete implementations and injects them into application (registries, repository, publisher). | everything |
 
 Inversion in practice: application defines a `Protocol` port (`SourceRepository`,
 `NewsPublisher`, `PullCollector`/`PushCollector`); infrastructure supplies a class
-that structurally satisfies it; `deps.py` constructs the impl and passes it in.
-Application never imports a concrete infra class — only its own ports. (One
-pragmatic concession: the ports type against the ORM `Source` schema directly
-rather than a separate domain entity.)
+that **implements** it (inherits the port); `deps.py` constructs the impl and passes
+it in. Application never imports a concrete infra class — only its own ports.
+(Pragmatic concession: DB-backed schemas live in `domain/schemas/` next to the plain
+ones, so the ports type against the ORM `Source` directly.)
 
 `source_service/` folder layout:
 
 ```
 source_service/                 # the importable package
   domain/
-    entities/news_item.py       # NewsItem (domain entity)
+    schemas/                    # Source (ORM table) + NewsItem (plain shape)
   application/
     ports/                      # collectors.py, repositories.py, publisher.py (Protocols)
     dto/source/                 # SourceCreate / SourceOut / SourceUpdate
     services/                   # SourceService, SchedulerService, SubscriptionService
   infrastructure/
-    persistence/schemas/        # ORM Source (table)
-    persistence/repositories/   # SourceRepo → implements SourceRepository
+    repositories/               # SourceRepo → implements SourceRepository (session per call)
     rabbit/connector.py         # RabbitConnector → implements NewsPublisher
     collectors/                 # RssCollector / WebCrawlCollector / TelegramCollector
   api/routes/                   # health.py, sources.py (FastAPI routers)

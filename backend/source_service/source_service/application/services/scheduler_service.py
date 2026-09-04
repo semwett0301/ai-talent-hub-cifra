@@ -5,14 +5,11 @@ Collaborators (publisher, collectors, source loaders) are injected from `deps`.
 Live re-scheduling on CRUD is a TODO; for now sources are picked up at startup.
 """
 
-from collections.abc import Awaitable, Callable
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from common.core.logging import get_logger
 from common.enums import SourceType
 
-from source_service.application.ports import NewsPublisher, PullCollector
-from source_service.infrastructure.persistence.schemas import Source
+from source_service.application.ports import NewsPublisher, PullCollector, SourceRepository
 
 logger = get_logger(__name__)
 
@@ -24,13 +21,11 @@ class SchedulerService:
         self,
         publisher: NewsPublisher,
         pull_collectors: dict[SourceType, PullCollector],
-        load_sources: Callable[[], Awaitable[list[Source]]],
-        get_source: Callable[[int], Awaitable[Source | None]],
+        repository: SourceRepository,
     ) -> None:
         self._publisher = publisher
         self._pull_collectors = pull_collectors
-        self._load_sources = load_sources
-        self._get_source = get_source
+        self._repository = repository
         self._scheduler = AsyncIOScheduler()
 
     def start(self) -> None:
@@ -40,7 +35,7 @@ class SchedulerService:
         self._scheduler.shutdown(wait=False)
 
     async def load(self) -> None:
-        for source in await self._load_sources():
+        for source in await self._repository.list_enabled():
             if source.type in self._pull_collectors:
                 self._add(source.id, source.poll_interval_seconds)
 
@@ -55,7 +50,7 @@ class SchedulerService:
         )
 
     async def _run(self, source_id: int) -> None:
-        source = await self._get_source(source_id)
+        source = await self._repository.get(source_id)
         if source is None or not source.is_enabled:
             return
         collector = self._pull_collectors.get(source.type)

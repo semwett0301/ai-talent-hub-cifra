@@ -8,7 +8,7 @@ from common.core.logging import get_logger
 from common.dto import NewsDTO, routing_key
 from common.enums import SourceType
 
-from source_service.domain.entities import NewsItem
+from source_service.domain.schemas import NewsItem
 
 logger = get_logger(__name__)
 

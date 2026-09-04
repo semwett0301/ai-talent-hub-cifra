@@ -56,7 +56,6 @@ services:
     environment:
       POSTGRES_HOST: postgres
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-      API_ROOT_PATH: /api/sources
     expose:
       - "8000"
     depends_on:

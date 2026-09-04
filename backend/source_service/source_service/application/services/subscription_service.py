@@ -5,13 +5,11 @@ subscribe/unsubscribe on CRUD is a TODO; for now enabled push sources are
 subscribed at startup.
 """
 
-from collections.abc import Awaitable, Callable
-
 from common.core.logging import get_logger
 from common.enums import SourceType
 
-from source_service.application.ports import PushCollector
-from source_service.infrastructure.persistence.schemas import Source
+from source_service.application.ports import PushCollector, SourceRepository
+from source_service.domain.schemas import Source
 
 logger = get_logger(__name__)
 
@@ -20,13 +18,13 @@ class SubscriptionService:
     def __init__(
         self,
         push_collectors: dict[SourceType, PushCollector],
-        load_sources: Callable[[], Awaitable[list[Source]]],
+        repository: SourceRepository,
     ) -> None:
         self._push_collectors = push_collectors
-        self._load_sources = load_sources
+        self._repository = repository
 
     async def load(self) -> None:
-        for source in await self._load_sources():
+        for source in await self._repository.list_enabled():
             await self.subscribe(source)
 
     async def subscribe(self, source: Source) -> None:

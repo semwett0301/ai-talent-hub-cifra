@@ -68,7 +68,7 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
 - The `nginx` image (`nginx/Dockerfile`, build context = repo root) serves the SPA
   (fallback to `index.html`) and gives each backend its own `/api/<service>/`
   namespace — currently **`/api/sources/*` → `source_service:8000`** with the whole
-  `/api/sources` prefix stripped (the service sets `root_path=/api/sources` so its
-  OpenAPI/Swagger resolve through the proxy). New services get a sibling
-  `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
+  `/api/sources` prefix stripped, so the OpenAPI spec is reachable at
+  `/api/sources/openapi.json`. New services get a sibling `/api/<name>/` location
+  until a full API gateway lands (`plans/api-gateway.md`).
 - Backend service images build from `./backend`.

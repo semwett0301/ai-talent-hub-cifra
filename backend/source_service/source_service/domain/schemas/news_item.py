@@ -1,4 +1,4 @@
-"""NewsItem — domain entity: the normalized unit every collector emits."""
+"""NewsItem — in-memory schema: the normalized unit every collector emits."""
 
 from dataclasses import dataclass, field
 from datetime import datetime

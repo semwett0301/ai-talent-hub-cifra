@@ -4,7 +4,7 @@ from typing import Protocol
 
 from common.enums import SourceType
 
-from source_service.domain.entities import NewsItem
+from source_service.domain.schemas import NewsItem
 
 
 class NewsPublisher(Protocol):
