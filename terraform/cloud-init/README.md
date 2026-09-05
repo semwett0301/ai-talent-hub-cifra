@@ -10,8 +10,8 @@ Notes: template vars from `main.tf` — `deploy_user`, `ssh_public_key`, `app_di
 `hostname`. The plain `ubuntu-24-04-x64` image ships without Docker, so it's installed
 via `get.docker.com`. UFW allows only 22: Docker-published ports (nginx's 80) go through
 Docker's own `DOCKER` iptables chain, which UFW does not filter, so 80 stays reachable
-without a UFW rule — the DO cloud firewall (`main.tf`, 22/80) is what actually gates
-it. It does **not** deploy the app — you ship `docker-compose.yml` to `/opt/<app_name>`
+without a UFW rule. There is no DO cloud firewall, so anything Compose publishes is
+public — only nginx may have `ports:`. It does **not** deploy the app — you ship `docker-compose.yml` to `/opt/<app_name>`
 separately.
 
 **Resilience:** the deploy dir is created **first** and nothing after uses `set -e`,

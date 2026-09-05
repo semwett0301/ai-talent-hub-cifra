@@ -1,7 +1,7 @@
 # terraform
 
 DigitalOcean infra + cloud-init. **No-domain / HTTP-by-IP** variant: provisions **one
-droplet** (Docker + a `deploy` user) behind a cloud firewall, with a reserved IP. The
+droplet** (Docker + a `deploy` user + UFW) with a reserved IP. The
 app is deployed **separately** via Docker Compose — Terraform does not run it.
 Manual console setup (one-time, before the first `init`): `../plans/digitalocean-setup.md`.
 
@@ -13,7 +13,7 @@ Manual console setup (one-time, before the first `init`): `../plans/digitalocean
   `SERVER_NAME`) and droplet (`REGION`/`SIZE`/`IMAGE`, default ams3 / s-2vcpu-4gb /
   ubuntu-24-04-x64).
 - `main.tf` — `digitalocean_ssh_key` + `digitalocean_droplet` (cloud-init as
-  `user_data`) + `digitalocean_reserved_ip` + `digitalocean_firewall` (22/80 in, all out).
+  `user_data`) + `digitalocean_reserved_ip`. No cloud firewall — the host gates itself.
 - `outputs.tf` — `server_ipv4` (= the reserved IP), `ssh_command`, `app_url`.
 - `cloud-init/` — first-boot prep: `deploy` user, `/opt/<app_name>`, UFW (22), Docker.
 - `.gitignore` — keeps state/tfvars/plans out of git.
@@ -21,9 +21,10 @@ Manual console setup (one-time, before the first `init`): `../plans/digitalocean
 Inputs come from the **repo-root `.env`** as `TF_VAR_*` (see `../.env.example` and
 the variable reference in `../README.md`) — there is no `terraform.tfvars`.
 
-Notes: only ports 22/80 are open. The cloud firewall is the real gate; UFW on the host
-allows just 22, and Docker exposes nginx's 80 through its own iptables chain (UFW
-does not filter Docker-published ports). **Editing `cloud-init/` replaces the droplet** — `user_data` is immutable on
+Notes: no DO cloud firewall, so the host is the only gate. UFW allows just 22; Docker
+exposes nginx's 80 through its own iptables chain, which UFW does not filter — so
+**every port Compose publishes is public**. Keep `ports:` on nginx only (postgres /
+rabbitmq stay on `expose`). **Editing `cloud-init/` replaces the droplet** — `user_data` is immutable on
 DO — but the reserved IP re-attaches to the new droplet, so `server_ipv4` is stable.
 Data on the old droplet is lost; `/opt/<app_name>/.env` must be recreated by hand.
 After apply, ship `docker-compose.yml` to `/opt/<app_name>` and `docker compose up -d`.

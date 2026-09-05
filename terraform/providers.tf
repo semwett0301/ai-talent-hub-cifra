@@ -29,5 +29,4 @@ terraform {
   }
 }
 
-# Auth via the DIGITALOCEAN_TOKEN env var (root .env / GitHub Secret).
 provider "digitalocean" {}
