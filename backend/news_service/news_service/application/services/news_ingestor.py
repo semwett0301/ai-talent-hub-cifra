@@ -7,8 +7,8 @@ here. Storage failures propagate as `NewsStoreError` (a `BatchStoreError`) so th
 consumer nacks the batch (requeue or drop, per its config).
 """
 
-from domain.core.logging import get_logger
-from domain.entities.news import NewsDTO
+from common.core.logging import get_logger
+from common.entities.news import NewsDTO
 
 from news_service.application.ports import NewsBatchHandler, NewsRepository
 

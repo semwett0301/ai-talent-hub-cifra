@@ -9,7 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "domain",
+    "common",
     "migrator",
     "news-service",
     "source-service",
@@ -783,6 +783,27 @@ wheels = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+source = { editable = "common" }
+dependencies = [
+    { name = "aio-pika" },
+    { name = "asyncpg" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aio-pika", specifier = "==9.5.4" },
+    { name = "asyncpg", specifier = "==0.30.0" },
+    { name = "pydantic", specifier = "==2.10.4" },
+    { name = "pydantic-settings", specifier = "==2.7.1" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.36" },
+]
+
+[[package]]
 name = "constantly"
 version = "23.10.4"
 source = { registry = "https://pypi.org/simple" }
@@ -919,27 +940,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
-]
-
-[[package]]
-name = "domain"
-version = "0.1.0"
-source = { editable = "domain" }
-dependencies = [
-    { name = "aio-pika" },
-    { name = "asyncpg" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aio-pika", specifier = "==9.5.4" },
-    { name = "asyncpg", specifier = "==0.30.0" },
-    { name = "pydantic", specifier = "==2.10.4" },
-    { name = "pydantic-settings", specifier = "==2.7.1" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.36" },
 ]
 
 [[package]]
@@ -1985,14 +1985,14 @@ version = "0.1.0"
 source = { virtual = "migrator" }
 dependencies = [
     { name = "alembic" },
-    { name = "domain" },
+    { name = "common" },
     { name = "psycopg2-binary" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = "==1.14.0" },
-    { name = "domain", editable = "domain" },
+    { name = "common", editable = "common" },
     { name = "psycopg2-binary", specifier = "==2.9.10" },
 ]
 
@@ -2180,7 +2180,7 @@ version = "0.1.0"
 source = { editable = "news_service" }
 dependencies = [
     { name = "aio-pika" },
-    { name = "domain" },
+    { name = "common" },
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -2188,7 +2188,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aio-pika", specifier = "==9.5.4" },
-    { name = "domain", editable = "domain" },
+    { name = "common", editable = "common" },
     { name = "fastapi", specifier = "==0.115.6" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.34.0" },
 ]
@@ -3538,8 +3538,8 @@ dependencies = [
     { name = "aiohttp" },
     { name = "apscheduler" },
     { name = "beautifulsoup4" },
+    { name = "common" },
     { name = "crawl4ai" },
-    { name = "domain" },
     { name = "fastapi" },
     { name = "feedparser" },
     { name = "kurigram" },
@@ -3555,8 +3555,8 @@ requires-dist = [
     { name = "aiohttp", specifier = "==3.14.3" },
     { name = "apscheduler", specifier = "==3.11.0" },
     { name = "beautifulsoup4", specifier = "==4.15.0" },
+    { name = "common", editable = "common" },
     { name = "crawl4ai", specifier = "==0.9.3" },
-    { name = "domain", editable = "domain" },
     { name = "fastapi", specifier = "==0.115.6" },
     { name = "feedparser", specifier = "==6.0.14" },
     { name = "kurigram", specifier = "==2.2.25" },

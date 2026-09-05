@@ -4,9 +4,9 @@ version = "0.1.0"
 description = "One-shot Alembic migrator — owns the shared DB schema history for all services"
 requires-python = ">=3.12"
 # Runtime deps — what `alembic upgrade head` needs. All ORM models live in the
-# shared `domain` package (domain.schemas), so no service packages are pulled in.
+# shared `common` package (common.schemas), so no service packages are pulled in.
 dependencies = [
-    "domain",
+    "common",
     "alembic==1.14.0",
     "psycopg2-binary==2.9.10",
 ]

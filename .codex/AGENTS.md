@@ -5,11 +5,12 @@ explicitly conflict with this file.
 
 ## Baseline conventions
 
-- Keep LLM and network I/O in services or `domain.llm`; endpoints stay thin.
-- Read configuration only through `domain.core.settings.settings`; never use
+- Keep LLM and network I/O in services or `common.llm`; endpoints stay thin.
+- Read configuration only through `common.core.settings.settings` (grouped as
+  `settings.<group>.<field>`; every setting lives in `common/core/settings/templates/`); never use
   `os.environ` directly.
-- Log through `domain.core.logging.get_logger`; do not use `print`.
-- Reuse enums from `domain.entities.news`; do not duplicate string literals.
+- Log through `common.core.logging.get_logger`; do not use `print`.
+- Reuse enums from `common.entities.news`; do not duplicate string literals.
 - Every model change goes through Alembic autogenerate and a reviewed migration.
 - Never commit secrets: `.env`, `*.session`, or API keys.
 - Do not make external API or LLM calls from tests or CI.
@@ -73,7 +74,7 @@ explicitly conflict with this file.
 
 ```text
 backend/     Python uv workspace
-  domain/    shared kernel: core/, entities/, schemas/
+  common/    shared kernel: core/, entities/, schemas/
   source_service/, migrator/  service packages
 frontend/    Vite + React SPA
 nginx/       static SPA and API proxy
@@ -81,10 +82,14 @@ docker-compose.yml, README, .github, .codex
 ```
 
 - Run uv commands from `backend/`. Its `pyproject.toml` is a virtual workspace
-  root; `domain` and each service are workspace members.
-- ORM schemas live only in `domain.schemas`. Alembic history is centralized in
-  `migrator`, which imports `domain.schemas`.
-- Services may depend on `domain` and the message bus, never on another service.
+  root; `common` and each service are workspace members.
+- ORM schemas live only in `common.schemas`. Alembic history is centralized in
+  `migrator`, which imports `common.schemas`.
+- Services may depend on `common` and the message bus, never on another service.
+- A service's own entities and pure rules live in `<service>/domain/`: the entity module
+  at the root of its subpackage, `model/` for sub-models, `rules/` for scoring and other
+  judgements; domain answers "what", application answers "how" (techniques, thresholds,
+  order of steps). Entity-specific rules and vocabularies live with the entity.
 - New services are copied from `backend/source_service`, added to the uv
   workspace and `docker-compose.yml`, and have their own uniquely named
   package and Dockerfile.
@@ -119,7 +124,7 @@ docker-compose.yml, README, .github, .codex
 - Use `%s` lazy arguments in log calls, never f-strings. Include an `id`,
   `link`, or `url`; never log tokens, passwords, or session strings.
 - Cap noisy third-party transport/protocol loggers at `INFO` in
-  `domain.core.logging.NOISY_LOGGERS`; do not silence them entirely.
+  `common.core.logging.NOISY_LOGGERS`; do not silence them entirely.
 
 ## Git
 

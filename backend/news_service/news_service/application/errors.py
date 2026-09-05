@@ -1,6 +1,6 @@
 """Application errors — raised by use cases / repositories, mapped by the outer layers."""
 
-from domain.core.errors import BatchStoreError
+from common.core.errors import BatchStoreError
 
 
 class NewsStoreError(BatchStoreError):

@@ -5,58 +5,78 @@ concrete repository/publisher, and hands them to application (the CRUD use case 
 the runtime registry). Everything else depends only on ports.
 """
 
-from domain.core.settings import settings
-from domain.entities.news import SourceType
+from common.core.logging import get_logger
+from common.core.settings import WebCrawlSettings, settings
+from common.entities.news import SourceType
 from fastapi import Request
 
-from source_service.application.ports import (
+from source_service.application.ports.scraping import PageFetcher
+from source_service.application.ports.source import (
     NewsPublisher,
-    PageFetcher,
     PullCollector,
     PushCollector,
     SourceRegistrar,
 )
-from source_service.application.services import SourceRegistry, SourceService
-from source_service.application.web_crawl.config import EnvSettings
-from source_service.application.web_crawl.settings import RuntimeSettings
+from source_service.application.services.article import ArticleJudgement, DateResolution
+from source_service.application.services.scraping import (
+    ArticleFetching,
+    CardCollection,
+    FallbackDiscovery,
+    HubDiscovery,
+    WebCrawl,
+)
+from source_service.application.services.scraping.web_crawl import CrawlStages
+from source_service.application.services.source import SourceRegistry, SourceService
 from source_service.infrastructure.collectors.rss import RssCollector
 from source_service.infrastructure.collectors.telegram import TelegramCollector
 from source_service.infrastructure.collectors.web import WebCrawlCollector
 from source_service.infrastructure.crawlers.crawl4ai_fetcher import Crawl4AiPageFetcher
-from source_service.infrastructure.crawlers.crawl4ai_news import Crawl4AIClient
+from source_service.infrastructure.crawlers.crawl4ai_pages import Crawl4AiPageCrawler
 from source_service.infrastructure.crawlers.feedparser_reader import FeedparserFeedReader
+from source_service.infrastructure.crawlers.litellm_client import LiteLlmClient
 from source_service.infrastructure.rabbit.connector import RabbitConnector
 from source_service.infrastructure.repositories import SourceRepo
 
+logger = get_logger(__name__)
 
-def build_pull_collectors(page_fetcher: PageFetcher) -> dict[SourceType, PullCollector]:
-    """Pull registry: SourceType → collector. The RSS collector reads feeds and fetches
-    articles over the same `PageFetcher` that backs type auto-detection."""
+
+def build_pull_collectors(
+    page_fetcher: PageFetcher, page_crawler: Crawl4AiPageCrawler
+) -> dict[SourceType, PullCollector]:
+    """Pull registry: SourceType → collector. RSS reads feeds over the HTTP `PageFetcher`
+    that also backs type auto-detection; WEB drives the browser crawler."""
     rss = RssCollector(FeedparserFeedReader(page_fetcher), page_fetcher)
-    return {SourceType.RSS: rss, SourceType.WEB: build_web_collector()}
+    return {SourceType.RSS: rss, SourceType.WEB: build_web_collector(page_crawler)}
 
 
-def build_web_collector() -> WebCrawlCollector:
-    """Build the web adapter without leaking global settings into the adapter."""
-    env = EnvSettings(
-        news_agent_model=settings.news_agent_model,
-        news_llm_provider=settings.news_llm_provider,
-        news_llm_api_token=settings.news_llm_api_token,
-        news_llm_base_url=settings.news_llm_base_url,
-        openrouter_api_key=settings.openrouter_api_key,
-        openrouter_base_url=settings.openrouter_base_url,
-        openrouter_model=settings.openrouter_model,
-        openai_api_key=settings.openai_api_key,
-        openai_base_url=settings.openai_base_url,
+def crawl_settings() -> WebCrawlSettings:
+    """The `web_crawl` group, with the LLM paths switched off when there is no token (or
+    `WEB_CRAWL_LLM_ENABLED=false`) — a per-process copy, the singleton is never mutated."""
+    runtime = settings.web_crawl
+    has_token = bool(settings.llm.llm_token())
+    if runtime.llm_enabled and has_token:
+        return runtime
+
+    logger.info("web crawl llm disabled: enabled=%s token=%s", runtime.llm_enabled, has_token)
+    return runtime.model_copy(
+        update={"llm_date_fallback": False, "listing_llm_max_calls_per_site": 0}
     )
-    use_llm = settings.web_crawl_llm_enabled and bool(env.llm_token())
-    runtime = RuntimeSettings(
-        days=max(1, settings.web_crawl_days),
-        max_article_candidates_per_site=max(0, settings.web_crawl_max_articles),
-        llm_date_fallback=use_llm,
-        listing_llm_max_calls_per_site=60 if use_llm else 0,
+
+
+def build_web_collector(page_crawler: Crawl4AiPageCrawler) -> WebCrawlCollector:
+    """The crawl is six stage services behind one orchestrator; the LLM is one client
+    behind two ports, or absent."""
+    runtime = crawl_settings()
+    llm = LiteLlmClient(settings.llm, runtime) if runtime.listing_llm_max_calls_per_site else None
+    stages = CrawlStages(
+        hubs=HubDiscovery(page_crawler, llm, runtime),
+        cards=CardCollection(page_crawler, runtime),
+        fallback=FallbackDiscovery(page_crawler, runtime),
+        fetching=ArticleFetching(page_crawler, runtime),
+        dates=DateResolution(llm, runtime),
+        judgement=ArticleJudgement(runtime),
     )
-    return WebCrawlCollector(runtime, lambda: Crawl4AIClient(runtime, env))
+    return WebCrawlCollector(WebCrawl(stages, runtime))
 
 
 def get_source_service(request: Request) -> SourceService:
@@ -68,7 +88,7 @@ def get_source_service(request: Request) -> SourceService:
 
 
 def build_rabbit() -> RabbitConnector:
-    return RabbitConnector(settings.rabbitmq_url, settings.news_exchange)
+    return RabbitConnector(settings.rabbit.rabbitmq_url, settings.rabbit.news_exchange)
 
 
 def build_page_fetcher() -> Crawl4AiPageFetcher:
@@ -78,21 +98,30 @@ def build_page_fetcher() -> Crawl4AiPageFetcher:
     return Crawl4AiPageFetcher()
 
 
+def build_page_crawler() -> Crawl4AiPageCrawler:
+    """One headless browser for every WEB source pull. Owns a `start`/`close` lifecycle
+    the caller must drive around serving."""
+    return Crawl4AiPageCrawler(crawl_settings(), settings.llm)
+
+
 def build_telegram_collector(publisher: NewsPublisher) -> TelegramCollector:
     """Push collector; publishes incoming posts through `publisher`. Owns a client
     lifecycle (`start`/`stop`) the caller must drive around serving."""
     return TelegramCollector(
         publisher,
-        settings.telegram_api_id,
-        settings.telegram_api_hash,
-        settings.telegram_session,
+        settings.telegram.api_id,
+        settings.telegram.api_hash,
+        settings.telegram.session,
     )
 
 
 def build_registry(
-    publisher: RabbitConnector, telegram: TelegramCollector, page_fetcher: PageFetcher
+    publisher: RabbitConnector,
+    telegram: TelegramCollector,
+    page_fetcher: PageFetcher,
+    page_crawler: Crawl4AiPageCrawler,
 ) -> SourceRegistry:
     """The runtime registry: pull scheduling + push subscription behind one registrar."""
     push_collectors: dict[SourceType, PushCollector] = {SourceType.TELEGRAM: telegram}
-    pull_collectors = build_pull_collectors(page_fetcher)
+    pull_collectors = build_pull_collectors(page_fetcher, page_crawler)
     return SourceRegistry(publisher, pull_collectors, push_collectors, SourceRepo())

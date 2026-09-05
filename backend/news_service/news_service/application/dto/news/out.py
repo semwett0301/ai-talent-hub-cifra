@@ -4,8 +4,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from domain.entities.news import SourceType
-from domain.entities.source import SourceReliability
+from common.entities.news import SourceType
+from common.entities.source import SourceReliability
 from pydantic import BaseModel, ConfigDict
 
 

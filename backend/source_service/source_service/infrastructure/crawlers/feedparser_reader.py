@@ -13,9 +13,9 @@ from time import struct_time
 from typing import Any
 
 import feedparser
-from domain.core.logging import get_logger
+from common.core.logging import get_logger
 
-from source_service.application.ports import FeedEntry, FeedReader, PageFetcher
+from source_service.application.ports.scraping import FeedEntry, FeedReader, PageFetcher
 
 logger = get_logger(__name__)
 

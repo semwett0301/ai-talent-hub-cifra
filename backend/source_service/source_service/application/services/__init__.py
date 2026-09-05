@@ -1,6 +1,5 @@
-"""Application services — CRUD use case and the runtime registry."""
+"""Application services, grouped by domain: `source/`, `scraping/`, `article/`.
 
-from source_service.application.services.source_registry import SourceRegistry
-from source_service.application.services.source_service import SourceService
-
-__all__ = ["SourceRegistry", "SourceService"]
+Import from the subpackage (`from source_service.application.services.scraping import
+WebCrawl`); nothing is re-exported from here.
+"""

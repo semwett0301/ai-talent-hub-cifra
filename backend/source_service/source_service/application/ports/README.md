@@ -1,28 +1,20 @@
 # ports
 
 The interfaces application depends on and infrastructure implements (`Protocol`).
-Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py`.
+Impls **inherit** the port (explicit conformance). **Grouped by domain**, the way
+`services/` is; each subpackage re-exports its ports from `__init__.py` and has its own
+README, nothing lives at the root. One port per implementation: two services sharing one
+adapter share one interface.
 
-- `collectors.py` — `PullCollector` (`fetch`), `PushCollector` (`subscribe`/
-  `unsubscribe`).
-- `repositories.py` — `SourceRepository`: `list_all` / `get` / `list_enabled(type)` +
-  create/update/delete over sources.
-- `publisher.py` — `NewsPublisher`: publishes `domain.entities.news.NewsDTO`s to the bus.
-- `registrar.py` — `SourceRegistrar` (`register`/`unregister`): reconciles one source
-  to the runtime. Implemented by `SourceRegistry`; injected into `SourceService` so
-  CRUD stays live.
-- `crawler.py` — `PageFetcher` (`fetch`): fetches a URL's raw body (page HTML, feed
-  XML) for `SourceService`'s type auto-detection and for `RssCollector`'s article
-  pages; implemented by `Crawl4AiPageFetcher`.
-- `feed.py` — `FeedReader` (`read`) + its return shape `FeedEntry` (url/title/
-  summary/published_at): downloads and parses one RSS/Atom feed for `RssCollector`;
-  implemented by `FeedparserFeedReader`.
+- `source/` — `SourceRepository`, `SourceRegistrar`, `PullCollector` / `PushCollector`,
+  `NewsPublisher`: sources as records, as a running schedule, and the news they produce.
+- `scraping/` — `PageFetcher`, `FeedReader` (+ `FeedEntry`), `PageCrawler` (+ `FetchedPage`,
+  `PageLink`) and `CrawlLlm` (+ `ListingVerdict`, `DateGuess`): reaching pages, feeds and
+  sites, and the two questions the crawl asks a language model.
 
-Notes: ports reference the `domain.schemas` `Source` and the shared
-`domain.entities.news.NewsDTO` contract directly. The repository method is `list_all` (not
-`list`) so the name doesn't shadow the builtin `list[...]` used in return annotations.
-`PageFetcher` and `FeedReader` have no domain type in their signatures — they deal in
-plain URLs, text and their own small frozen dataclasses. Both `PageFetcher.fetch` and
-`FeedReader.read` **never raise**: a failure is `None` / `[]` plus a WARNING at the
-adapter, so a caller needs no `try` of its own. Article extraction is not a port: it is
-pure parsing over fetched text (`application/parse/article.py`).
+Notes: import from the subpackage (`from source_service.application.ports.scraping import
+PageCrawler`). Ports reference the `common.schemas` `Source` and the shared
+`common.entities.news.NewsDTO` contract directly. Fetching ports **never raise** — a
+failure is `None` / `[]` / a missing page plus a WARNING at the adapter; the LLM port
+returns `None` on a failed or invalid answer. Parsing is not a port: it is pure logic in
+`application/parse`.

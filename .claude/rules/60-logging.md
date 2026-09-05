@@ -41,12 +41,12 @@ per-message one is `DEBUG` and the batch summary is `INFO`.
 ## Keep libraries quiet
 
 Third-party transport/protocol loggers (AMQP frames, MTProto updates, HTTP wire) are
-capped at `INFO` in `NOISY_LOGGERS` (`domain.core.logging`) regardless of `settings.debug`.
+capped at `INFO` in `NOISY_LOGGERS` (`common.core.logging`) regardless of `settings.debug`.
 Add a library there the moment its `DEBUG` output floods the log — cap it, don't
 silence it, so connect/disconnect diagnostics survive. A library that chatters at
 `INFO` on every call (news-please) goes in `CHATTY_LOGGERS`, capped at `WARNING`.
 
-Config via `settings` only; get loggers via `domain.core.logging.get_logger`; no `print`.
+Config via `settings` only; get loggers via `common.core.logging.get_logger`; no `print`.
 
 ## Where logs live
 

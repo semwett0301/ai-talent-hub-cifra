@@ -10,9 +10,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Workspace root + lockfile, the shared `domain` package, then the service.
+# Workspace root + lockfile, the shared `common` package, then the service.
 COPY pyproject.toml uv.lock ./
-COPY domain ./domain
+COPY common ./common
 COPY source_service ./source_service
 
 RUN uv sync --frozen --package source-service --no-dev --no-editable

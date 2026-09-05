@@ -6,9 +6,9 @@ for all services, so migrations live here (not per service): the migrator runs
 `depends_on: condition: service_completed_successfully`.
 
 - `alembic.ini` — Alembic config (`script_location = migrations`; URL injected at
-  runtime from `domain.core.settings` in `migrations/env.py`).
+  runtime from `common.core.settings` in `migrations/env.py`).
 - `migrations/env.py` — sync engine from `settings.sync_database_url`; imports
-  `domain.schemas` so every ORM model registers on `Base.metadata`, then runs the
+  `common.schemas` so every ORM model registers on `Base.metadata`, then runs the
   migrations.
 - `migrations/versions/` — the single linear revision history (`0001_initial_source`
   creates the `source` table; `0002_seed_sources` seeds the starting source list;
@@ -19,17 +19,17 @@ for all services, so migrations live here (not per service): the migrator runs
   end-to-end checks; `0006_source_rss_link` adds the `rss_link` column with its
   `type = rss` CHECK constraint; `0007_news_table` creates the `news` table
   `news_service` writes bus messages into, with `url` UNIQUE as the dedupe key).
-- `pyproject.toml` — runtime deps `domain` + `alembic` + `psycopg2-binary`. Every
-  ORM model comes from `domain.schemas` (a runtime dep), so no service package is
+- `pyproject.toml` — runtime deps `common` + `alembic` + `psycopg2-binary`. Every
+  ORM model comes from `common.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.
 - `Dockerfile` — multi-stage: uv builds the runtime `.venv`
-  (`--package migrator --no-default-groups` → domain + Alembic), copied onto a clean
+  (`--package migrator --no-default-groups` → common + Alembic), copied onto a clean
   `python:3.12-slim` with the Alembic config/migrations; `CMD alembic upgrade head`.
 
 Notes: run locally from this dir — `uv run alembic -c alembic.ini upgrade head`;
 autogenerate — `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`.
 Both `upgrade` and `--autogenerate` see the full schema because `env.py` imports
-`domain.schemas`. **Data migrations must define tables inline (`sa.table(...)`)**,
+`common.schemas`. **Data migrations must define tables inline (`sa.table(...)`)**,
 never by importing ORM models, so old revisions stay pinned to their historical
-shape. **Adding a table:** define the model in `domain/schemas/`, re-export it from
-`domain.schemas.__init__`, then autogenerate a revision — no migrator change needed.
+shape. **Adding a table:** define the model in `common/schemas/`, re-export it from
+`common.schemas.__init__`, then autogenerate a revision — no migrator change needed.

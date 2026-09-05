@@ -4,7 +4,7 @@ DTOs for the `Source` resource — one class per module, re-exported from `__ini
 (import as `from source_service.application.dto.source import SourceCreate`).
 
 - `create.py` — `SourceCreate`: fields accepted when creating a source, including
-  `reliability` (`domain.entities.source.SourceReliability`, defaults to
+  `reliability` (`common.entities.source.SourceReliability`, defaults to
   `MEDIUM`). **No `type`** — `SourceService` auto-detects it from `link` (see
   `application/parse/`).
 - `update.py` — `SourceUpdate`: all-optional fields for a partial update (PATCH),

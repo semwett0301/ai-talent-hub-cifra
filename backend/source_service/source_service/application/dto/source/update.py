@@ -1,6 +1,6 @@
 """Input DTO for partially updating a Source."""
 
-from domain.entities.source import SourceReliability
+from common.entities.source import SourceReliability
 from pydantic import BaseModel
 
 

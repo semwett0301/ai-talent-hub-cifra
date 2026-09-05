@@ -1,12 +1,12 @@
 # application
 
 Use-case / orchestration layer. Coordinates via **ports** (interfaces it defines and
-infrastructure implements); depends on the shared `domain` package (schemas +
+infrastructure implements); depends on the shared `common` package (schemas +
 entities), never on concrete infra. Collaborators are injected by the composition
 root (`deps.py`).
 
 - `ports/` — the interfaces (Protocols): `NewsRepository` (data access) and
-  `NewsBatchHandler` (the shared `domain.core.rabbit.BatchHandler` narrowed to
+  `NewsBatchHandler` (the shared `common.core.rabbit.BatchHandler` narrowed to
   `NewsDTO` — what the bus consumer hands a batch to).
 - `dto/` — the response DTO (Pydantic) for the read API.
 - `services/` — `NewsFeed` (list / dismiss) and `NewsIngestor` (batch ingest, implements

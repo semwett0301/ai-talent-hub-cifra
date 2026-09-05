@@ -1,6 +1,6 @@
 """Input DTO for creating a Source. `type` is not accepted — SourceService detects it."""
 
-from domain.entities.source import SourceReliability
+from common.entities.source import SourceReliability
 from pydantic import BaseModel
 
 
