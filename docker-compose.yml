@@ -74,7 +74,6 @@ services:
       APP_NAME: ${APP_NAME:-AI Analytical Center}
       ENVIRONMENT: ${ENVIRONMENT:-local}
       DEBUG: ${DEBUG:-true}
-      SECRET_KEY: ${SECRET_KEY:-change-me}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       NEWS_EXCHANGE: ${NEWS_EXCHANGE:-news}
       SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
@@ -103,7 +102,6 @@ services:
       APP_NAME: ${APP_NAME:-AI Analytical Center}
       ENVIRONMENT: ${ENVIRONMENT:-local}
       DEBUG: ${DEBUG:-true}
-      SECRET_KEY: ${SECRET_KEY:-change-me}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       NEWS_EXCHANGE: ${NEWS_EXCHANGE:-news}
       NEWS_QUEUE: ${NEWS_QUEUE:-news.raw}

@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     app_name: str = "AI Analytical Center"
     environment: str = "local"
     debug: bool = True
-    secret_key: str = "change-me"
 
     # Postgres
     postgres_host: str = "localhost"

@@ -89,7 +89,6 @@ How each consumer picks it up:
 | `APP_NAME` | Service display name (FastAPI title, logs). | `AI Analytical Center` | no |
 | `ENVIRONMENT` | `local` / `staging` / `production`. | `local` | no |
 | `DEBUG` | Verbose logging and debug behaviour. | `true` | no |
-| `SECRET_KEY` | App signing key. Change outside local. | `change-me-in-production` | **yes** |
 
 ### Postgres
 
@@ -205,7 +204,7 @@ compose defaults — currently just the Telegram credentials:
 | `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` / `TELEGRAM_SESSION` | the secrets of the same name |
 
 Everything else (`DEBUG=true` — full logs on purpose, `ENVIRONMENT`, `POSTGRES_*`,
-`RABBITMQ_URL`, prefixes, `APP_NAME`, `SECRET_KEY`) keeps the defaults from
+`RABBITMQ_URL`, prefixes, `APP_NAME`) keeps the defaults from
 `docker-compose.yml` — Postgres and RabbitMQ are reachable only inside the compose
 network. To add a server value: add a secret, a line in the "Write server .env" step,
 and a row here.
@@ -230,10 +229,9 @@ Terraform inputs drop the `TF_VAR_` prefix:
 | `TELEGRAM_API_HASH` | `TELEGRAM_API_HASH` | `deploy` — server `.env` |
 | `TELEGRAM_SESSION` | `TELEGRAM_SESSION` | `deploy` — server `.env` |
 
-Application secrets (`SECRET_KEY`, `POSTGRES_PASSWORD`, `TELEGRAM_*`) are **not**
-used by the workflow today — the app reads them from the `.env` that lives on the
-server. Move them into Secrets and render the file in the `deploy` job when that
-should be automated.
+`POSTGRES_PASSWORD` stays at the compose default on the server (Postgres is internal to
+the compose network); to change it, add it to the "Write server .env" step and run
+`ALTER USER` on the existing volume.
 
 ## Commit conventions
 
