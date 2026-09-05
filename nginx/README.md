@@ -5,12 +5,12 @@ The edge — the only service exposed to the host (port 80).
 - `Dockerfile` — multi-stage: builds the React SPA (`frontend/`), then serves the
   static `dist/` from `nginx:alpine`. Build context = repo root.
 - `templates/default.conf.template` — serves static with SPA fallback to
-  `index.html`, and reverse-proxies each backend under its own `/api/<service>/`
-  namespace. Currently `/api/sources/*` → `source_service:8000` with the **whole
+  `index.html`, reverse-proxies each backend under its own `/api/<service>/`
+  namespace, and proxies `${LOGS_PREFIX}/` (default `/logs/`) to Dozzle (login is
+  Dozzle's own, see `../dozzle/README.md`). Currently `/api/sources/*` → `source_service:8000` with the **whole
   `/api/sources` prefix stripped** (`/api/sources` → `/`, `/api/sources/5` → `/5`,
   `/api/sources/openapi.json` → `/openapi.json`), so the OpenAPI spec is reachable
   at `/api/sources/openapi.json`.
-
 Notes: the `.template` file is processed by the nginx image's built-in
 docker-entrypoint envsubst step at container start (`*.template` under
 `/etc/nginx/templates/` → `/etc/nginx/conf.d/*.conf`), substituting
@@ -33,3 +33,11 @@ saw at startup. Because `proxy_pass` has a variable and no URI
 part, the URI produced by the preceding `rewrite ... break` is what gets passed —
 hence `set` must come before the `rewrite`. Backend and DB have no host ports; all
 external traffic goes through here.
+
+The `/logs` location keeps the prefix (no `rewrite`) because Dozzle is started with
+`DOZZLE_BASE=${LOGS_PREFIX}` and serves its assets under it. It streams over SSE /
+WebSocket, hence `proxy_buffering off`, `proxy_read_timeout 1h`, `proxy_http_version
+1.1` and the `Upgrade`/`Connection` passthrough via the `map $http_upgrade
+$connection_upgrade` block at the top of the template (a `map` must live in the
+`http` context, which `conf.d/*.conf` is included into). `location = ${LOGS_PREFIX}`
+only redirects to the trailing-slash form.

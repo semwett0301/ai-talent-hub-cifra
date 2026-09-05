@@ -1,14 +1,21 @@
 # Local stack. Run from repo root:
 #   docker compose up --build
 #
-# Only nginx publishes a host port (80). postgres, rabbitmq and the backend
-# services are reachable only on the internal compose network.
+# Only nginx publishes a host port (80). postgres, rabbitmq, dozzle and the
+# backend services are reachable only on the internal compose network.
 #
 # Every value comes from the root .env (compose loads it automatically for
 # ${...} substitution) — the single source of truth, see .env.example. Each
 # service is handed only the variables it needs, so infra/deploy secrets never
 # enter an application container.
 name: cifra
+
+# Every container: rotated json-file logs (Dozzle and `docker compose logs` read these).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
 
 x-postgres-env: &postgres-env
   POSTGRES_HOST: postgres
@@ -20,6 +27,7 @@ x-postgres-env: &postgres-env
 services:
   postgres:
     image: postgres:16-alpine
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cifra}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cifra}
@@ -36,6 +44,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-alpine
+    logging: *default-logging
     expose:
       - "5672"
     healthcheck:
@@ -49,6 +58,7 @@ services:
     build:
       context: ./backend
       dockerfile: migrator/Dockerfile
+    logging: *default-logging
     environment: *postgres-env
     depends_on:
       postgres:
@@ -58,6 +68,7 @@ services:
     build:
       context: ./backend
       dockerfile: source_service/Dockerfile
+    logging: *default-logging
     environment:
       <<: *postgres-env
       APP_NAME: ${APP_NAME:-AI Analytical Center}
@@ -86,6 +97,7 @@ services:
     build:
       context: ./backend
       dockerfile: news_service/Dockerfile
+    logging: *default-logging
     environment:
       <<: *postgres-env
       APP_NAME: ${APP_NAME:-AI Analytical Center}
@@ -109,22 +121,41 @@ services:
       migrator:
         condition: service_completed_successfully
 
-  # Edge: builds the SPA (VITE_* are baked in at build time), serves it static
-  # and reverse-proxies /api/<service>/* to the internal backend services.
+  # Container log viewer, reachable only through nginx at ${LOGS_PREFIX}. Login is
+  # Dozzle's own: users come from ./dozzle/users.yml (gitignored; the deploy job writes it
+  # from LOGS_USER/LOGS_PASSWORD, locally see dozzle/README.md). Read-only docker socket.
+  dozzle:
+    image: amir20/dozzle:v10.9.2
+    logging: *default-logging
+    environment:
+      DOZZLE_BASE: ${LOGS_PREFIX:-/logs}
+      DOZZLE_FILTER: label=com.docker.compose.project=cifra
+      DOZZLE_AUTH_PROVIDER: simple
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./dozzle:/data:ro
+    expose:
+      - "8080"
+
+  # Edge: builds the SPA (VITE_* are baked in at build time), serves it static,
+  # reverse-proxies /api/<service>/* to the backend services and /logs to dozzle.
   nginx:
     build:
       context: .
       dockerfile: nginx/Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    logging: *default-logging
     environment:
       SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
       NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
+      LOGS_PREFIX: ${LOGS_PREFIX:-/logs}
     ports:
       - "80:80"
     depends_on:
       - source_service
       - news_service
+      - dozzle
 
 volumes:
   pgdata:

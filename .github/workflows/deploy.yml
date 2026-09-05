@@ -1,5 +1,6 @@
-# CI/CD: apply infra (only when terraform/ changed), then deploy the app over SSH.
-# The server host is read from Terraform state (S3), so there is no SSH_HOST secret.
+# CI/CD: check secrets, apply infra (only when terraform/ changed), then deploy the
+# app over SSH. The server host is read from Terraform state (S3), so there is no
+# SSH_HOST secret.
 name: Deploy
 
 on:
@@ -15,8 +16,31 @@ permissions:
   contents: read
 
 jobs:
+  # Fail fast: every secret infra + deploy need, checked before anything runs.
+  check-secrets:
+    name: check secrets
+    runs-on: ubuntu-latest
+    env:
+      DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      APP_NAME: ${{ secrets.APP_NAME }}
+      LOGS_USER: ${{ secrets.LOGS_USER }}
+      LOGS_PASSWORD: ${{ secrets.LOGS_PASSWORD }}
+    steps:
+      - run: |
+          missing=0
+          for name in DIGITALOCEAN_TOKEN AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
+                      SSH_PUBLIC_KEY SSH_PRIVATE_KEY APP_NAME LOGS_USER LOGS_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::secret $name is not set"; missing=1; fi
+          done
+          exit $missing
+
   changes:
     name: detect changes
+    needs: check-secrets
     runs-on: ubuntu-latest
     outputs:
       terraform: ${{ steps.filter.outputs.terraform }}
@@ -47,14 +71,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check required config
-        run: |
-          test -n "$DIGITALOCEAN_TOKEN" || { echo "::error::secret DIGITALOCEAN_TOKEN is not set"; exit 1; }
-          test -n "$AWS_ACCESS_KEY_ID" || { echo "::error::secret AWS_ACCESS_KEY_ID is not set"; exit 1; }
-          test -n "$AWS_SECRET_ACCESS_KEY" || { echo "::error::secret AWS_SECRET_ACCESS_KEY is not set"; exit 1; }
-          test -n "$TF_VAR_SSH_PUBLIC_KEY" || { echo "::error::secret SSH_PUBLIC_KEY is not set"; exit 1; }
-          test -n "$TF_VAR_APP_NAME" || { echo "::error::secret APP_NAME is not set"; exit 1; }
-
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.8"
@@ -76,6 +92,8 @@ jobs:
       DEPLOY_PATH: /opt/${{ secrets.APP_NAME }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      LOGS_USER: ${{ secrets.LOGS_USER }}
+      LOGS_PASSWORD: ${{ secrets.LOGS_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -125,6 +143,16 @@ jobs:
           --exclude='.env.example'
           --exclude='.git/'
           ./ "$DEPLOY_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      # Dozzle login: hash the secrets on the runner, ship the file (gitignored on the
+      # server, so rsync --delete leaves it alone).
+      - name: Write Dozzle users
+        env:
+          SSH_HOST: ${{ steps.host.outputs.host }}
+        run: |
+          docker run --rm amir20/dozzle:v10.9.2 generate "$LOGS_USER" \
+            --password "$LOGS_PASSWORD" --email "$LOGS_USER@localhost" --name "$LOGS_USER" > users.yml
+          scp -i ~/.ssh/deploy_key users.yml "$DEPLOY_USER@$SSH_HOST:$DEPLOY_PATH/dozzle/users.yml"
 
       - name: Restart containers
         env:

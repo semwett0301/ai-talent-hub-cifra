@@ -9,7 +9,7 @@ backend/     all Python — its own uv workspace (root pyproject = virtual works
              core/ (settings/logging/db/errors/rabbit subpackages) + entities/ (business shapes) + schemas/ (shared ORM models)
   source_service/, news_service/, migrator/   one package per service, siblings of domain (no services/ wrapper)
 frontend/    React SPA (Vite, TypeScript, React Router) — built to static files
-nginx/       edge image: serves static SPA + proxies /api/* → source_service
+nginx/       edge image: serves static SPA + proxies /api/* → services, /logs/* → dozzle
 docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
 ```
 
@@ -71,5 +71,5 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
   `/api/sources` prefix stripped, so the OpenAPI spec is reachable at
   `/api/sources/openapi.json` — and **`/api/news/*` → `news_service:8000`** likewise.
   New services get a sibling `/api/<name>/` location until a full API gateway lands
-  (`plans/api-gateway.md`).
+  (`plans/api-gateway.md`). `/logs/*` → `dozzle:8080` (Dozzle's own login) is the log viewer.
 - Backend service images build from `./backend`.
