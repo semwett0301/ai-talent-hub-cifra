@@ -11,9 +11,8 @@ GitHub Actions.
   3. `deploy` — reads the server IP from Terraform output (S3 state, no `SSH_HOST`
      secret), waits until cloud-init has finished (`/var/lib/cloud/bootstrap-complete`,
      up to 10 min — a replaced droplet is `active` long before Docker is installed),
-     rsyncs the repo to `/opt/<APP_NAME>`, writes the server `.env` (minimal:
-     `ENVIRONMENT=production`, `DEBUG=false`, `TELEGRAM_*` from secrets; everything else
-     keeps the compose defaults) and `dozzle/users.yml` (`LOGS_USER`/`LOGS_PASSWORD`
+     rsyncs the repo to `/opt/<APP_NAME>`, writes the server `.env` (only `TELEGRAM_*`
+     from secrets; everything else keeps the compose defaults) and `dozzle/users.yml` (`LOGS_USER`/`LOGS_PASSWORD`
      hashed on the runner with `dozzle generate`), both by scp, then
      `docker compose up -d --build`.
   Secrets: `DIGITALOCEAN_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
