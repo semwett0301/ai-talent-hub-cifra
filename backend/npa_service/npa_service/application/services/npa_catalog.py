@@ -2,9 +2,9 @@
 
 import uuid
 
-from domain.core.logging import get_logger
-from domain.entities.npa import NpaDTO
-from domain.schemas import Npa
+from common.core.logging import get_logger
+from common.entities.npa import NpaDTO
+from common.schemas import Npa
 
 from npa_service.application.ports import NpaRepository
 

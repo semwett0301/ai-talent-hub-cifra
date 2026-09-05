@@ -4,7 +4,7 @@ import uuid
 from types import TracebackType
 from typing import Self
 
-from domain.schemas import News
+from common.schemas import News
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from news_service.application.ports import NewsTransaction

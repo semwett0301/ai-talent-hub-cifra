@@ -4,7 +4,7 @@ import uuid
 from types import TracebackType
 from typing import Protocol, Self
 
-from domain.schemas import News
+from common.schemas import News
 
 
 class NewsTransaction(Protocol):

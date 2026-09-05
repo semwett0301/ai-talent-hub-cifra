@@ -19,5 +19,5 @@ Application services — use cases, one public class per module (re-exported fro
 
 Notes: collaborators are injected from the root `deps.py` as ports, never concrete
 infra. The batching itself (timer / size / ack) is **not** here — it is a property
-of the broker protocol, so it lives in the shared `domain.core.rabbit`; application
+of the broker protocol, so it lives in the shared `common.core.rabbit`; application
 only sees "here is a batch".

@@ -15,13 +15,13 @@ Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py
 - `npa_gateway.py` — `NpaGateway`: `create(NpaDTO) -> id` registers an act in
   `npa_service`; raises `NpaConflictError` (409 there) or `NpaGatewayError` (anything
   else) instead of returning a sentinel, so the transaction above can roll back.
-- `batch_handler.py` — `NewsBatchHandler`: the shared `domain.core.rabbit.BatchHandler`
+- `batch_handler.py` — `NewsBatchHandler`: the shared `common.core.rabbit.BatchHandler`
   narrowed to `NewsDTO` — the inward-facing port the bus consumer calls with one
   batch. Implemented by `NewsIngestor` (application), consumed by the shared
-  `RabbitBatchConsumer` (domain).
+  `RabbitBatchConsumer` (`common`).
 
-Notes: ports reference `domain.schemas.News` and the shared
-`domain.entities.news.NewsDTO` contract directly. `add_many` / `handle_batch` **raise**
+Notes: ports reference `common.schemas.News` and the shared
+`common.entities.news.NewsDTO` contract directly. `add_many` / `handle_batch` **raise**
 `NewsStoreError` (a `BatchStoreError`) rather than returning a sentinel — the consumer
 needs a hard signal to requeue the whole batch, and a count of `0` legitimately means
 "all duplicates".

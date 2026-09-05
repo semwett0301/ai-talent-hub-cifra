@@ -29,3 +29,5 @@ enforceable specifics here.
 - `40-monorepo.md` — repo structure, backend/frontend split, networking.
 - `50-docs.md` — keep each folder's `README.md` current.
 - `60-logging.md` — log every logical action; keep library noise capped.
+- `70-settings.md` — all settings in `common.core.settings`, grouped by concern.
+- `80-domain.md` — a service's own domain layer: what vs how, entity / `model/` / `rules/` layout.

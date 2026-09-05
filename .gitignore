@@ -16,6 +16,7 @@ build/
 # IDE
 .idea/
 .vscode/
+.DS_Store
 
 # Tooling
 .mypy_cache/

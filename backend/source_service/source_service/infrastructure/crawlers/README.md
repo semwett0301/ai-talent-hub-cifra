@@ -1,27 +1,29 @@
 # crawlers
 
-The HTTP-facing adapters: the `PageFetcher` port implementation and the `FeedReader`
-that parses what it fetches. The only place in the service that imports `crawl4ai`
-and `feedparser`.
+The adapters that talk to the web and to the LLM — the only place in the service that
+imports `crawl4ai`, `feedparser` and `litellm`.
 
-- `crawl4ai_fetcher.py` — `Crawl4AiPageFetcher`: wraps `AsyncWebCrawler` with
-  `AsyncHTTPCrawlerStrategy` (lightweight HTTP fetch, no Playwright/browser) to
-  fetch a URL's raw body — page HTML, or feed XML (non-HTML text comes back as-is).
-  Owns a `start`/`close` lifecycle, driven from `main.py`'s lifespan (same pattern
-  as `RabbitConnector`/`TelegramCollector`).
-- `feedparser_reader.py` — `FeedparserFeedReader(page_fetcher)`: fetches the feed body
-  through `PageFetcher`, parses it with feedparser inline (tens of ms per feed, once
-  per pull — no worker thread) and maps each item to a `FeedEntry` (markup stripped
-  from title/summary, `published_parsed`/`updated_parsed` → aware UTC datetime).
-  `read` never raises — a failed fetch returns `[]`, a feed with XML errors (`bozo`)
-  still yields whatever parsed, both logged as WARNING. Items without a `link` are
-  dropped: `url` is the dedupe key downstream. feedparser never fetches the URL
-  itself (its urllib fetch has no timeout).
+- `crawl4ai_fetcher.py` — `Crawl4AiPageFetcher` → `PageFetcher`: wraps `AsyncWebCrawler`
+  with `AsyncHTTPCrawlerStrategy` (lightweight HTTP fetch, no browser) to fetch a URL's
+  raw body — page HTML, or feed XML. Owns a `start`/`close` lifecycle driven from
+  `main.py`'s lifespan.
+- `feedparser_reader.py` — `FeedparserFeedReader(page_fetcher)` → `FeedReader`: fetches
+  the feed body through `PageFetcher`, parses it with feedparser and maps each item to a
+  `FeedEntry`. `read` never raises — a failed fetch returns `[]`, a feed with XML errors
+  still yields whatever parsed.
+- `crawl4ai_pages.py` — `Crawl4AiPageCrawler` → `PageCrawler`: one
+  headless Chromium (`BrowserConfig(headless, text_mode)`) for the whole service, started
+  and closed from the lifespan. `crawl_pages` / `crawl_articles` run `arun_many` (the
+  article config adds `PruningContentFilter` for `fit_markdown` and keeps the HTML intact
+  for the date cascade). Every result becomes a `FetchedPage` in `to_page` (same module) —
+  Crawl4AI's own types stop here.
+- `litellm_client.py` — `LiteLlmClient` → `CrawlLlm`: `litellm.acompletion` with the `llm` settings group (model
+  string with provider prefix, key, base URL) and the `web_crawl` token limits /
+  temperature. Prompts declare page content untrusted; answers are fence-stripped and
+  validated into `ListingVerdict` / `DateGuess`; any failure is a WARNING and `None`.
 
-Notes: the one HTTP client in the service — `SourceService` (type auto-detection),
-`FeedparserFeedReader`, and `RssCollector` (article pages) all fetch through it, so
-timeouts and headers live in one place. `fetch` never raises — a failed crawl
-(network error or `result.success is False`) returns `None`, so callers fall back
-(`SourceType.WEB`, empty feed, feed summary) without a `try`/`except` of their own.
-Runs with `verbose=False`: crawl4ai otherwise narrates every fetch to stdout, and
-RSS pulls fetch hundreds of articles.
+Notes: all fetching adapters **never raise** — a failed crawl returns `None` / `[]` / the
+pages that did succeed, logged at WARNING/ERROR, so callers fall back without a `try` of
+their own. Both Crawl4AI wrappers run `verbose=False`: crawl4ai otherwise narrates every
+fetch to stdout. The date resolver reads the *already fetched* article text — it never
+crawls the page a second time.

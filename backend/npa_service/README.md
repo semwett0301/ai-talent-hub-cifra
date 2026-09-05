@@ -10,11 +10,11 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
 
 - `Dockerfile` — image (FastAPI + Uvicorn). Multi-stage: uv builds a self-contained
   `.venv`, copied onto a clean `python:3.12-slim`. Migrations live in `migrator`.
-- `pyproject.toml` — deps on `domain` + fastapi, uvicorn. Ships a uniquely named
+- `pyproject.toml` — deps on `common` + fastapi, uvicorn. Ships a uniquely named
   top-level package `npa_service`.
 - `npa_service/`
   - `main.py` — FastAPI app. Routers own paths from the root; nginx maps `/api/npa/*`
-    onto them (`root_path = settings.npa_api_prefix`, so `/api/npa/docs` works behind
+    onto them (`root_path = settings.edge.npa_api_prefix`, so `/api/npa/docs` works behind
     nginx). No lifespan — nothing long-lived to start.
   - `deps.py` — **composition root**: builds `NpaRepo` and provides `get_npa_catalog`
     for the routes.
@@ -26,8 +26,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
   - `api/routes/` — FastAPI routers only: `npa.py` (`GET /`, `GET /{id}`, `POST /`),
     `health.py`.
 
-Notes: the request body of `POST /` is the shared `domain.entities.npa.NpaDTO` — the
+Notes: the request body of `POST /` is the shared `common.entities.npa.NpaDTO` — the
 same contract `news_service` speaks, so there is no separate input DTO. A repeated
 `url` is a **409**, enforced by the DB unique key (the repo maps `IntegrityError`).
-The `Npa` table and every ORM model live in the shared `domain.schemas` (one DB for
+The `Npa` table and every ORM model live in the shared `common.schemas` (one DB for
 all services); the DB schema history is applied by `../migrator`.

@@ -9,4 +9,4 @@ over SQLAlchemy.
   `IntegrityError` to `NpaAlreadyExistsError`.
 
 Notes: `NpaRepo` **inherits** the `NpaRepository` port (explicit conformance) and is
-re-exported from `__init__.py`. Sessions come from `domain.core.db`.
+re-exported from `__init__.py`. Sessions come from `common.core.db`.

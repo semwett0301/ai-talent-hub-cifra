@@ -1,7 +1,7 @@
 # dto
 
 Application request/response schemas (Pydantic), grouped by resource. Distinct from
-`domain.entities.news`, which is the **bus** contract (`NewsDTO`).
+`common.entities.news`, which is the **bus** contract (`NewsDTO`).
 
 - `news/` — DTOs for the `News` resource.
 

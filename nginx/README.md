@@ -20,7 +20,7 @@ docker-entrypoint envsubst step at container start (`*.template` under
 alone since they aren't set as env vars. `SOURCES_API_PREFIX` is defined **once**,
 in the repo-root `.env` (see `../.env.example`), and shared with
 `source_service` (which reads it back as FastAPI's `root_path` via
-`domain.core.settings.settings.sources_api_prefix`) — change the prefix there, not here.
+`common.core.settings.settings.sources_api_prefix`) — change the prefix there, not here.
 
 The API location is a regex (`~ ^${SOURCES_API_PREFIX}(?:/(.*))?$` + `rewrite …
 break`) so it matches the bare collection and sub-paths without a trailing-slash

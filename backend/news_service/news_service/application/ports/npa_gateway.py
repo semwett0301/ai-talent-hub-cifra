@@ -3,7 +3,7 @@
 import uuid
 from typing import Protocol
 
-from domain.entities.npa import NpaDTO
+from common.entities.npa import NpaDTO
 
 
 class NpaGateway(Protocol):

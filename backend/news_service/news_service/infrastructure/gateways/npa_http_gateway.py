@@ -3,8 +3,8 @@
 import uuid
 
 import httpx
-from domain.core.logging import get_logger
-from domain.entities.npa import NpaDTO
+from common.core.logging import get_logger
+from common.entities.npa import NpaDTO
 
 from news_service.application.errors import NpaConflictError, NpaGatewayError
 from news_service.application.ports import NpaGateway

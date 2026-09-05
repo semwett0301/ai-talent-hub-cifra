@@ -1,7 +1,7 @@
 # application
 
 Use-case / orchestration layer. Coordinates via **ports** (interfaces it defines and
-infrastructure implements); depends on the shared `domain` package (schemas +
+infrastructure implements); depends on the shared `common` package (schemas +
 entities), never on concrete infra. Collaborators are injected by the composition
 root (`deps.py`).
 
@@ -12,4 +12,4 @@ root (`deps.py`).
   API maps it to 409).
 
 Notes: import ports (`application.ports`), not infra classes. The create input is the
-shared `domain.entities.npa.NpaDTO`, not a local DTO — it is the cross-service contract.
+shared `common.entities.npa.NpaDTO`, not a local DTO — it is the cross-service contract.

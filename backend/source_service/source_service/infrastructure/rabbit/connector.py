@@ -1,13 +1,13 @@
 """RabbitConnector — implements the NewsPublisher port over the `news` exchange.
 
-`publish_news` publishes each `domain.entities.news.NewsDTO` with its per-type routing key.
+`publish_news` publishes each `common.entities.news.NewsDTO` with its per-type routing key.
 """
 
 import aio_pika
-from domain.core.logging import get_logger
-from domain.entities.news import NewsDTO, routing_key
+from common.core.logging import get_logger
+from common.entities.news import NewsDTO, routing_key
 
-from source_service.application.ports import NewsPublisher
+from source_service.application.ports.source import NewsPublisher
 
 logger = get_logger(__name__)
 

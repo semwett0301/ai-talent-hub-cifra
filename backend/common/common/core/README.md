@@ -1,0 +1,25 @@
+# common.core
+
+Base infrastructure shared by every service, one subpackage per concern. Import from
+the subpackage (`from common.core.settings import settings`), not from the modules
+inside it.
+
+- `settings/` — **every setting in the project**, grouped in `templates/` and aggregated
+  by `Settings`; the `settings` singleton (pydantic-settings over the
+  repo-root `.env`). The only way to read config — never `os.environ`.
+- `logging/` — `configure_logging()` / `get_logger()` over stdlib `logging`, with the
+  noisy-library caps (`NOISY_LOGGERS`, `CHATTY_LOGGERS`).
+- `db/` — the declarative `Base` every ORM model inherits, plus the async `engine`,
+  `async_session_factory`, and `get_session`.
+- `errors/` — domain-wide error types shared between services and the mechanisms
+  here (`BatchStoreError`: a batch could not be persisted). Transport-agnostic.
+- `llm/` — traffic control for model calls: `LlmCallBudget` (a per-run cap on how many
+  LLM calls are made in total and how many run at once). The model clients themselves
+  stay in the services.
+- `rabbit/` — the shared RabbitMQ **batch consumer** (`RabbitBatchConsumer[T]`,
+  `BatchHandler[T]`, `BatchConsumerConfig`): a service supplies a pydantic message
+  model + a handler, the mechanism (prefetch, buffer, ack-after-store, requeue/drop on
+  `BatchStoreError`) lives here once.
+
+Notes: `settings` is imported by `logging` and `db`, so it must stay dependency-free
+within `core`. Alembic uses `settings.postgres.sync_database_url`; everything else the async one.

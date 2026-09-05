@@ -2,9 +2,9 @@
 
 import uuid
 
-from domain.core.db import async_session_factory
-from domain.entities.npa import NpaDTO
-from domain.schemas import Npa
+from common.core.db import async_session_factory
+from common.entities.npa import NpaDTO
+from common.schemas import Npa
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 

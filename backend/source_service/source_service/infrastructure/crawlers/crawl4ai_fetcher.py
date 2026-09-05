@@ -1,11 +1,11 @@
 """PageFetcher implementation backed by crawl4ai — the one file importing it."""
 
 import aiohttp
+from common.core.logging import get_logger
 from crawl4ai import AsyncWebCrawler, CacheMode, CrawlerRunConfig
 from crawl4ai.async_crawler_strategy import AsyncHTTPCrawlerStrategy
-from domain.core.logging import get_logger
 
-from source_service.application.ports import PageFetcher
+from source_service.application.ports.scraping import PageFetcher
 
 logger = get_logger(__name__)
 

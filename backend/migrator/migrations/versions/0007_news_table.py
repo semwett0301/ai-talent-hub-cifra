@@ -4,7 +4,7 @@ Revision ID: 0007_news_table
 Revises: 0006_source_rss_link
 Create Date: 2026-09-04
 
-One row per `domain.entities.news.NewsDTO` consumed from the `news` exchange, stored
+One row per `common.entities.news.NewsDTO` consumed from the `news` exchange, stored
 as-is. `url` is UNIQUE — the consumer inserts with ON CONFLICT DO NOTHING, so a story
 delivered twice (or from two sources) lands once. `is_alert` (default false) is the
 service-owned flag flipped by the dismiss endpoint.

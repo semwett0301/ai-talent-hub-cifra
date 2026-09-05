@@ -1,21 +1,21 @@
 # services
 
-Application services — use cases and background aggregators, one public class per
-module (re-exported from `__init__.py`).
+Application services, **grouped by domain** the way `source_service/domain` is: the use
+cases plus the steps they are composed of. Only `SourceService` and `WebCrawl` are use
+cases in the strict sense — something an actor asks for; the rest are the steps a use case
+runs. A step still belongs here and not in the domain, because it holds ports (I/O) and
+thresholds from settings. Each subpackage re-exports its classes from `__init__.py` and has
+its own README; nothing lives at the root of `services/`.
 
-- `source_service.py` — `SourceService`: CRUD use-cases over `SourceRepository`; each
-  mutation reconciles the runtime through the injected `SourceRegistrar`. `create`
-  and (when `link` changes) `update` auto-detect `type` via the injected
-  `PageFetcher` + `application.parse` — clients never send `type`. When the
-  detected feed is RSS, the feed URL is stored in `rss_link` (also server-only,
-  never accepted from a client); `link` itself is never rewritten.
-- `source_registry.py` — `SourceRegistry`: the sole `SourceRegistrar`. Dispatches by
-  source type — pull → APScheduler job, push → subscription; injected publisher +
-  pull/push collectors + `SourceRepository`. Owns `start`/`shutdown`/`load` lifecycle
-  (used by `main.py`, off the port).
+- `source/` — `SourceService` (CRUD + type auto-detection) and `SourceRegistry` (the
+  runtime registrar: pull scheduling + push subscription).
+- `web/` — collecting news from a `WEB` source: `WebCrawl` (the use case) over three stage
+  subpackages, `web/hubs/` (site → listing pages), `web/listings/` (those pages → candidate
+  links) and `web/articles/` (candidate links → accepted articles).
 
-Notes: collaborators are injected from the root `deps.py` as ports (interfaces),
-never bare callables or concrete infra. `register`/`unregister` is the single
-per-source path — CRUD calls it for one source (via `app.state.registrar`), startup
-`load` calls it for every enabled source. The `SourceRepo` opens a session per call —
-safe for this long-lived, concurrent service. Started from `main.py`'s lifespan.
+Notes: a service takes its collaborators as ports and its knobs as one settings group in
+the constructor, and exposes one `run`. Between the crawl services articles travel as
+`Article`, and the contract is the status — a stage handles its own status and passes the
+rest through. Anything scoped to one run (a frontier, an LLM budget, a stale streak) is
+built inside `run()` and never injected: see each stage's `state/`. A new area = a new
+subpackage, not a file here.

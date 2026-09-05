@@ -4,7 +4,7 @@ Revision ID: 0008_npa_table
 Revises: 0007_news_table
 Create Date: 2026-09-05
 
-One row per `domain.entities.npa.NpaDTO` accepted by `npa_service` (directly, or
+One row per `common.entities.npa.NpaDTO` accepted by `npa_service` (directly, or
 escalated from a news alert by `news_service`). `url` is UNIQUE — one row per act.
 """
 

@@ -1,30 +1,30 @@
 """Alembic environment — the shared DB schema history (sync engine, psycopg2).
 
 Owns migrations for every service on the one database. All ORM models live in the
-shared `domain.schemas` package; importing it registers every table on
+shared `common.schemas` package; importing it registers every table on
 `Base.metadata` for both `upgrade` and `--autogenerate`.
 """
 
 from logging.config import fileConfig
 
-import domain.schemas  # noqa: F401 — import registers every ORM model on Base.metadata
+import common.schemas  # noqa: F401 — import registers every ORM model on Base.metadata
 from alembic import context
-from domain.core.db import Base
-from domain.core.settings import settings
+from common.core.db import Base
+from common.core.settings import settings
 from sqlalchemy import engine_from_config, pool
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.sync_database_url)
+config.set_main_option("sqlalchemy.url", settings.postgres.sync_database_url)
 
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=settings.sync_database_url,
+        url=settings.postgres.sync_database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,

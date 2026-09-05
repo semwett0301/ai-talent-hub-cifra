@@ -2,8 +2,8 @@
 
 from typing import Protocol
 
-from domain.core.rabbit import BatchHandler
-from domain.entities.news import NewsDTO
+from common.core.rabbit import BatchHandler
+from common.entities.news import NewsDTO
 
 
 class NewsBatchHandler(BatchHandler[NewsDTO], Protocol):

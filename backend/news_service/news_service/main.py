@@ -2,8 +2,8 @@
 
 from contextlib import asynccontextmanager
 
-from domain.core.logging import configure_logging, get_logger
-from domain.core.settings import settings
+from common.core.logging import configure_logging, get_logger
+from common.core.settings import settings
 from fastapi import FastAPI
 
 from news_service import deps
@@ -31,14 +31,14 @@ async def lifespan(app: FastAPI):
         logger.info("news_service stopped")
 
 
-# Routers own paths from the root; nginx exposes them under settings.news_api_prefix
+# Routers own paths from the root; nginx exposes them under settings.edge.news_api_prefix
 # and strips it before proxying. root_path tells FastAPI about that prefix so /docs
 # and openapi.json resolve behind the proxy — same NEWS_API_PREFIX env var as nginx.
 app = FastAPI(
     title="news_service",
     version="0.1.0",
     lifespan=lifespan,
-    root_path=settings.news_api_prefix,
+    root_path=settings.edge.news_api_prefix,
 )
 app.include_router(health.router)
 app.include_router(news.router)

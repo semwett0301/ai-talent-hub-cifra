@@ -3,8 +3,8 @@
 # Imports
 from contextlib import asynccontextmanager
 
-from domain.core.logging import configure_logging, get_logger
-from domain.core.settings import settings
+from common.core.logging import configure_logging, get_logger
+from common.core.settings import settings
 from fastapi import FastAPI
 
 from source_service import deps
@@ -30,12 +30,16 @@ async def lifespan(app: FastAPI):
     await page_fetcher.start()
     app.state.page_fetcher = page_fetcher
 
+    # One headless browser for every WEB source pull.
+    page_crawler = deps.build_page_crawler()
+    await page_crawler.start()
+
     # Registry: CRUD reaches it via app.state to (un)schedule/(un)subscribe live.
-    registry = deps.build_registry(rabbit, telegram, page_fetcher)
+    scheduler = deps.build_job_scheduler()
+    registry = deps.build_registry(rabbit, scheduler, telegram, (page_fetcher, page_crawler))
     await registry.load()
 
-    registry.start()
-
+    scheduler.start()
     app.state.registrar = registry
 
     logger.info("source_service started")
@@ -46,15 +50,16 @@ async def lifespan(app: FastAPI):
     finally:
         logger.info("source_service stopping")
 
-        registry.shutdown()
+        scheduler.shutdown()
         await telegram.stop()
+        await page_crawler.close()
         await page_fetcher.close()
         await rabbit.close()
 
         logger.info("source_service stopped")
 
 
-# Routers own paths from the root; nginx exposes them under settings.sources_api_prefix
+# Routers own paths from the root; nginx exposes them under settings.edge.sources_api_prefix
 # and strips it before proxying. root_path tells FastAPI about that prefix so /docs
 # and the generated openapi.json use the right absolute URLs — kept in sync with
 # nginx via the same SOURCES_API_PREFIX env var (see docker-compose.yml).
@@ -62,7 +67,7 @@ app = FastAPI(
     title="source_service",
     version="0.1.0",
     lifespan=lifespan,
-    root_path=settings.sources_api_prefix,
+    root_path=settings.edge.sources_api_prefix,
 )
 app.include_router(health.router)
 app.include_router(sources.router)

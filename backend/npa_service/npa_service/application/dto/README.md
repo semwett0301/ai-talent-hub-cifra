@@ -1,7 +1,7 @@
 # dto
 
 Application response schemas (Pydantic), grouped by resource. Distinct from
-`domain.entities.npa`, which is the **cross-service** contract (`NpaDTO`).
+`common.entities.npa`, which is the **cross-service** contract (`NpaDTO`).
 
 - `npa/` — DTOs for the `Npa` resource.
 

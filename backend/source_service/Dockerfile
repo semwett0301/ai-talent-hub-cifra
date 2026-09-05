@@ -10,9 +10,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Workspace root + lockfile, the shared `domain` package, then the service.
+# Workspace root + lockfile, the shared `common` package, then the service.
 COPY pyproject.toml uv.lock ./
-COPY domain ./domain
+COPY common ./common
 COPY source_service ./source_service
 
 RUN uv sync --frozen --package source-service --no-dev --no-editable
@@ -20,9 +20,18 @@ RUN uv sync --frozen --package source-service --no-dev --no-editable
 # Runtime: just Python + the prebuilt venv (which already contains our code).
 FROM python:3.12-slim-bookworm
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    CRAWL4_AI_BASE_DIRECTORY=/var/lib/crawl4ai
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
+
+# WebCrawlCollector uses Crawl4AI's browser crawler (not the lightweight HTTP
+# crawler used only for RSS discovery). Install Chromium and its OS libraries
+# into the final image so a scheduled WEB source works in Compose as well.
+RUN playwright install-deps chromium \
+    && playwright install chromium \
+    && mkdir -p /var/lib/crawl4ai
 
 EXPOSE 8000
 CMD ["uvicorn", "source_service.main:app", "--host", "0.0.0.0", "--port", "8000"]

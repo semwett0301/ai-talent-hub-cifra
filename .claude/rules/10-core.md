@@ -19,6 +19,8 @@ This is the most important rule: **Do not mimic the style and patterns of existi
 - No magic numbers or magic strings; extract them into named constants
 - At most one comment line directly above a line/block of code; if one line is not
   enough, the code needs a clearer name or a split, not a longer comment
+- Docstrings (module/class/function) stay at most 2-3 lines; if it needs more, split the
+  thing it documents or let the name carry more of the meaning
 
 ## Formatting & Readability
 

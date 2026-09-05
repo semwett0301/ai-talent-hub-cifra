@@ -17,7 +17,7 @@ media, regulators, and Telegram channels.
 
 ## Structure
 
-- `backend/` — Python (uv workspace): `domain` shared kernel (core + entities +
+- `backend/` — Python (uv workspace): `common` shared kernel (core + entities +
   shared ORM schemas) + `source_service` (FastAPI, collects → RabbitMQ) +
   `news_service` (FastAPI, RabbitMQ → DB in batches + list/dismiss/escalate API) +
   `npa_service` (FastAPI, legislative acts: list/get/create) + `migrator` (Alembic),
@@ -51,9 +51,9 @@ uv run alembic -c alembic.ini revision --autogenerate -m "msg" # after a model c
 ```
 
 Autogenerate diffs the DB against `Base.metadata` — the `migrator`'s `env.py` imports
-`domain.schemas` (where every ORM model lives), so run it via `uv` and review the
-emitted revision. Adding a table: define the model in `domain/schemas/`, re-export it
-from `domain.schemas.__init__`, then autogenerate — no migrator change needed.
+`common.schemas` (where every ORM model lives), so run it via `uv` and review the
+emitted revision. Adding a table: define the model in `common/schemas/`, re-export it
+from `common.schemas.__init__`, then autogenerate — no migrator change needed.
 See `backend/migrator/README.md`.
 
 ## Environment variables
@@ -73,7 +73,7 @@ values live as **GitHub Actions Secrets** (mapping table at the end).
 
 How each consumer picks it up:
 
-- **Backend** — `domain.core.settings.Settings` loads the repo-root `.env` by absolute
+- **Backend** — `common.core.settings.Settings` loads the repo-root `.env` by absolute
   path, so `uv run …` works from any directory. Never read `os.environ` directly.
 - **Compose** — loads the root `.env` automatically for `${VAR}` substitution, and
   hands each service only the variables it needs (so infra/deploy secrets never
@@ -170,6 +170,26 @@ gen_session.py` (interactive login; prints the string, writes nothing to disk).
 | `TELEGRAM_API_ID` | MTProto app id from https://my.telegram.org. | empty | **yes** |
 | `TELEGRAM_API_HASH` | MTProto app hash from the same page. | empty | **yes** |
 | `TELEGRAM_SESSION` | Exported **kurigram/pyrogram** session string of a pre-authorized user account (not interchangeable with a Telethon `StringSession`). Equivalent to full access to that account — use a dedicated one. | empty | **yes** |
+
+### WEB crawler
+
+The `WEB` source collector uses the included Crawl4AI news agent. The first
+Docker build installs Chromium, so it is noticeably larger than the previous
+API-only image. An LLM is optional: with a configured token it is used only for
+ambiguous dates and listing-page relevance; otherwise deterministic HTML and
+Crawl4AI extraction continues.
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `WEB_CRAWL_DAYS` | Freshness window for collected web articles. | `3` | no |
+| `WEB_CRAWL_MAX_ARTICLES` | Per-source upper bound on article candidates in one scheduled run. | `50` | no |
+| `WEB_CRAWL_LLM_ENABLED` | Enables LLM fallbacks when credentials exist. | `true` | no |
+| `WEB_CRAWL_<FIELD>` | Advanced: any field of `WebCrawlSettings` (`backend/common/common/core/settings/templates/web_crawl.py`) — crawl limits, LLM budgets, thresholds. | code defaults | no |
+| `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | OpenRouter credentials and compatible API base URL. | empty / OpenRouter v1 | **yes** |
+| `OPENROUTER_MODEL` | OpenRouter model slug without a prefix, for example `deepinfra/fp8`; the collector sends it as `openrouter/deepinfra/fp8`. | empty | no |
+| `NEWS_AGENT_MODEL` | Legacy/default OpenRouter model slug, used when `OPENROUTER_MODEL` is empty. | `deepseek/deepseek-v4-flash` | no |
+| `NEWS_LLM_PROVIDER`, `NEWS_LLM_API_TOKEN`, `NEWS_LLM_BASE_URL` | Explicit LiteLLM provider settings; take precedence over OpenRouter/OpenAI aliases. | empty | `*_TOKEN` yes |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | OpenAI-compatible fallback credentials and base URL; set `NEWS_AGENT_MODEL` to that provider's model name. | empty | **yes** |
 
 ### Terraform — provider and remote state
 

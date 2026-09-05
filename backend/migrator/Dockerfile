@@ -10,9 +10,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Workspace root + lockfile, then the one first-party package uv builds (domain).
+# Workspace root + lockfile, then the one first-party package uv builds (common).
 COPY pyproject.toml uv.lock ./
-COPY domain ./domain
+COPY common ./common
 COPY migrator ./migrator
 
 RUN uv sync --frozen --package migrator --no-default-groups --no-editable

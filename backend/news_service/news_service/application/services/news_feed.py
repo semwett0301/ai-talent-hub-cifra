@@ -2,8 +2,8 @@
 
 import uuid
 
-from domain.core.logging import get_logger
-from domain.schemas import News
+from common.core.logging import get_logger
+from common.schemas import News
 
 from news_service.application.ports import NewsRepository
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "NPA service — store legislative acts (нормативно-правовые акты), serve list / get / create"
 requires-python = ">=3.12"
 dependencies = [
-    "domain",
+    "common",
     "fastapi==0.115.6",
     "uvicorn[standard]==0.34.0",
 ]

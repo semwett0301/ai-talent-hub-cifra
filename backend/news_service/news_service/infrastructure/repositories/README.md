@@ -16,6 +16,6 @@ over SQLAlchemy.
   the session. The row stays locked by the `UPDATE` until then, so keep the block short.
 
 Notes: `NewsRepo` **inherits** the `NewsRepository` port (explicit conformance) and both
-classes are re-exported from `__init__.py`. Sessions come from `domain.core.db`. The
+classes are re-exported from `__init__.py`. Sessions come from `common.core.db`. The
 `insert` is the **PostgreSQL dialect** one (`sqlalchemy.dialects.postgresql`) — the
 generic `sqlalchemy.insert` has no `on_conflict_do_nothing`.

@@ -2,11 +2,11 @@
 
 import uuid
 
-from domain.schemas import Source
+from common.schemas import Source
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from source_service.application.dto.source import SourceCreate, SourceOut, SourceUpdate
-from source_service.application.services import SourceService
+from source_service.application.services.source import SourceService
 from source_service.deps import get_source_service
 
 router = APIRouter(tags=["sources"])
@@ -48,7 +48,10 @@ async def update_source(
     service: SourceService = Depends(get_source_service),
 ) -> SourceOut:
     source = await _get_or_404(service, source_id)
-    updated = await service.update(source, payload)
+    try:
+        updated = await service.update(source, payload)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     return SourceOut.model_validate(updated)
 
 

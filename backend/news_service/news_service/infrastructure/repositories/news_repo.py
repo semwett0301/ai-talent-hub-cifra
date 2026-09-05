@@ -2,9 +2,9 @@
 
 import uuid
 
-from domain.core.db import async_session_factory
-from domain.entities.news import NewsDTO
-from domain.schemas import News
+from common.core.db import async_session_factory
+from common.entities.news import NewsDTO
+from common.schemas import News
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError

@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime
 
-from domain.entities.news import SourceType
-from domain.entities.source import SourceReliability
+from common.entities.news import SourceType
+from common.entities.source import SourceReliability
 from pydantic import BaseModel, ConfigDict
 
 
@@ -17,6 +17,7 @@ class SourceOut(BaseModel):
     link: str
     poll_interval_seconds: int | None
     is_enabled: bool
+    is_relevant: bool
     reliability: SourceReliability
     created_at: datetime
     updated_at: datetime

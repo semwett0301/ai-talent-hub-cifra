@@ -3,8 +3,8 @@
 import uuid
 from typing import Protocol
 
-from domain.entities.news import NewsDTO
-from domain.schemas import News
+from common.entities.news import NewsDTO
+from common.schemas import News
 
 from news_service.application.ports.transaction import NewsTransaction
 

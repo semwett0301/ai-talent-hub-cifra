@@ -2,7 +2,7 @@
 
 import uuid
 
-from domain.entities.npa import NpaDTO
+from common.entities.npa import NpaDTO
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from npa_service.application.dto.npa import NpaOut

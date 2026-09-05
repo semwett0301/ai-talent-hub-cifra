@@ -2,8 +2,8 @@
 
 import uuid
 
-from domain.entities.npa import NpaDTO
-from domain.schemas import News
+from common.entities.npa import NpaDTO
+from common.schemas import News
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from news_service.application.dto.news import NewsOut

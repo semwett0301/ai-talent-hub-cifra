@@ -1,19 +1,7 @@
-"""Ports — interfaces application depends on, implemented in infrastructure."""
+"""Ports — interfaces application depends on, implemented in infrastructure.
 
-from source_service.application.ports.collectors import PullCollector, PushCollector
-from source_service.application.ports.crawler import PageFetcher
-from source_service.application.ports.feed import FeedEntry, FeedReader
-from source_service.application.ports.publisher import NewsPublisher
-from source_service.application.ports.registrar import SourceRegistrar
-from source_service.application.ports.repositories import SourceRepository
-
-__all__ = [
-    "FeedEntry",
-    "FeedReader",
-    "NewsPublisher",
-    "PageFetcher",
-    "PullCollector",
-    "PushCollector",
-    "SourceRegistrar",
-    "SourceRepository",
-]
+Grouped by domain: `source/`, `scraping/` (every port that reaches the open web —
+the RSS reader included, so it is wider than `services/web`). Import from the
+subpackage (`from source_service.application.ports.scraping import PageCrawler`); nothing
+is re-exported from here.
+"""

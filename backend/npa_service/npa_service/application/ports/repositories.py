@@ -3,8 +3,8 @@
 import uuid
 from typing import Protocol
 
-from domain.entities.npa import NpaDTO
-from domain.schemas import Npa
+from common.entities.npa import NpaDTO
+from common.schemas import Npa
 
 
 class NpaRepository(Protocol):

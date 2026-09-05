@@ -2,12 +2,12 @@
 
 import uuid
 
-from domain.core.db import async_session_factory
-from domain.entities.news import SourceType
-from domain.schemas import Source
+from common.core.db import async_session_factory
+from common.entities.news import SourceType
+from common.schemas import Source
 from sqlalchemy import select
 
-from source_service.application.ports import SourceRepository
+from source_service.application.ports.source import SourceRepository
 
 
 class SourceRepo(SourceRepository):

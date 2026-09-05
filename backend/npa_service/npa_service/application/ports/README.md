@@ -7,5 +7,5 @@ Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py
   `get(id)` (None when unknown), `add(NpaDTO)` (inserts and returns the row; raises
   `NpaAlreadyExistsError` when the `url` is already stored).
 
-Notes: ports reference `domain.schemas.Npa` and the shared `domain.entities.npa.NpaDTO`
+Notes: ports reference `common.schemas.Npa` and the shared `common.entities.npa.NpaDTO`
 contract directly.
