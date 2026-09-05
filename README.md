@@ -130,6 +130,19 @@ How each consumer picks it up:
 | `SOURCES_API_PREFIX` | The nginx location `source_service` is mounted under, and the same value as FastAPI's `root_path` (so `/docs` and `openapi.json` resolve behind the proxy). Consumed by **both** containers — change it here only. | `/api/sources` | no |
 | `NEWS_API_PREFIX` | Same for `news_service`. | `/api/news` | no |
 
+### Logs (Dozzle)
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `LOGS_PREFIX` | nginx location + `DOZZLE_BASE` for the container-logs UI. | `/logs` | no |
+| `LOGS_USER` | Dozzle login. | `admin` | no |
+| `LOGS_PASSWORD` | Dozzle password. Not read by any container directly: it is hashed into `dozzle/users.yml` (gitignored) — by the `deploy` job on the server, by hand locally (`dozzle/README.md`). | empty | **yes** |
+
+Every container logs to stdout; Docker keeps them as rotated json-files (`10m` × 5 per container, `x-logging`
+anchor in `docker-compose.yml`). Read them with `docker compose logs -f <service>` or in
+the browser at `http://<host>/logs/` (only this compose project's containers, read-only
+docker socket).
+
 ### Frontend (build time)
 
 | Variable | Meaning | Default | Secret |
@@ -195,6 +208,8 @@ Terraform inputs drop the `TF_VAR_` prefix:
 | `SSH_PRIVATE_KEY` | `SSH_PRIVATE_KEY` | `deploy` |
 | `APP_NAME` | `TF_VAR_APP_NAME` | `infra`, `deploy` (`/opt/<APP_NAME>`) |
 | `DEPLOY_USER` | `TF_VAR_DEPLOY_USER` | `infra`, `deploy` (optional, default `deploy`) |
+| `LOGS_USER` | `LOGS_USER` | `deploy` — Dozzle login → `dozzle/users.yml` |
+| `LOGS_PASSWORD` | `LOGS_PASSWORD` | `deploy` — Dozzle password (hashed on the runner) |
 
 Application secrets (`SECRET_KEY`, `POSTGRES_PASSWORD`, `TELEGRAM_*`) are **not**
 used by the workflow today — the app reads them from the `.env` that lives on the

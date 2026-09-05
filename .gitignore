@@ -33,3 +33,6 @@ plans/
 
 # Local-only compose overrides (e.g. exposing postgres on the host)
 docker-compose.override.yml
+
+# Dozzle login (bcrypt hashes) — created by hand next to .env, never committed
+dozzle/users.yml

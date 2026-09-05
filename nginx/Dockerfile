@@ -1,4 +1,4 @@
-# Edge image: build the React SPA, then serve it (static) + proxy /api.
+# Edge image: build the React SPA, then serve it (static) + proxy /api and /logs.
 # Build context = repo root (needs frontend/ and nginx/templates/).
 FROM node:22-alpine AS build
 

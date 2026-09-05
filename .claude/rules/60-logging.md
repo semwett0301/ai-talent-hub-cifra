@@ -47,3 +47,9 @@ silence it, so connect/disconnect diagnostics survive. A library that chatters a
 `INFO` on every call (news-please) goes in `CHATTY_LOGGERS`, capped at `WARNING`.
 
 Config via `settings` only; get loggers via `domain.core.logging.get_logger`; no `print`.
+
+## Where logs live
+
+stdout only — Docker keeps them as rotated json-files (`10m` × 5 per container, compose
+`x-logging`), readable via `docker compose logs` or Dozzle at `/logs/` (login from `dozzle/users.yml`). There
+is no long-term store: don't rely on history older than the rotation window.

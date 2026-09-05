@@ -48,10 +48,11 @@ frontend/                 # React SPA — Vite + TypeScript + React Router
   src/                    #   main.tsx, App.tsx, pages/, assets/
   public/                 #   static assets served as-is
   .oxlintrc.json          #   linter config
-nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service, /api/news/* → news_service
+dozzle/                   # log viewer config: users.yml (gitignored login) + README
+nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service, /api/news/* → news_service, /logs/* → dozzle (own login)
   Dockerfile              #   multi-stage: node build → nginx serving dist/
   templates/default.conf.template
-docker-compose.yml        # root: nginx (public) + migrator + source_service + news_service + postgres + rabbitmq (internal)
+docker-compose.yml        # root: nginx (public) + migrator + source_service + news_service + postgres + rabbitmq + dozzle (internal)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
 terraform/                # DigitalOcean infra (Terraform + cloud-init)
@@ -88,6 +89,8 @@ gen_session.py            # one-off: interactive Telegram login → TELEGRAM_SES
   at `/api/sources/openapi.json`. `news_service` has the sibling **`/api/news/*` →
   `news_service:8000`** location (`NEWS_API_PREFIX`). New services get their own
   `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
+  **`/logs/*` → `dozzle:8080`** (`LOGS_PREFIX`, prefix kept; Dozzle does its own login
+  from the gitignored `dozzle/users.yml`) is the container-log viewer — not an API namespace.
   There is **no separate frontend container**. Edit
   `nginx/templates/default.conf.template` and `nginx/Dockerfile`. Each prefix is a
   single source of truth — `SOURCES_API_PREFIX` / `NEWS_API_PREFIX` in the root
