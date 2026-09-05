@@ -161,7 +161,7 @@ docker compose up --build
 ## CI
 
 Two path-filtered workflows, so a change runs only the relevant job:
-- `.github/workflows/backend.yml` — Ruff lint + format check on `backend/`.
+- `.github/workflows/backend.yml` — Ruff lint + format check, mypy, and pytest on `backend/`.
 - `.github/workflows/frontend.yml` — oxlint on `frontend/`.
 
 ## Git / PR flow
