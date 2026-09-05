@@ -38,9 +38,9 @@ jobs:
       run:
         working-directory: terraform
     env:
-      TWC_TOKEN: ${{ secrets.TWC_TOKEN }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_VAR_SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_APP_NAME: ${{ secrets.APP_NAME }}
       TF_VAR_DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -49,9 +49,9 @@ jobs:
 
       - name: Check required config
         run: |
-          test -n "$TWC_TOKEN" || { echo "::error::secret TWC_TOKEN is not set"; exit 1; }
-          test -n "$AWS_ACCESS_KEY_ID" || { echo "::error::secret TF_STATE_ACCESS_KEY is not set"; exit 1; }
-          test -n "$AWS_SECRET_ACCESS_KEY" || { echo "::error::secret TF_STATE_SECRET_KEY is not set"; exit 1; }
+          test -n "$DIGITALOCEAN_TOKEN" || { echo "::error::secret DIGITALOCEAN_TOKEN is not set"; exit 1; }
+          test -n "$AWS_ACCESS_KEY_ID" || { echo "::error::secret AWS_ACCESS_KEY_ID is not set"; exit 1; }
+          test -n "$AWS_SECRET_ACCESS_KEY" || { echo "::error::secret AWS_SECRET_ACCESS_KEY is not set"; exit 1; }
           test -n "$TF_VAR_SSH_PUBLIC_KEY" || { echo "::error::secret SSH_PUBLIC_KEY is not set"; exit 1; }
           test -n "$TF_VAR_APP_NAME" || { echo "::error::secret APP_NAME is not set"; exit 1; }
 
@@ -74,8 +74,8 @@ jobs:
     env:
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_PATH: /opt/${{ secrets.APP_NAME }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v4
 

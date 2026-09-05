@@ -6,12 +6,12 @@ GitHub Actions.
 - `frontend.yml` — oxlint on `frontend/` (push/PR, path-filtered).
 - `deploy.yml` — CI/CD on `workflow_dispatch` and push to `main`, three jobs:
   1. `changes` — detects whether `terraform/**` was touched (dorny/paths-filter).
-  2. `infra` — `terraform apply` (Timeweb, S3 state); runs only when `terraform/**`
+  2. `infra` — `terraform apply` (DigitalOcean, state in Spaces); runs only when `terraform/**`
      changed (or on manual dispatch). Creates the SSH key from `SSH_PUBLIC_KEY`.
   3. `deploy` — reads the server IP from Terraform output (S3 state, no `SSH_HOST`
      secret), rsyncs the repo to `/opt/<APP_NAME>` (created at first boot by
      cloud-init), then `docker compose up -d --build`.
-  Secrets: `TWC_TOKEN`, `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY`,
+  Secrets: `DIGITALOCEAN_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
   `SSH_PUBLIC_KEY`, `APP_NAME`, `SSH_PRIVATE_KEY`, and optional `DEPLOY_USER`
   (default `deploy`). SSH port is fixed at 22.
 

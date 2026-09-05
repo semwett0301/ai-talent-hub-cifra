@@ -152,26 +152,25 @@ gen_session.py` (interactive login; prints the string, writes nothing to disk).
 
 ### Terraform — provider and remote state
 
+Values from the DigitalOcean console (`plans/digitalocean-setup.md`).
+
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
-| `TWC_TOKEN` | Timeweb Cloud API token for the `twc` provider. | empty | **yes** |
-| `AWS_ACCESS_KEY_ID` | Access key for the S3 state bucket (`cifra-tfstate`, Timeweb S3). | empty | **yes** |
-| `AWS_SECRET_ACCESS_KEY` | Its secret key. Timeweb S3 has no state locking — never run a local and a CI apply at once. | empty | **yes** |
+| `DIGITALOCEAN_TOKEN` | Personal access token (read + write) for the `digitalocean` provider. The DigitalOcean MCP server in `.mcp.json` reads the same variable. | empty | **yes** |
+| `AWS_ACCESS_KEY_ID` | Spaces access key id for the state bucket (`cifra-tfstate`, region `ams3`). | empty | **yes** |
+| `AWS_SECRET_ACCESS_KEY` | Its secret. Spaces has no state locking — never run a local and a CI apply at once. | empty | **yes** |
 
 ### Terraform — inputs (`TF_VAR_*`)
 
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
-| `TF_VAR_SSH_PUBLIC_KEY` | Public key (OpenSSH format) uploaded to Timeweb and installed for `root` + the deploy user. | empty | **yes** |
-| `TF_VAR_APP_NAME` | Project slug: deploy dir `/opt/<name>`, hostname, Compose project name. | `cifra` | no |
+| `TF_VAR_SSH_PUBLIC_KEY` | Public key (OpenSSH format) registered in DO and installed for `root` + the deploy user. | empty | **yes** |
+| `TF_VAR_APP_NAME` | Project slug: deploy dir `/opt/<name>`, SSH key / firewall name, droplet tag, Compose project name. | `cifra` | no |
 | `TF_VAR_DEPLOY_USER` | Non-root user created for SSH/deploy. | `deploy` | no |
-| `TF_VAR_SERVER_NAME` | Server display name in the Timeweb panel. | `cifra-prod` | no |
-| `TF_VAR_LOCATION` | `ru-1` (spb), `ru-2` (nsk), `ru-3` (msk), `de-1` (fra), `kz-1`, `nl-1`. | `ru-1` | no |
-| `TF_VAR_AVAILABILITY_ZONE` | Must match the location (`ru-1`→`spb-3`, `ru-2`→`nsk-1`, `ru-3`→`msk-1`, `de-1`→`fra-1`, `kz-1`→`ala-1`, `nl-1`→`ams-1`). | `spb-3` | no |
-| `TF_VAR_OS_NAME` / `TF_VAR_OS_VERSION` | OS family/version for the image lookup; must exist paired with the Docker software image. | `ubuntu` / `24.04` | no |
-| `TF_VAR_CPU` | vCPU count (configurator minimum 2). | `2` | no |
-| `TF_VAR_RAM_MB` | RAM in MB, multiple of 1024. | `4096` | no |
-| `TF_VAR_DISK_MB` | System disk in MB: 40960–2048000, step 5120. | `40960` | no |
+| `TF_VAR_SERVER_NAME` | Droplet name (also its hostname). | `cifra-prod` | no |
+| `TF_VAR_REGION` | Droplet + reserved IP region slug (`ams3`, `fra1`, `lon1`, …). Independent of the Spaces region. | `ams3` | no |
+| `TF_VAR_SIZE` | Droplet size slug; `s-2vcpu-4gb` = 2 vCPU / 4 GB / 80 GB. | `s-2vcpu-4gb` | no |
+| `TF_VAR_IMAGE` | Distribution image slug. | `ubuntu-24-04-x64` | no |
 
 ### Deploy
 
@@ -184,14 +183,14 @@ Terraform state via `terraform output -raw server_ipv4`.
 
 ### GitHub Actions Secrets
 
-`deploy.yml` expects these names — a few differ from the `.env` key, since
-Terraform and the AWS SDK read fixed variable names:
+`deploy.yml` expects these names — the same as the `.env` key, except that the
+Terraform inputs drop the `TF_VAR_` prefix:
 
 | GitHub Secret | `.env` key | Used by |
 |---|---|---|
-| `TWC_TOKEN` | `TWC_TOKEN` | `infra` — provider |
-| `TF_STATE_ACCESS_KEY` | `AWS_ACCESS_KEY_ID` | `infra`, `deploy` — S3 state |
-| `TF_STATE_SECRET_KEY` | `AWS_SECRET_ACCESS_KEY` | `infra`, `deploy` — S3 state |
+| `DIGITALOCEAN_TOKEN` | `DIGITALOCEAN_TOKEN` | `infra` — provider |
+| `AWS_ACCESS_KEY_ID` | `AWS_ACCESS_KEY_ID` | `infra`, `deploy` — Spaces state |
+| `AWS_SECRET_ACCESS_KEY` | `AWS_SECRET_ACCESS_KEY` | `infra`, `deploy` — Spaces state |
 | `SSH_PUBLIC_KEY` | `TF_VAR_SSH_PUBLIC_KEY` | `infra` |
 | `SSH_PRIVATE_KEY` | `SSH_PRIVATE_KEY` | `deploy` |
 | `APP_NAME` | `TF_VAR_APP_NAME` | `infra`, `deploy` (`/opt/<APP_NAME>`) |
