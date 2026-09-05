@@ -14,6 +14,7 @@ class NewsOut(BaseModel):
 
     id: uuid.UUID
     schema_version: int
+    source_id: uuid.UUID | None
     source_link: str
     source_type: SourceType
     source_reliability: SourceReliability

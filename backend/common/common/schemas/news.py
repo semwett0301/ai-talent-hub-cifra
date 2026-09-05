@@ -1,15 +1,16 @@
 """News — DB-backed schema (SQLAlchemy ORM), owned by news_service.
 
 Mirrors `common.entities.news.NewsDTO` field for field: the consumer stores the bus
-message as-is. `url` is unique — the same story is never stored twice. `is_alert` is
-the one service-owned flag: false on insert, set true when a reader dismisses the item.
+message as-is. `url` is unique — the same story is never stored twice. `source_id` points at
+the `source` row and is nulled when that source is deleted. `is_alert` is the one
+service-owned flag: false on insert, set true when a reader dismisses the item.
 """
 
 import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -33,6 +34,9 @@ class News(Base):
         Uuid(as_uuid=True), primary_key=True, server_default=_GEN_UUID
     )
     schema_version: Mapped[int] = mapped_column(Integer)
+    source_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("source.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     source_link: Mapped[str] = mapped_column(String(255))
     source_type: Mapped[SourceType] = mapped_column(SOURCE_TYPE)
     source_reliability: Mapped[SourceReliability] = mapped_column(SOURCE_RELIABILITY)
