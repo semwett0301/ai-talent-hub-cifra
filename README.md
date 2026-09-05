@@ -65,8 +65,9 @@ Terraform and the deploy workflow all read from it — there is no per-folder
 cp .env.example .env      # then fill in the blanks
 ```
 
-`.env` is gitignored, and the deploy job explicitly excludes it from the rsync —
-on the server it is created once by hand in `/opt/<APP_NAME>/`. In CI the same
+`.env` is gitignored, and the deploy job explicitly excludes it from the rsync. On the
+server the `deploy` job writes a **minimal** `/opt/<APP_NAME>/.env` on every deploy
+(see "Server .env" below) — nothing is created by hand there. In CI the same
 values live as **GitHub Actions Secrets** (mapping table at the end).
 
 How each consumer picks it up:
@@ -194,6 +195,22 @@ Values from the DigitalOcean console (`plans/digitalocean-setup.md`).
 The server host is deliberately **not** a variable: the deploy job reads it from
 Terraform state via `terraform output -raw server_ipv4`.
 
+### Server `.env`
+
+The `deploy` job builds it from secrets and constants, so it holds only what must
+differ from the compose defaults:
+
+| Key | Value on the server |
+|---|---|
+| `ENVIRONMENT` | `production` (constant in `deploy.yml`) |
+| `DEBUG` | `false` (constant) |
+| `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` / `TELEGRAM_SESSION` | the secrets of the same name |
+
+`POSTGRES_*`, `RABBITMQ_URL`, prefixes, `APP_NAME`, `SECRET_KEY` (unused yet) keep the
+defaults from `docker-compose.yml` — Postgres and RabbitMQ are reachable only inside
+the compose network. To add a server value: add a secret, a line in the "Write server
+.env" step, and a row here.
+
 ### GitHub Actions Secrets
 
 `deploy.yml` expects these names — the same as the `.env` key, except that the
@@ -210,6 +227,9 @@ Terraform inputs drop the `TF_VAR_` prefix:
 | `DEPLOY_USER` | `TF_VAR_DEPLOY_USER` | `infra`, `deploy` (optional, default `deploy`) |
 | `LOGS_USER` | `LOGS_USER` | `deploy` — Dozzle login → `dozzle/users.yml` |
 | `LOGS_PASSWORD` | `LOGS_PASSWORD` | `deploy` — Dozzle password (hashed on the runner) |
+| `TELEGRAM_API_ID` | `TELEGRAM_API_ID` | `deploy` — server `.env` |
+| `TELEGRAM_API_HASH` | `TELEGRAM_API_HASH` | `deploy` — server `.env` |
+| `TELEGRAM_SESSION` | `TELEGRAM_SESSION` | `deploy` — server `.env` |
 
 Application secrets (`SECRET_KEY`, `POSTGRES_PASSWORD`, `TELEGRAM_*`) are **not**
 used by the workflow today — the app reads them from the `.env` that lives on the
