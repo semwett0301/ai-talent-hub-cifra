@@ -66,10 +66,10 @@ Mock data:
 ## Integration references
 
 API:
-`docs/handoff/04-api-contract.md`
+`frontend/handoff/04-api-contract.md`
 
 OpenAPI:
-`docs/handoff/openapi.yaml`
+`frontend/handoff/openapi.yaml`
 
 Delivery plan:
-`docs/handoff/06-delivery-plan.md`
+`frontend/handoff/06-delivery-plan.md`
