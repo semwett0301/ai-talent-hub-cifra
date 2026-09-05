@@ -20,7 +20,9 @@ for all services, so migrations live here (not per service): the migrator runs
   `type = rss` CHECK constraint; `0007_news_table` creates the `news` table
   `news_service` writes bus messages into, with `url` UNIQUE as the dedupe key;
   `0008_npa_table` creates the `npa` table `npa_service` stores legislative acts in,
-  `url` UNIQUE; `0009_source_is_relevant` adds `is_relevant` plus its CHECK constraint).
+  `url` UNIQUE; `0009_source_is_relevant` adds `is_relevant` plus its CHECK constraint;
+  `0010_news_source_id` adds the nullable, indexed `news.source_id` FK to `source`
+  with `ON DELETE SET NULL`).
 - `pyproject.toml` — runtime deps `common` + `alembic` + `psycopg2-binary`. Every
   ORM model comes from `common.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.

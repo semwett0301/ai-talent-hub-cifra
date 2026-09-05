@@ -43,6 +43,7 @@ def _to_news_dto(source: Source, chat: Chat, message: Message) -> NewsDTO:
         source.link,
         source.type,
         source.reliability,
+        source_id=source.id,
         url=_message_url(chat, message),
         text=message.text or message.caption or "",
         published_at=message.date,

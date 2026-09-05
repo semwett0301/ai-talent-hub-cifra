@@ -2,11 +2,12 @@
 
 Everything the `news` domain shares between producer and consumers lives here: the
 `SourceType` a post came from, the `NewsDTO` payload (which also carries the source's
-`SourceReliability`, so a consumer never has to call back into `source_service`), and
-the routing key it is published under. Grouped by domain (news) rather than by
+id and `SourceReliability`, so a consumer never has to call back into `source_service`),
+and the routing key it is published under. Grouped by domain (news) rather than by
 technical kind.
 """
 
+import uuid
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -29,7 +30,10 @@ class SourceType(StrEnum):
 class NewsDTO(BaseModel):
     """A single collected news item as published to the `news` exchange."""
 
-    schema_version: int = 3
+    schema_version: int = 4
+    # The `source` row this came from; None once the source is gone (deleted before
+    # the consumer stored the item — the consumer detaches, it never fails the batch).
+    source_id: uuid.UUID | None = None
     source_link: str
     source_type: SourceType
     source_reliability: SourceReliability
@@ -49,6 +53,7 @@ class NewsDTO(BaseModel):
         source_type: SourceType,
         reliability: SourceReliability,
         *,
+        source_id: uuid.UUID | None,
         url: str,
         text: str,
         published_at: datetime | None = None,
@@ -61,6 +66,7 @@ class NewsDTO(BaseModel):
         would cycle.
         """
         return cls(
+            source_id=source_id,
             source_link=link,
             source_type=source_type,
             source_reliability=reliability,

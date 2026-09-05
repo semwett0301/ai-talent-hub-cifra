@@ -32,6 +32,7 @@ def _to_news_dto(source: Source, entry: FeedEntry, article: ExtractedArticle | N
         source.link,
         source.type,
         source.reliability,
+        source_id=source.id,
         url=entry.url,
         text=text,
         published_at=published_at,

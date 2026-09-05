@@ -69,6 +69,7 @@ class Article(BaseModel, frozen=True):
             source.link,
             SourceType.WEB,
             source.reliability,
+            source_id=source.id,
             url=self.content.final_url,
             text=self.content.text,
             published_at=self.publication.value,
