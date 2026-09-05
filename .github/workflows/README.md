@@ -9,8 +9,9 @@ GitHub Actions.
   2. `infra` — `terraform apply` (DigitalOcean, state in Spaces); runs only when `terraform/**`
      changed (or on manual dispatch). Creates the SSH key from `SSH_PUBLIC_KEY`.
   3. `deploy` — reads the server IP from Terraform output (S3 state, no `SSH_HOST`
-     secret), rsyncs the repo to `/opt/<APP_NAME>` (created at first boot by
-     cloud-init), then `docker compose up -d --build`.
+     secret), waits until cloud-init has finished (`/var/lib/cloud/bootstrap-complete`,
+     up to 10 min — a replaced droplet is `active` long before Docker is installed),
+     rsyncs the repo to `/opt/<APP_NAME>`, then `docker compose up -d --build`.
   Secrets: `DIGITALOCEAN_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
   `SSH_PUBLIC_KEY`, `APP_NAME`, `SSH_PRIVATE_KEY`, and optional `DEPLOY_USER`
   (default `deploy`). SSH port is fixed at 22.

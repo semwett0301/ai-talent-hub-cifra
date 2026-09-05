@@ -18,5 +18,7 @@ separately.
 so a Docker install hiccup can't leave `/opt/<app_name>` uncreated (the deploy user
 isn't a sudoer and can't create it under `/opt`). `bootcmd` stops `apt-daily` and
 waits for the dpkg lock before the packages module. Keep `#cloud-config` as the
-first line (required directive). Runs only on first boot; **any edit replaces the
+first line (required directive) and the file **ASCII-only**: a non-ASCII byte (an em
+dash in a comment) made DO's metadata hand cloud-init an unparseable YAML blob, and
+the whole config was silently skipped. Runs only on first boot; **any edit replaces the
 droplet** on the next apply.

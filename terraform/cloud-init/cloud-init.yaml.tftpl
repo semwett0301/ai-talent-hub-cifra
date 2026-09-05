@@ -31,7 +31,7 @@ bootcmd:
     done
 
 runcmd:
-  # Deploy dir first (rsync target; deploy user can't mkdir under /opt) — never abort before it.
+  # Deploy dir first (rsync target; deploy user can't mkdir under /opt). Never abort before it.
   - [ install, -d, -o, "${deploy_user}", -g, "${deploy_user}", "${app_dir}" ]
 
   # Host firewall: SSH only. Docker publishes 80 via its own iptables chain, bypassing UFW.
