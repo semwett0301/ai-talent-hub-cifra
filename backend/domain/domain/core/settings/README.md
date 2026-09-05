@@ -5,7 +5,8 @@
   singleton (`get_settings()`). Holds every service's knobs — the Postgres / RabbitMQ
   URLs, the `*_api_prefix` values shared with nginx, the `source_poll_interval_seconds`
   fallback `source_service` schedules on, the `news_*` batch settings `news_service`
-  reads, and the Telegram credentials.
+  reads, `npa_service_url` (where `news_service` posts escalated acts), and the
+  Telegram credentials.
 - `__init__.py` — re-exports `settings`, `Settings`, `get_settings`, `ENV_FILE`.
 
 Notes: add a field to `Settings` for every new variable and declare it in the root

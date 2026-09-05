@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # root_path uses it so /docs and openapi.json resolve behind the proxy.
     sources_api_prefix: str = "/api/sources"
     news_api_prefix: str = "/api/news"
+    npa_api_prefix: str = "/api/npa"
+
+    # news_service → npa_service: base URL of the internal HTTP API the escalation
+    # endpoint posts new acts to (compose overrides it to http://npa_service:8000).
+    npa_service_url: str = "http://localhost:8002"
 
     # source_service scheduler: how often a pull source (RSS/Web) is polled when the
     # row's own `poll_interval_seconds` is null.

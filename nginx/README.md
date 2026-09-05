@@ -10,7 +10,8 @@ The edge — the only service exposed to the host (port 80).
   Dozzle's own, see `../dozzle/README.md`). Currently `/api/sources/*` → `source_service:8000` with the **whole
   `/api/sources` prefix stripped** (`/api/sources` → `/`, `/api/sources/5` → `/5`,
   `/api/sources/openapi.json` → `/openapi.json`), so the OpenAPI spec is reachable
-  at `/api/sources/openapi.json`.
+  at `/api/sources/openapi.json`; likewise `/api/news/*` → `news_service:8000`
+  (`${NEWS_API_PREFIX}`) and `/api/npa/*` → `npa_service:8000` (`${NPA_API_PREFIX}`).
 Notes: the `.template` file is processed by the nginx image's built-in
 docker-entrypoint envsubst step at container start (`*.template` under
 `/etc/nginx/templates/` → `/etc/nginx/conf.d/*.conf`), substituting

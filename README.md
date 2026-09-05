@@ -19,13 +19,14 @@ media, regulators, and Telegram channels.
 
 - `backend/` — Python (uv workspace): `domain` shared kernel (core + entities +
   shared ORM schemas) + `source_service` (FastAPI, collects → RabbitMQ) +
-  `news_service` (FastAPI, RabbitMQ → DB in batches + list/dismiss API) + `migrator` (Alembic),
+  `news_service` (FastAPI, RabbitMQ → DB in batches + list/dismiss/escalate API) +
+  `npa_service` (FastAPI, legislative acts: list/get/create) + `migrator` (Alembic),
   as sibling packages. Services follow **onion architecture** (application →
   infrastructure → api, wired in `deps.py`); see `backend/README.md`.
 - `frontend/` — React SPA (Vite, TypeScript, React Router).
 - `nginx/` — edge: builds the SPA, serves it static, proxies `/api`; the only
   service exposed to the host.
-- `docker-compose.yml` — nginx (public) + source_service + news_service
+- `docker-compose.yml` — nginx (public) + source_service + news_service + npa_service
   + migrator + postgres + rabbitmq (internal).
 
 ## Run
@@ -123,12 +124,19 @@ How each consumer picks it up:
 | `NEWS_BATCH_INTERVAL_SECONDS` | Max seconds a partial batch waits before being written. A batch flushes on **either** limit. | `60` | no |
 | `NEWS_REQUEUE_ON_STORE_ERROR` | When the DB write of a batch fails: `true` nacks it back onto the queue and retries after one interval (at-least-once, nothing lost); `false` nacks it without requeue (dropped, or dead-lettered if the queue gets a DLX). | `true` | no |
 
+### news_service → npa_service
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `NPA_SERVICE_URL` | Base URL of `npa_service`'s API that `POST /api/news/{id}/npa` posts the act to (service-to-service, inside the compose network — Compose overrides it to `http://npa_service:8000`). Local dev default assumes `npa_service` on port 8002. | `http://localhost:8002` | no |
+
 ### Edge routing
 
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
 | `SOURCES_API_PREFIX` | The nginx location `source_service` is mounted under, and the same value as FastAPI's `root_path` (so `/docs` and `openapi.json` resolve behind the proxy). Consumed by **both** containers — change it here only. | `/api/sources` | no |
 | `NEWS_API_PREFIX` | Same for `news_service`. | `/api/news` | no |
+| `NPA_API_PREFIX` | Same for `npa_service`. | `/api/npa` | no |
 
 ### Logs (Dozzle)
 

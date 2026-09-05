@@ -16,7 +16,8 @@ Alembic — the **shared** schema history for all services on the one database
   `type = rss`, and backfills it for the vedomosti/kommersant/cableman sources
   from `0002_seed_sources` (switching telesputnik to `type = web` instead, since
   it has no known feed); `0007_news_table` creates the `news` table `news_service`
-  writes bus messages into, with `url` UNIQUE as the dedupe key.
+  writes bus messages into, with `url` UNIQUE as the dedupe key; `0008_npa_table`
+  creates the `npa` table `npa_service` stores legislative acts in (`url` UNIQUE).
 
 Notes: run from `../` (the migrator dir) — `uv run alembic -c alembic.ini upgrade head`.
 Autogenerate: `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`. Models

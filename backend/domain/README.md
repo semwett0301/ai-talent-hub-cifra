@@ -17,8 +17,10 @@ whose code lives in the nested `domain/` dir (like every service's `<name>/<name
   reuses).
 - `domain/entities/` — business shapes, **grouped by domain** (not by technical kind).
   `entities/news/` holds `NewsDTO`, its `SourceType`, and the routing key — all in
-  `dto.py`.
-- `domain/schemas/` — the SQLAlchemy ORM models for the shared DB (`Source`, …). One
+  `dto.py`; `entities/npa/` holds `NpaDTO`, the HTTP contract between `news_service`
+  and `npa_service`.
+- `domain/schemas/` — the SQLAlchemy ORM models for the shared DB (`Source`, `News`,
+  `Npa`). One
   history for all, applied by the `migrator`, which imports `domain.schemas`.
 - (later) `domain/llm/` etc. as services need them.
 
