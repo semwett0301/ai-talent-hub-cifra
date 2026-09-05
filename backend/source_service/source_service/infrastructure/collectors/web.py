@@ -5,7 +5,7 @@ from common.entities.news import NewsDTO
 from common.schemas import Source
 
 from source_service.application.ports.source import PullCollector
-from source_service.application.services.scraping import WebCrawl
+from source_service.application.services.web import WebCrawl
 
 logger = get_logger(__name__)
 

@@ -3,7 +3,7 @@
 Ingestion service: **CRUD sources → collect news → publish to RabbitMQ**. No
 persistent dedupe, no news storage — downstream consumes from RabbitMQ and dedupes on
 `NewsDTO.url`. Telegram (kurigram), RSS (feedparser + news-please), and WEB
-sources are implemented. WEB sources run through the `services.scraping` stage
+sources are implemented. WEB sources run through the `services.web` stage
 services on the Crawl4AI browser adapter, behind `WebCrawlCollector`.
 Design: `../../../plans/source-service-architecture.md`,
 `../../../plans/telegram-kurigram-migration.md`.
@@ -30,8 +30,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     each as entity + `model/` + `rules/` (scoring, `FreshnessWindow`), plus URL identity
     rules. Pure: no I/O, no Crawl4AI, no LLM.
   - `application/` — `ports/` (interfaces infra implements) + `dto/` + `parse/` +
-    `services/` grouped by domain — `source/`, `scraping/` (the WEB crawl as stage
-    services behind `WebCrawl`), `article/` (date resolution, judgement):
+    `services/` grouped by domain — `source/` and `web/` (the WEB crawl:
+    `WebCrawl` over `hubs/`, `listings/` and `articles/`):
     `SourceService` (CRUD over the repo port; auto-detects a source's
     `type` from its `link` via `parse/` + the `PageFetcher` port — clients never
     send `type`; an RSS feed's URL is stored in `rss_link`, scraping-only and also
@@ -53,8 +53,8 @@ implement `fetch`/`subscribe` in its infra file; register it in `deps`.
 ## WEB collector
 
 `WebCrawlCollector` is a `PullCollector`: for each `WEB` source it runs
-`services.scraping.WebCrawl` (hub discovery → cards → fetch → date → judgement, see
-`application/services/scraping/README.md`) on the service's shared browser and
+`services.web.WebCrawl` (hubs → cards → article harvest, see
+`application/services/web/README.md`) on the service's shared browser and
 publishes one `NewsDTO` per accepted article to `news.raw.web`. The compact shared fields
 are `url`, `text`, `published_at` and source attributes. All agent data is kept
 as JSON under `raw`: convenient keys include `title`, `author`, `description`,

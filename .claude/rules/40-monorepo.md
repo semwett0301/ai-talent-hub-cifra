@@ -6,7 +6,7 @@ repo files.
 ```
 backend/     all Python — its own uv workspace (root pyproject = virtual workspace root, no package)
   common/    shared kernel, its own pyproject; package at common/common (imported as `common`)
-             core/ (settings/logging/db/errors/rabbit subpackages) + entities/ (business shapes) + schemas/ (shared ORM models)
+             core/ (settings/logging/db/errors/llm/rabbit subpackages) + entities/ (business shapes) + schemas/ (shared ORM models)
   source_service/, news_service/, migrator/   one package per service, siblings of common (no services/ wrapper)
 frontend/    React SPA (Vite, TypeScript, React Router) — built to static files
 nginx/       edge image: serves static SPA + proxies /api/* → services, /logs/* → dozzle
@@ -26,7 +26,8 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
   lives in `common/schemas/` (re-exported from `common.schemas`), not per service —
   every service and the `migrator` import the same tables. The Alembic history is
   centralized in the `migrator`, which imports `common.schemas`.
-- **`common` holds:** `core/` (settings, logging, db infra), `entities/` (business
+- **`common` holds:** `core/` (settings, logging, db, llm infra — `LlmCallBudget`
+  caps LLM calls per run; never hand-roll a semaphore in a service), `entities/` (business
   shapes, grouped by domain — e.g. `entities/news`), and `schemas/` (shared ORM
   models). Service dirs hold only that service's own logic (use cases, ports,
   collectors, routes). **No cross-service imports** — services communicate only

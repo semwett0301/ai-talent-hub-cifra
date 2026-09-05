@@ -6,14 +6,14 @@ entities) and on the service's own `source_service.domain` (web-news entities an
 rules), never on concrete infra. Collaborators are injected by the composition
 root (`deps.py`).
 
-- `ports/` — the interfaces (Protocols) infra/services implement, grouped by domain like
-  `services/`: `source/` (repository, registrar, collectors, publisher), `scraping/`
-  (page fetcher, feed reader, browser page crawler with `FetchedPage`, the crawl's LLM
-  port `CrawlLlm`).
+- `ports/` — the interfaces (Protocols) infra/services implement, grouped by domain:
+  `source/` (repository, registrar, collectors, publisher), `scraping/` (page fetcher, feed
+  reader, browser page crawler with `FetchedPage`, the crawl's LLM port `CrawlLlm` — every
+  port that reaches the open web, so it is wider than `services/web`).
 - `dto/` — request/response DTOs (Pydantic) for the use cases.
-- `services/` — use cases, grouped by domain: `source/` (`SourceService`,
-  `SourceRegistry`), `scraping/` (`WebCrawl` and its stages), `article/`
-  (`DateResolution`, `ArticleJudgement`). One class per module.
+- `services/` — use cases and the steps they are composed of, grouped by domain:
+  `source/` (`SourceService`, `SourceRegistry`) and `web/` (`WebCrawl` over `hubs/`,
+  `listings/` and `articles/`). One class per module.
 - `parse/` — pure text-in/structure-out logic (no I/O): link/page recognition for
   `SourceService`'s type auto-detection, article extraction (news-please) for
   `RssCollector`, and for the WEB crawl: date parsing, listing-page and article-page

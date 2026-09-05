@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from common.core.settings import WebCrawlSettings
 from source_service.application.ports.scraping import FetchedPage
-from source_service.application.services.scraping import CardCollection
+from source_service.application.services.web.listings import CardCollection
 from source_service.domain import ArticleStatus, Hub, HubOrigin
 
 FRESH = datetime.now(ZoneInfo("Europe/Moscow")).isoformat()

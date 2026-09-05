@@ -13,14 +13,14 @@ whose code lives in the nested `domain/` dir (like every service's `<name>/<name
 - `common/core/` — base infra every service uses, one subpackage per concern:
   `settings/` (pydantic-settings over `.env`), `logging/`, `db/` (declarative `Base`,
   async engine/session factory), `errors/` (domain-wide error types such as
-  `BatchStoreError`), `rabbit/` (the shared batch consumer any bus consumer service
+  `BatchStoreError`), `llm/` (`LlmCallBudget` — the per-run cap on LLM calls and on
+  how many run at once), `rabbit/` (the shared batch consumer any bus consumer service
   reuses).
 - `common/entities/` — business shapes, **grouped by domain** (not by technical kind).
   `entities/news/` holds `NewsDTO`, its `SourceType`, and the routing key — all in
   `dto.py`.
 - `common/schemas/` — the SQLAlchemy ORM models for the shared DB (`Source`, …). One
   history for all, applied by the `migrator`, which imports `common.schemas`.
-- (later) `common/llm/` etc. as services need them.
 
 Notes: keep this coherent — it's the one place every service shares. New tables go in
 `common/schemas/`; new business shapes in `common/entities/`.

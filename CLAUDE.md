@@ -30,7 +30,7 @@ repo files.
 ```
 backend/                  # all Python — a single uv workspace (services are siblings)
   common/                 # shared kernel (one DB → shared schemas), its own pyproject
-    common/               #   importable package: core (settings/logging/db/errors/rabbit), entities, schemas
+    common/               #   importable package: core (settings/logging/db/errors/llm/rabbit), entities, schemas
     pyproject.toml        #   the `common` package
   source_service/         # project source-service — FastAPI ingestion service
     source_service/       #   importable package (uniquely named, not generic `app`)
@@ -63,7 +63,8 @@ gen_session.py            # one-off: interactive Telegram login → TELEGRAM_SES
 ```
 
 `backend/common` holds the shared kernel — ORM `schemas` (one DB for all), business
-`entities`, and `core` infra — and grows with shared LLM code as introduced.
+`entities`, and `core` infra, including `core/llm` (`LlmCallBudget`: how many LLM calls
+one run may make and how many at once — reuse it, don't hand-roll a semaphore).
 `data/` and test dirs are intentionally absent for now.
 
 ## Tech stack
@@ -100,7 +101,7 @@ gen_session.py            # one-off: interactive Telegram login → TELEGRAM_SES
 
 ## Architecture rules (backend)
 
-- `common` is the **shared kernel** — `core` (settings/logging/db infra), `entities`
+- `common` is the **shared kernel** — `core` (settings/logging/db/llm infra), `entities`
   (business shapes), and `schemas` (ORM models). The **DB is one for all services**,
   so every ORM model lives in `common.schemas` (not per service), and the Alembic
   history is centralized in the `migrator`, which imports `common.schemas`.
@@ -179,9 +180,9 @@ Two path-filtered workflows, so a change runs only the relevant job:
   (`<name>/`, not a generic `app`), and a `Dockerfile`; add `<name>` to
   `[tool.uv.workspace] members` in `backend/pyproject.toml` and a block to
   `docker-compose.yml`.
-- **Shared code** (ORM schemas, business entities, DB session, LLM) → add under
-  `backend/common/` (`schemas/`, `entities/`, `core/`) and its deps to
-  `common/pyproject.toml`.
+- **Shared code** (ORM schemas, business entities, DB session, LLM mechanics) → add
+  under `backend/common/` (`schemas/`, `entities/`, `core/`) and its deps to
+  `common/pyproject.toml`. Anything bounding LLM traffic goes in `core/llm/`.
 - **Migrations** → live in the `migrator` (`backend/migrator/`), a single shared
   Alembic history. Adding a table = define the model in `common/schemas/` and
   re-export it from `common.schemas.__init__`, then autogenerate a revision (`env.py`

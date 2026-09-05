@@ -13,6 +13,9 @@ inside it.
   `async_session_factory`, and `get_session`.
 - `errors/` — domain-wide error types shared between services and the mechanisms
   here (`BatchStoreError`: a batch could not be persisted). Transport-agnostic.
+- `llm/` — traffic control for model calls: `LlmCallBudget` (a per-run cap on how many
+  LLM calls are made in total and how many run at once). The model clients themselves
+  stay in the services.
 - `rabbit/` — the shared RabbitMQ **batch consumer** (`RabbitBatchConsumer[T]`,
   `BatchHandler[T]`, `BatchConsumerConfig`): a service supplies a pydantic message
   model + a handler, the mechanism (prefetch, buffer, ack-after-store, requeue/drop on

@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import pytest
 from common.core.settings import WebCrawlSettings
-from source_service.application.services.article import ArticleJudgement
+from source_service.application.services.web.articles import ArticleJudgement
 from source_service.domain import (
     Article,
     ArticleContent,
@@ -42,6 +41,9 @@ def test_untitled_article_is_rejected():
     assert verdict.rejection is RejectReason.NO_TITLE
 
 
-def test_judgement_refuses_undated_articles():
-    with pytest.raises(ValueError):
-        ArticleJudgement(WebCrawlSettings()).run([Article(url=URL)])
+def test_articles_of_another_status_pass_through_untouched():
+    undated = Article(url=URL)
+
+    [carried] = ArticleJudgement(WebCrawlSettings()).run([undated])
+
+    assert carried is undated

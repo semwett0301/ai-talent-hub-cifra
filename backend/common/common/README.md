@@ -4,7 +4,7 @@ The importable shared kernel, `import common`. What it holds and why is in `../R
 this file only maps the subpackages.
 
 - `core/` — infra every service uses: `settings/` (all configuration, grouped),
-  `logging/`, `db/`, `errors/`, `rabbit/` (the batch consumer).
+  `logging/`, `db/`, `errors/`, `llm/` (`LlmCallBudget`), `rabbit/` (the batch consumer).
 - `entities/` — cross-service business shapes, grouped by domain (`news/`, `source/`).
 - `schemas/` — the SQLAlchemy ORM models of the one shared database.
 

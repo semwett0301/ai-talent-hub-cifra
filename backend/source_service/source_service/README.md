@@ -8,7 +8,8 @@ the WEB collector — is described in `../README.md`; this file only maps the la
 - `domain/` — the service's own entities and pure rules (`Article`, `Hub`, scoring,
   URL identity). No I/O.
 - `application/` — use cases and ports: `services/` grouped by domain (`source/`,
-  `scraping/`, `article/`), `parse/` (pure parsing), `ports/`, `dto/`.
+  `web/` with its `hubs/`, `listings/` and `articles/` stages), `parse/` (pure parsing),
+  `ports/`, `dto/`.
 - `infrastructure/` — port implementations: repositories, RabbitMQ, collectors, crawlers.
 - `api/` — FastAPI routers.
 

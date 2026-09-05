@@ -17,15 +17,16 @@ from source_service.application.ports.source import (
     PushCollector,
     SourceRegistrar,
 )
-from source_service.application.services.article import ArticleJudgement, DateResolution
-from source_service.application.services.scraping import (
-    ArticleFetching,
-    CardCollection,
-    HubDiscovery,
-    WebCrawl,
-)
-from source_service.application.services.scraping.web_crawl import CrawlStages
 from source_service.application.services.source import SourceRegistry, SourceService
+from source_service.application.services.web import CrawlStages, WebCrawl
+from source_service.application.services.web.articles import (
+    ArticleFetching,
+    ArticleHarvest,
+    ArticleJudgement,
+    DateResolution,
+)
+from source_service.application.services.web.hubs import HubDiscovery, ListingClassifier
+from source_service.application.services.web.listings import CardCollection
 from source_service.infrastructure.collectors.rss import RssCollector
 from source_service.infrastructure.collectors.telegram import TelegramCollector
 from source_service.infrastructure.collectors.web import WebCrawlCollector
@@ -57,24 +58,24 @@ def crawl_settings() -> WebCrawlSettings:
         return runtime
 
     logger.info("web crawl llm disabled: enabled=%s token=%s", runtime.llm_enabled, has_token)
-    return runtime.model_copy(
-        update={"llm_date_fallback": False, "listing_llm_max_calls_per_site": 0}
-    )
+    return runtime.model_copy(update={"llm_enabled": False, "llm_date_fallback": False})
 
 
 def build_web_collector(page_crawler: Crawl4AiPageCrawler) -> WebCrawlCollector:
-    """The crawl is five stage services behind one orchestrator; the LLM is one client
-    behind two ports, or absent."""
+    """The crawl is five stages behind one orchestrator; the LLM is one client behind
+    two ports, or absent."""
     runtime = crawl_settings()
-    llm = LiteLlmClient(settings.llm, runtime) if runtime.listing_llm_max_calls_per_site else None
+    llm = LiteLlmClient(settings.llm, runtime) if runtime.llm_enabled else None
+    classifier = ListingClassifier(llm, runtime) if llm else None
+
     stages = CrawlStages(
-        hubs=HubDiscovery(page_crawler, llm, runtime),
+        hubs=HubDiscovery(page_crawler, classifier, runtime),
         cards=CardCollection(page_crawler, runtime),
-        fetching=ArticleFetching(page_crawler, runtime),
+        harvest=ArticleHarvest(ArticleFetching(page_crawler, runtime), runtime),
         dates=DateResolution(llm, runtime),
         judgement=ArticleJudgement(runtime),
     )
-    return WebCrawlCollector(WebCrawl(stages, runtime, SourceRepo()))
+    return WebCrawlCollector(WebCrawl(stages, SourceRepo()))
 
 
 def get_source_service(request: Request) -> SourceService:

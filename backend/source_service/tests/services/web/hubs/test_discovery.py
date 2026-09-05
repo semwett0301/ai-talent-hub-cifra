@@ -1,7 +1,7 @@
 import pytest
 from common.core.settings import WebCrawlSettings
 from source_service.application.ports.scraping import FetchedPage, ListingVerdict, PageLink
-from source_service.application.services.scraping import HubDiscovery
+from source_service.application.services.web.hubs import HubDiscovery, ListingClassifier
 from source_service.domain import HubOrigin, Site
 
 SITE = Site(url="https://example.test", name="Example")
@@ -67,7 +67,9 @@ async def test_classifier_confirmed_listing_becomes_a_hub_with_its_next_page():
             "https://example.test/about": page("https://example.test/about"),
         }
     )
-    discovery = HubDiscovery(crawler, FakeLlm({"https://example.test/news"}), WebCrawlSettings())
+    settings = WebCrawlSettings()
+    classifier = ListingClassifier(FakeLlm({"https://example.test/news"}), settings)
+    discovery = HubDiscovery(crawler, classifier, settings)
 
     hubs = await discovery.run(SITE)
 
@@ -92,8 +94,9 @@ async def test_default_depth_reaches_a_listing_three_clicks_deep():
             listing: page(listing),
         }
     )
+    settings = WebCrawlSettings()
     llm = FakeLlm(listings={listing}, expandable=frozenset({section, subsection}))
-    discovery = HubDiscovery(crawler, llm, WebCrawlSettings())
+    discovery = HubDiscovery(crawler, ListingClassifier(llm, settings), settings)
 
     hubs = await discovery.run(SITE)
 
