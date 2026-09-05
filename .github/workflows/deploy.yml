@@ -1,6 +1,5 @@
-# CI/CD: check secrets, apply infra (only when terraform/ changed), then deploy the
-# app over SSH. The server host is read from Terraform state (S3), so there is no
-# SSH_HOST secret.
+# CI/CD: apply infra (only when terraform/ changed), then deploy the app over SSH.
+# The server host is read from Terraform state (S3), so there is no SSH_HOST secret.
 name: Deploy
 
 on:
@@ -16,31 +15,8 @@ permissions:
   contents: read
 
 jobs:
-  # Fail fast: every secret infra + deploy need, checked before anything runs.
-  check-secrets:
-    name: check secrets
-    runs-on: ubuntu-latest
-    env:
-      DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      APP_NAME: ${{ secrets.APP_NAME }}
-      LOGS_USER: ${{ secrets.LOGS_USER }}
-      LOGS_PASSWORD: ${{ secrets.LOGS_PASSWORD }}
-    steps:
-      - run: |
-          missing=0
-          for name in DIGITALOCEAN_TOKEN AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
-                      SSH_PUBLIC_KEY SSH_PRIVATE_KEY APP_NAME LOGS_USER LOGS_PASSWORD; do
-            if [ -z "${!name}" ]; then echo "::error::secret $name is not set"; missing=1; fi
-          done
-          exit $missing
-
   changes:
     name: detect changes
-    needs: check-secrets
     runs-on: ubuntu-latest
     outputs:
       terraform: ${{ steps.filter.outputs.terraform }}
