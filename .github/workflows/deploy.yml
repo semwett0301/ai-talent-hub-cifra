@@ -123,15 +123,13 @@ jobs:
           --exclude='.git/'
           ./ "$DEPLOY_USER@$SSH_HOST:$DEPLOY_PATH/"
 
-      # Server .env: the minimal production set (everything else keeps the compose
-      # defaults). Built on the runner from secrets, shipped by scp — rsync excludes .env.
+      # Server .env: only what must differ from the compose defaults (Telegram creds).
+      # Built on the runner from secrets, shipped by scp — rsync excludes .env.
       - name: Write server .env
         env:
           SSH_HOST: ${{ steps.host.outputs.host }}
         run: |
           {
-            echo "ENVIRONMENT=production"
-            echo "DEBUG=false"
             echo "TELEGRAM_API_ID=$TELEGRAM_API_ID"
             echo "TELEGRAM_API_HASH=$TELEGRAM_API_HASH"
             echo "TELEGRAM_SESSION=$TELEGRAM_SESSION"

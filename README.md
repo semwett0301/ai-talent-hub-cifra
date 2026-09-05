@@ -197,19 +197,18 @@ Terraform state via `terraform output -raw server_ipv4`.
 
 ### Server `.env`
 
-The `deploy` job builds it from secrets and constants, so it holds only what must
-differ from the compose defaults:
+The `deploy` job builds it from secrets, so it holds only what must differ from the
+compose defaults — currently just the Telegram credentials:
 
 | Key | Value on the server |
 |---|---|
-| `ENVIRONMENT` | `production` (constant in `deploy.yml`) |
-| `DEBUG` | `false` (constant) |
 | `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` / `TELEGRAM_SESSION` | the secrets of the same name |
 
-`POSTGRES_*`, `RABBITMQ_URL`, prefixes, `APP_NAME`, `SECRET_KEY` (unused yet) keep the
-defaults from `docker-compose.yml` — Postgres and RabbitMQ are reachable only inside
-the compose network. To add a server value: add a secret, a line in the "Write server
-.env" step, and a row here.
+Everything else (`DEBUG=true` — full logs on purpose, `ENVIRONMENT`, `POSTGRES_*`,
+`RABBITMQ_URL`, prefixes, `APP_NAME`, `SECRET_KEY`) keeps the defaults from
+`docker-compose.yml` — Postgres and RabbitMQ are reachable only inside the compose
+network. To add a server value: add a secret, a line in the "Write server .env" step,
+and a row here.
 
 ### GitHub Actions Secrets
 
