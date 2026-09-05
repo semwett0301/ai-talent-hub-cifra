@@ -3,7 +3,7 @@
 from .body import BodyRequirement
 from .duplicates import merge_duplicates
 from .freshness import FreshnessWindow
-from .ranking import article_score, is_article_like, select_candidates
+from .ranking import article_score, is_article_like
 from .scoring import ARTICLE_RULES, ARTICLE_SCORER, ArticleScorer
 
 __all__ = [
@@ -15,5 +15,4 @@ __all__ = [
     "article_score",
     "is_article_like",
     "merge_duplicates",
-    "select_candidates",
 ]

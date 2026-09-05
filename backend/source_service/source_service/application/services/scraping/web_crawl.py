@@ -5,8 +5,10 @@ from dataclasses import dataclass
 
 from common.core.logging import get_logger
 from common.core.settings import WebCrawlSettings
+from common.schemas import Source
 
 from source_service.application.dto.crawl_run import CrawlRun
+from source_service.application.ports.source import SourceRepository
 from source_service.application.services.article import (
     ArticleJudgement,
     DateResolution,
@@ -16,7 +18,6 @@ from source_service.domain import Article, ArticleStatus, RejectReason, Site, me
 
 from .article_fetching import ArticleFetching
 from .card_collection import CardCollection
-from .fallback_discovery import FallbackDiscovery
 from .hub_discovery import HubDiscovery
 
 logger = get_logger(__name__)
@@ -30,12 +31,11 @@ def _batches(items: list[Article], size: int) -> Iterator[list[Article]]:
 
 @dataclass(frozen=True)
 class CrawlStages:
-    """The six services one site crawl is composed of — `WebCrawl`'s only argument besides
+    """The five services one site crawl is composed of — `WebCrawl`'s only argument besides
     settings, wired once in `deps`."""
 
     hubs: HubDiscovery
     cards: CardCollection
-    fallback: FallbackDiscovery
     fetching: ArticleFetching
     dates: DateResolution
     judgement: ArticleJudgement
@@ -45,23 +45,28 @@ class WebCrawl:
     """Holds no logic of its own beyond order, routing by status, the early stop and the
     dedupe; every judgement lives in a stage."""
 
-    def __init__(self, stages: CrawlStages, settings: WebCrawlSettings) -> None:
+    def __init__(
+        self, stages: CrawlStages, settings: WebCrawlSettings, repo: SourceRepository
+    ) -> None:
         self.__stages = stages
         self.__settings = settings
+        self.__repo = repo
 
-    async def run(self, site: Site) -> list[Article]:
-        """Accepted articles of the site, freshest first."""
+    async def run(self, source: Source) -> list[Article]:
+        """Accepted articles for this source, freshest first. Marks the source not
+        relevant when the search finds no candidate at all — no listing found."""
+        site = Site(url=source.link, name=source.name)
         run = CrawlRun(site=site.label)
         hubs = await self.__stages.hubs.run(site)
         run.hubs = len(hubs)
 
         candidates = await self.__stages.cards.run(hubs)
+        run.candidates = len(candidates)
 
         if not candidates:
-            logger.info("listing cards empty: site=%s (falling back to deep crawl)", site.seed)
-            candidates = await self.__stages.fallback.run(site)
-
-        run.candidates = len(candidates)
+            await self.__repo.update(source, {"is_relevant": False, "is_enabled": False})
+            logger.info("source marked not relevant: id=%s link=%s", source.id, source.link)
+            return []
 
         accepted = merge_duplicates(await self.__extract(candidates, run))
         logger.info(

@@ -56,6 +56,7 @@ class SourceService:
             changes["type"], changes["link"], changes["rss_link"] = await self.__detect_type(
                 changes["link"]
             )
+        self.__check_relevance(source, changes)
 
         updated = await self._repo.update(source, changes)
         logger.info(
@@ -72,6 +73,12 @@ class SourceService:
         logger.info("source deleted: id=%s link=%s", source_id, link)
 
         await self._registrar.unregister(source)
+
+    @staticmethod
+    def __check_relevance(source: Source, changes: dict) -> None:
+        """`is_relevant` isn't client-settable; a non-relevant source stays disabled."""
+        if changes.get("is_enabled", source.is_enabled) and not source.is_relevant:
+            raise ValueError("cannot enable a non-relevant source")
 
     async def __detect_type(self, link: str) -> tuple[SourceType, str, str | None]:
         """Telegram link -> TELEGRAM, `link` unchanged. Else crawl the page: an RSS

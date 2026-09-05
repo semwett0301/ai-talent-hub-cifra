@@ -7,7 +7,10 @@ class per module (re-exported from `__init__.py`).
   UUID (`gen_random_uuid()`), not a serial int. `reliability`
   (`common.entities.source.SourceReliability`) defaults to `medium`. `rss_link` is
   the discovered feed URL, set only for `type=rss` sources — enforced by a CHECK
-  constraint, not the ORM.
+  constraint, not the ORM. `is_relevant` (default true) is set false by
+  `WebCrawlCollector` when a WEB crawl finds no candidates at all; a CHECK
+  constraint enforces `is_relevant OR NOT is_enabled` — a non-relevant source is
+  always also disabled, DB-enforced regardless of who writes the row.
 - `news.py` — `News`: ORM model for the `news` table, written by `news_service` from
   the bus. Same fields as `common.entities.news.NewsDTO` plus `id`/`created_at`;
   `url` is `UNIQUE` (the dedupe key — a story is stored once), `raw` is JSONB,

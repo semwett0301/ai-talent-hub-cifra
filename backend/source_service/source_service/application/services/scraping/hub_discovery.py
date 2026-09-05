@@ -49,7 +49,8 @@ class _Classified:
 
 class HubDiscovery:
     """Home page → its links → (their links) → "is this a listing?" via the classifier,
-    never more than two clicks deep. Without a classifier the home page is the only hub."""
+    never more than `listing_discovery_max_depth` clicks deep. Without a classifier the
+    home page is the only hub."""
 
     def __init__(
         self,
@@ -91,20 +92,25 @@ class HubDiscovery:
         if self.__settings.listing_discovery_max_depth == SEED_DEPTH:
             return self.__accept(await self.__classify(frontier, home, SEED_DEPTH))
 
-        first = await self.__scrape(frontier, self.__child_links(home, site), 1)
-        classified = await self.__classify(frontier, first, 1)
-        found = self.__accept(classified)
+        found: dict[str, Hub] = {}
+        pages_at_depth, depth = home, 1
+        while True:
+            pages = await self.__scrape(frontier, self.__child_links(pages_at_depth, site), depth)
+            classified = await self.__classify(frontier, pages, depth)
+            accepted = self.__accept(classified)
+            found.update(accepted)
 
-        expand = [entry.page for entry in classified if _may_lead_to_listings(entry.verdict)]
-        logger.info(
-            "listing frontier branched: depth=1 listings=%d expand=%d pruned=%d",
-            len(found),
-            len(expand),
-            len(first) - len(found) - len(expand),
-        )
-        if self.__settings.listing_discovery_max_depth >= 2 and expand:
-            second = await self.__scrape(frontier, self.__child_links(expand, site), 2)
-            found.update(self.__accept(await self.__classify(frontier, second, 2)))
+            expand = [entry.page for entry in classified if _may_lead_to_listings(entry.verdict)]
+            logger.info(
+                "listing frontier branched: depth=%d listings=%d expand=%d pruned=%d",
+                depth,
+                len(accepted),
+                len(expand),
+                len(pages) - len(accepted) - len(expand),
+            )
+            if depth >= self.__settings.listing_discovery_max_depth or not expand:
+                break
+            pages_at_depth, depth = expand, depth + 1
         return found
 
     def __child_links(self, pages: list[FetchedPage], site: Site) -> list[str]:

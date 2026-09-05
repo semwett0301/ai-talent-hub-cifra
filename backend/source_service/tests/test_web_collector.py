@@ -10,7 +10,6 @@ from source_service.domain import (
     ArticleContent,
     ArticleOrigin,
     PublicationDate,
-    Site,
 )
 from source_service.infrastructure.collectors.web import WebCrawlCollector
 
@@ -41,26 +40,33 @@ def accepted_article() -> Article:
 
 
 class FakeWebCrawl:
-    received_site: Site | None = None
+    def __init__(self, articles: list[Article]) -> None:
+        self.articles = articles
+        self.received_source: Source | None = None
 
-    async def run(self, site: Site) -> list[Article]:
-        type(self).received_site = site
-        return [accepted_article()]
+    async def run(self, source: Source) -> list[Article]:
+        self.received_source = source
+        return self.articles
 
 
-@pytest.mark.asyncio
-async def test_web_collector_turns_the_source_into_a_site_and_accepted_articles_into_news():
-    source = Source(
+def source() -> Source:
+    return Source(
         name="Example",
         link="https://example.test",
         type=SourceType.WEB,
         reliability=SourceReliability.HIGH,
     )
-    collector = WebCrawlCollector(FakeWebCrawl())  # type: ignore[arg-type]
 
-    items = await collector.fetch(source)
 
-    assert FakeWebCrawl.received_site == Site(url="https://example.test", name="Example")
+@pytest.mark.asyncio
+async def test_web_collector_forwards_the_source_and_turns_accepted_articles_into_news():
+    crawl = FakeWebCrawl([accepted_article()])
+    collector = WebCrawlCollector(crawl)  # type: ignore[arg-type]
+    src = source()
+
+    items = await collector.fetch(src)
+
+    assert crawl.received_source is src
     assert len(items) == 1
     item = items[0]
     assert item.source_type is SourceType.WEB

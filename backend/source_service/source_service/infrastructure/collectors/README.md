@@ -10,9 +10,11 @@ Collector implementations of the application collector ports — the per-source-
   when extraction comes back empty. Emits one
   `NewsDTO` per entry with
   `url` = the entry's canonical link and `raw` = `{title, summary, feed_url}`.
-- `web.py` — `WebCrawlCollector` (pull): turns the `Source` row into a domain `Site`, runs
+- `web.py` — `WebCrawlCollector` (pull): hands the `Source` row to
   `application.services.scraping.WebCrawl` and emits each accepted `Article` via its own
-  `to_news_dto(source)`. The browser it crawls with is an app-lifetime singleton.
+  `to_news_dto(source)` — no business decision of its own. `WebCrawl` builds the `Site`,
+  runs the crawl and marks the source not relevant when nothing is found; this collector
+  only shapes the result into `NewsDTO`.
 - `telegram.py` — `TelegramCollector` (push, kurigram — a Pyrogram fork, imported as
   `pyrogram`): joins channels and publishes each new post as a `common.entities.news.NewsDTO`
   via the injected `NewsPublisher`. **Implemented.**

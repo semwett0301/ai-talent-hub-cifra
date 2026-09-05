@@ -18,9 +18,8 @@ from .article import (
     article_score,
     is_article_like,
     merge_duplicates,
-    select_candidates,
 )
-from .hub import HUB_SCORER, Hub, HubOrigin, hub_score, merge_hubs, rank_hubs, select_hubs
+from .hub import HUB_SCORER, Hub, HubOrigin, hub_score, rank_hubs
 from .scoring import RuleScorer, Score, ScoreRule
 from .site import Site
 
@@ -45,8 +44,5 @@ __all__ = [
     "hub_score",
     "is_article_like",
     "merge_duplicates",
-    "merge_hubs",
     "rank_hubs",
-    "select_candidates",
-    "select_hubs",
 ]

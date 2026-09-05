@@ -29,6 +29,8 @@ class Source(Base):
     # How often to poll a pull source (RSS/Web), seconds. Null for push (Telegram).
     poll_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # False once a WEB crawl finds nothing; keeps is_enabled false too, by CHECK constraint.
+    is_relevant: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

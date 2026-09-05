@@ -28,6 +28,4 @@ class ArticleOrigin(StrEnum):
     """Which discovery step produced the link."""
 
     LISTING = "listing"  # a card on a confirmed listing page
-    ADAPTIVE = "adaptive"  # a page the adaptive crawl visited
-    BEST_FIRST = "best_first"  # a page the best-first deep crawl visited
-    LINK = "link"  # a link found on one of the above
+    LINK = "link"  # a link found on the home page or a listing page

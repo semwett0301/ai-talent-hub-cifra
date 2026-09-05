@@ -1,6 +1,5 @@
 """Browser crawler port — fetch pages with a real browser, hand back a plain shape."""
 
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -34,13 +33,4 @@ class PageCrawler(Protocol):
 
     async def crawl_articles(self, urls: list[str]) -> list[FetchedPage]:
         """Like `crawl_pages`, but `markdown` is pruned to the article body."""
-        ...
-
-    async def adaptive_discover(self, seed_url: str) -> list[FetchedPage]:
-        """Query-driven exploration from the home page until the crawler is confident."""
-        ...
-
-    def best_first_discover(self, hub_url: str) -> AsyncIterator[FetchedPage]:
-        """Priority crawl below one hub, page by page as they arrive; the consumer stops the
-        crawl by leaving the loop."""
         ...

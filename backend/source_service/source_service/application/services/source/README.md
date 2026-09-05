@@ -8,7 +8,11 @@ re-exported from `__init__.py`.
   and (when `link` changes) `update` auto-detect `type` via the injected
   `PageFetcher` + `application.parse` — clients never send `type`. When the
   detected feed is RSS, the feed URL is stored in `rss_link` (also server-only,
-  never accepted from a client); `link` itself is never rewritten.
+  never accepted from a client); `link` itself is never rewritten. `is_relevant` is
+  not client-settable either (only `WebCrawlCollector` sets it); `update` rejects
+  (`ValueError`, turned into a 422 at the route) a PATCH that would enable a source
+  already marked `is_relevant=false` — the DB CHECK constraint backs this up
+  regardless of who writes the row.
 - `source_registry.py` — `SourceRegistry`: the sole `SourceRegistrar`. Dispatches by
   source type — pull → APScheduler job, push → subscription; injected publisher +
   pull/push collectors + `SourceRepository`. Owns `start`/`shutdown`/`load` lifecycle

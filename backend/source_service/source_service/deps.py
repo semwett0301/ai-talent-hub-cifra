@@ -21,7 +21,6 @@ from source_service.application.services.article import ArticleJudgement, DateRe
 from source_service.application.services.scraping import (
     ArticleFetching,
     CardCollection,
-    FallbackDiscovery,
     HubDiscovery,
     WebCrawl,
 )
@@ -64,19 +63,18 @@ def crawl_settings() -> WebCrawlSettings:
 
 
 def build_web_collector(page_crawler: Crawl4AiPageCrawler) -> WebCrawlCollector:
-    """The crawl is six stage services behind one orchestrator; the LLM is one client
+    """The crawl is five stage services behind one orchestrator; the LLM is one client
     behind two ports, or absent."""
     runtime = crawl_settings()
     llm = LiteLlmClient(settings.llm, runtime) if runtime.listing_llm_max_calls_per_site else None
     stages = CrawlStages(
         hubs=HubDiscovery(page_crawler, llm, runtime),
         cards=CardCollection(page_crawler, runtime),
-        fallback=FallbackDiscovery(page_crawler, runtime),
         fetching=ArticleFetching(page_crawler, runtime),
         dates=DateResolution(llm, runtime),
         judgement=ArticleJudgement(runtime),
     )
-    return WebCrawlCollector(WebCrawl(stages, runtime))
+    return WebCrawlCollector(WebCrawl(stages, runtime, SourceRepo()))
 
 
 def get_source_service(request: Request) -> SourceService:
@@ -101,7 +99,7 @@ def build_page_fetcher() -> Crawl4AiPageFetcher:
 def build_page_crawler() -> Crawl4AiPageCrawler:
     """One headless browser for every WEB source pull. Owns a `start`/`close` lifecycle
     the caller must drive around serving."""
-    return Crawl4AiPageCrawler(crawl_settings(), settings.llm)
+    return Crawl4AiPageCrawler(crawl_settings())
 
 
 def build_telegram_collector(publisher: NewsPublisher) -> TelegramCollector:

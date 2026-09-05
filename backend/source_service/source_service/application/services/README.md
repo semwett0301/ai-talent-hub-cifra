@@ -7,7 +7,7 @@ has its own README; nothing lives at the root of `services/`.
 - `source/` — `SourceService` (CRUD + type auto-detection) and `SourceRegistry` (the
   runtime registrar: pull scheduling + push subscription).
 - `scraping/` — how to reach a site's publications: `WebCrawl` (orchestrator),
-  `HubDiscovery`, `CardCollection`, `FallbackDiscovery`, `ArticleFetching`.
+  `HubDiscovery`, `CardCollection`, `ArticleFetching`.
 - `article/` — what happens to a fetched article: `DateResolution`, `ArticleJudgement`
   (+ `LlmDateBudget`).
 

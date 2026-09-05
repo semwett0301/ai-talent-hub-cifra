@@ -17,6 +17,7 @@ class SourceOut(BaseModel):
     link: str
     poll_interval_seconds: int | None
     is_enabled: bool
+    is_relevant: bool
     reliability: SourceReliability
     created_at: datetime
     updated_at: datetime

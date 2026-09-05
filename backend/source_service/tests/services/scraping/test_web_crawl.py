@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from common.core.settings import WebCrawlSettings
+from common.schemas import Source
 from source_service.application.services.article import ArticleJudgement, DateResolution
 from source_service.application.services.scraping import WebCrawl
 from source_service.application.services.scraping.web_crawl import CrawlStages
@@ -13,11 +14,10 @@ from source_service.domain import (
     Hub,
     HubOrigin,
     PublicationDate,
-    Site,
 )
 
 MOSCOW = ZoneInfo("Europe/Moscow")
-SITE = Site(url="https://example.test", name="Example")
+SOURCE = Source(link="https://example.test", name="Example")
 
 
 def dated_article(url: str, published_at: datetime) -> Article:
@@ -45,11 +45,6 @@ class FakeCards:
         return [Article(url=f"https://example.test/news/{i}") for i in range(self.count)]
 
 
-class FakeFallback:
-    async def run(self, site):
-        return []
-
-
 class FakeFetching:
     def __init__(self, published_at: datetime):
         self.published_at = published_at
@@ -63,16 +58,29 @@ class FakeFetching:
         return [dated_article(a.url, self.published_at) for a in articles]
 
 
-def crawl(fetching: FakeFetching, settings: WebCrawlSettings) -> WebCrawl:
+class FakeSourceRepo:
+    def __init__(self) -> None:
+        self.updates: list[tuple[Source, dict]] = []
+
+    async def update(self, source: Source, data: dict) -> Source:
+        self.updates.append((source, data))
+        return source
+
+
+def crawl(
+    fetching: FakeFetching,
+    settings: WebCrawlSettings,
+    cards: int = 5,
+    repo: FakeSourceRepo | None = None,
+) -> WebCrawl:
     stages = CrawlStages(
         hubs=FakeHubs(),  # type: ignore[arg-type]
-        cards=FakeCards(5),  # type: ignore[arg-type]
-        fallback=FakeFallback(),  # type: ignore[arg-type]
+        cards=FakeCards(cards),  # type: ignore[arg-type]
         fetching=fetching,  # type: ignore[arg-type]
         dates=DateResolution(None, settings),
         judgement=ArticleJudgement(settings),
     )
-    return WebCrawl(stages, settings)
+    return WebCrawl(stages, settings, repo or FakeSourceRepo())  # type: ignore[arg-type]
 
 
 @pytest.mark.asyncio
@@ -85,9 +93,9 @@ async def test_stops_after_a_full_batch_of_reliably_old_dates():
     )
     fetching = FakeFetching(datetime.now(MOSCOW) - timedelta(days=30))
 
-    accepted = await crawl(fetching, settings).run(SITE)
+    articles = await crawl(fetching, settings).run(SOURCE)
 
-    assert accepted == []
+    assert articles == []
     assert fetching.batches == [["https://example.test/news/0", "https://example.test/news/1"]]
 
 
@@ -96,8 +104,21 @@ async def test_fresh_articles_flow_through_every_batch_and_come_back_newest_firs
     settings = WebCrawlSettings(article_batch_size=2)
     fetching = FakeFetching(datetime.now(MOSCOW))
 
-    accepted = await crawl(fetching, settings).run(SITE)
+    articles = await crawl(fetching, settings).run(SOURCE)
 
-    assert len(accepted) == 5
-    assert all(a.status is ArticleStatus.ACCEPTED for a in accepted)
+    assert len(articles) == 5
+    assert all(a.status is ArticleStatus.ACCEPTED for a in articles)
     assert len(fetching.batches) == 3
+
+
+@pytest.mark.asyncio
+async def test_no_candidates_marks_source_not_relevant():
+    settings = WebCrawlSettings()
+    fetching = FakeFetching(datetime.now(MOSCOW))
+    repo = FakeSourceRepo()
+
+    articles = await crawl(fetching, settings, cards=0, repo=repo).run(SOURCE)
+
+    assert articles == []
+    assert fetching.batches == []
+    assert repo.updates == [(SOURCE, {"is_relevant": False, "is_enabled": False})]

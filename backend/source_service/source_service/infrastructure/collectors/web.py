@@ -6,23 +6,21 @@ from common.schemas import Source
 
 from source_service.application.ports.source import PullCollector
 from source_service.application.services.scraping import WebCrawl
-from source_service.domain import Site
 
 logger = get_logger(__name__)
 
 
 class WebCrawlCollector(PullCollector):
-    """Turns a `Source` row into a `Site`, runs the crawl, emits the accepted articles."""
+    """Runs the crawl for a `Source` row and emits its accepted articles as `NewsDTO`."""
 
     def __init__(self, crawl: WebCrawl) -> None:
         self.__crawl = crawl
 
     async def fetch(self, source: Source) -> list[NewsDTO]:
-        site = Site(url=source.link, name=source.name)
         logger.info("web crawl started: source=%s", source.link)
         # Boundary with the scheduler: a broken site must not take the registry down.
         try:
-            articles = await self.__crawl.run(site)
+            articles = await self.__crawl.run(source)
         except Exception:
             logger.exception("web crawl failed: source=%s", source.link)
             return []

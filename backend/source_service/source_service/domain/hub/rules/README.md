@@ -7,8 +7,7 @@
   penalties — the mirror image of the article rules. Built on the generic
   `domain.scoring` mechanism and the shared URL vocabulary in `domain.scoring.terms`.
 
-- `ranking.py` — `hub_score`, `rank_hubs` (best first), `merge_hubs` (one per URL, the
-  better-scored sighting wins), `select_hubs(hubs, min_score)` (listing-like enough to be
-  read).
+- `ranking.py` — `hub_score`, `rank_hubs` (best first).
 
-Notes: `min_hub_score` (the acceptance threshold) is the use case's, not the rule's.
+Notes: the acceptance threshold (`listing_llm_min_confidence`) is the use case's, not the
+rule's — `HUB_SCORER` only orders candidates, `HubDiscovery` decides how strict to be.

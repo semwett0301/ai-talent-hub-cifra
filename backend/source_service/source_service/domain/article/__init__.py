@@ -11,7 +11,6 @@ from .rules import (
     article_score,
     is_article_like,
     merge_duplicates,
-    select_candidates,
 )
 
 __all__ = [
@@ -29,5 +28,4 @@ __all__ = [
     "article_score",
     "is_article_like",
     "merge_duplicates",
-    "select_candidates",
 ]

@@ -15,11 +15,8 @@ imports `crawl4ai`, `feedparser` and `litellm`.
   headless Chromium (`BrowserConfig(headless, text_mode)`) for the whole service, started
   and closed from the lifespan. `crawl_pages` / `crawl_articles` run `arun_many` (the
   article config adds `PruningContentFilter` for `fit_markdown` and keeps the HTML intact
-  for the date cascade); `adaptive_discover` runs Crawl4AI's `AdaptiveCrawler`,
-  `best_first_discover` yields the pages of a streamed `BestFirstCrawlingStrategy` as they
-  arrive and cancels the strategy when the consumer stops iterating — *whether* to stop is
-  the application's call (`services/scraping/fallback_discovery.py`). Every result becomes a
-  `FetchedPage` in `to_page` (same module) — Crawl4AI's own types stop here.
+  for the date cascade). Every result becomes a `FetchedPage` in `to_page` (same module) —
+  Crawl4AI's own types stop here.
 - `litellm_client.py` — `LiteLlmClient` → `CrawlLlm`: `litellm.acompletion` with the `llm` settings group (model
   string with provider prefix, key, base URL) and the `web_crawl` token limits /
   temperature. Prompts declare page content untrusted; answers are fence-stripped and

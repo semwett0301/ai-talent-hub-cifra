@@ -9,10 +9,8 @@ Reaching pages, feeds and sites, and the crawl's language model.
   downloaded and parsed for `RssCollector`. Implemented by `FeedparserFeedReader`.
 - `page_crawler.py` — `PageCrawler`: the browser. `crawl_page` / `crawl_pages` /
   `crawl_articles` return `FetchedPage`s (url, final_url, html, markdown, title, internal
-  `PageLink`s, metadata) — **the only form a page takes outside the adapter**;
-  `adaptive_discover` (a list) / `best_first_discover` (an async stream of pages — the
-  consumer stops the crawl by leaving the loop) are the two site-exploration algorithms
-  `FallbackDiscovery` needs. Implemented by `Crawl4AiPageCrawler`.
+  `PageLink`s, metadata) — **the only form a page takes outside the adapter**. Implemented
+  by `Crawl4AiPageCrawler`.
 - `crawl_llm.py` — `CrawlLlm`: the two questions the crawl asks a model —
   `classify_listing(url, snapshot)` for `HubDiscovery`, `resolve_publication_date(url,
   text)` for `DateResolution`. Implemented by `LiteLlmClient`.

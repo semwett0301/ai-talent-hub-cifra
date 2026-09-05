@@ -2,7 +2,7 @@
 
 from .hub import Hub
 from .model import HubOrigin
-from .rules import HUB_RULES, HUB_SCORER, HubScorer, hub_score, merge_hubs, rank_hubs, select_hubs
+from .rules import HUB_RULES, HUB_SCORER, HubScorer, hub_score, rank_hubs
 
 __all__ = [
     "HUB_RULES",
@@ -11,7 +11,5 @@ __all__ = [
     "HubOrigin",
     "HubScorer",
     "hub_score",
-    "merge_hubs",
     "rank_hubs",
-    "select_hubs",
 ]

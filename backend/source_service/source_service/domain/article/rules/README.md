@@ -13,9 +13,8 @@ Judgements about an article that need nothing but the article itself.
   every date check in the crawl goes through.
 - `body.py` — `BodyRequirement(min_words)`: `accepts(word_count)` — anything shorter is a
   teaser or a stub, not a publication.
-- `ranking.py` — `article_score`, `is_article_like(article, min_score)` (worth fetching?),
-  `select_candidates(articles, min_score)` (one per URL, the better-scored sighting wins,
-  best first). The rules every discovery route ranks links by.
+- `ranking.py` — `article_score`, `is_article_like(article, min_score)` (worth fetching?).
+  The rule the listing route scores card candidates by.
 - `duplicates.py` — `merge_duplicates(articles)`: one story under several addresses is one
   record — collapse by `Article.identity`, the newer publication date wins, newest first.
 

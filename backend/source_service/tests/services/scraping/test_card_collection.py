@@ -34,13 +34,6 @@ class FakeCrawler:
     async def crawl_articles(self, urls):
         return []
 
-    async def adaptive_discover(self, seed):
-        return []
-
-    async def best_first_discover(self, hub):
-        return
-        yield
-
 
 @pytest.mark.asyncio
 async def test_cards_are_collected_in_order_and_the_first_old_card_ends_the_hub():
