@@ -11,7 +11,7 @@ GitHub Actions.
   3. `deploy` — reads the server IP from Terraform output (S3 state, no `SSH_HOST`
      secret), rsyncs the repo to `/opt/<APP_NAME>` (created at first boot by
      cloud-init), then `docker compose up -d --build`.
-  Secrets: `DIGITALOCEAN_TOKEN`, `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY`,
+  Secrets: `DIGITALOCEAN_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
   `SSH_PUBLIC_KEY`, `APP_NAME`, `SSH_PRIVATE_KEY`, and optional `DEPLOY_USER`
   (default `deploy`). SSH port is fixed at 22.
 

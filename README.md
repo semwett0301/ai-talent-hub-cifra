@@ -183,14 +183,14 @@ Terraform state via `terraform output -raw server_ipv4`.
 
 ### GitHub Actions Secrets
 
-`deploy.yml` expects these names — a few differ from the `.env` key, since
-Terraform and the AWS SDK read fixed variable names:
+`deploy.yml` expects these names — the same as the `.env` key, except that the
+Terraform inputs drop the `TF_VAR_` prefix:
 
 | GitHub Secret | `.env` key | Used by |
 |---|---|---|
 | `DIGITALOCEAN_TOKEN` | `DIGITALOCEAN_TOKEN` | `infra` — provider |
-| `TF_STATE_ACCESS_KEY` | `AWS_ACCESS_KEY_ID` | `infra`, `deploy` — Spaces state |
-| `TF_STATE_SECRET_KEY` | `AWS_SECRET_ACCESS_KEY` | `infra`, `deploy` — Spaces state |
+| `AWS_ACCESS_KEY_ID` | `AWS_ACCESS_KEY_ID` | `infra`, `deploy` — Spaces state |
+| `AWS_SECRET_ACCESS_KEY` | `AWS_SECRET_ACCESS_KEY` | `infra`, `deploy` — Spaces state |
 | `SSH_PUBLIC_KEY` | `TF_VAR_SSH_PUBLIC_KEY` | `infra` |
 | `SSH_PRIVATE_KEY` | `SSH_PRIVATE_KEY` | `deploy` |
 | `APP_NAME` | `TF_VAR_APP_NAME` | `infra`, `deploy` (`/opt/<APP_NAME>`) |
