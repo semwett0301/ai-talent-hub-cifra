@@ -11,6 +11,11 @@ Application services — use cases, one public class per module (re-exported fro
   duplicate urls, including repeats inside the batch — no dedupe in code), logs one
   `news batch stored` line per batch. Lets `NewsStoreError` propagate so the consumer
   nacks instead of acknowledging (requeue by default, see `NEWS_REQUEUE_ON_STORE_ERROR`).
+- `npa_escalation.py` — `NpaEscalation`: `escalate(news_id, NpaDTO)` — inside one
+  `NewsRepository.begin()` transaction: stage `is_alert = true`, `NpaGateway.create`
+  the act, commit. None (nothing sent) for an unknown id; a `NpaGatewayError` from the
+  gateway propagates and the staged flip is rolled back, so the alert is dismissed only
+  when `npa_service` confirmed the act. Logs one `news escalated` line.
 
 Notes: collaborators are injected from the root `deps.py` as ports, never concrete
 infra. The batching itself (timer / size / ack) is **not** here — it is a property

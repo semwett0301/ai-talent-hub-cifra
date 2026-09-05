@@ -63,13 +63,13 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
 
 - `docker-compose.yml` lives at the repo root and orchestrates all parts.
 - **Only nginx publishes a host port (80).** Backend services (`source_service`,
-  `news_service`), `postgres`, and `rabbitmq` are internal-only (`expose`, no host
+  `news_service`, `npa_service`), `postgres`, and `rabbitmq` are internal-only (`expose`, no host
   `ports`). There is no separate frontend container.
 - The `nginx` image (`nginx/Dockerfile`, build context = repo root) serves the SPA
   (fallback to `index.html`) and gives each backend its own `/api/<service>/`
   namespace — currently **`/api/sources/*` → `source_service:8000`** with the whole
   `/api/sources` prefix stripped, so the OpenAPI spec is reachable at
-  `/api/sources/openapi.json` — and **`/api/news/*` → `news_service:8000`** likewise.
+  `/api/sources/openapi.json` — and **`/api/news/*` → `news_service:8000`**, **`/api/npa/*` → `npa_service:8000`** likewise.
   New services get a sibling `/api/<name>/` location until a full API gateway lands
   (`plans/api-gateway.md`). `/logs/*` → `dozzle:8080` (Dozzle's own login) is the log viewer.
 - Backend service images build from `./backend`.
