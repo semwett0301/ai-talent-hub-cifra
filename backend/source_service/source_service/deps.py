@@ -15,9 +15,12 @@ from source_service.application.ports.source import (
     NewsPublisher,
     PullCollector,
     PushCollector,
-    SourceRegistrar,
 )
-from source_service.application.services.source import SourceRegistry, SourceService
+from source_service.application.services.source import (
+    SourceCollectors,
+    SourceRegistry,
+    SourceService,
+)
 from source_service.application.services.web import CrawlStages, WebCrawl
 from source_service.application.services.web.articles import (
     ArticleFetching,
@@ -36,6 +39,7 @@ from source_service.infrastructure.crawlers.feedparser_reader import FeedparserF
 from source_service.infrastructure.crawlers.litellm_client import LiteLlmClient
 from source_service.infrastructure.rabbit.connector import RabbitConnector
 from source_service.infrastructure.repositories import SourceRepo
+from source_service.infrastructure.scheduling import ApSchedulerJobs
 
 logger = get_logger(__name__)
 
@@ -81,7 +85,7 @@ def build_web_collector(page_crawler: Crawl4AiPageCrawler) -> WebCrawlCollector:
 def get_source_service(request: Request) -> SourceService:
     """FastAPI use case. SourceRepo opens a session per call, so no request binding.
     The runtime registry and page fetcher are app-lifetime singletons on `app.state`."""
-    registrar: SourceRegistrar = request.app.state.registrar
+    registrar: SourceRegistry = request.app.state.registrar
     page_fetcher: PageFetcher = request.app.state.page_fetcher
     return SourceService(SourceRepo(), registrar, page_fetcher)
 
@@ -116,11 +120,22 @@ def build_telegram_collector(publisher: NewsPublisher) -> TelegramCollector:
 
 def build_registry(
     publisher: RabbitConnector,
+    scheduler: ApSchedulerJobs,
     telegram: TelegramCollector,
-    page_fetcher: PageFetcher,
-    page_crawler: Crawl4AiPageCrawler,
+    crawlers: tuple[PageFetcher, Crawl4AiPageCrawler],
 ) -> SourceRegistry:
-    """The runtime registry: pull scheduling + push subscription behind one registrar."""
+    """The runtime registry: pull scheduling + push subscription behind one registrar.
+    Scheduling mechanics live in `scheduler`; the registry only decides what runs."""
     push_collectors: dict[SourceType, PushCollector] = {SourceType.TELEGRAM: telegram}
-    pull_collectors = build_pull_collectors(page_fetcher, page_crawler)
-    return SourceRegistry(publisher, pull_collectors, push_collectors, SourceRepo())
+    collectors = SourceCollectors(
+        pull=build_pull_collectors(*crawlers),
+        push=push_collectors,
+        publisher=publisher,
+    )
+    return SourceRegistry(collectors, scheduler, SourceRepo(), settings.sources)
+
+
+def build_job_scheduler() -> ApSchedulerJobs:
+    """One scheduler for every pull source. Owns a `start`/`shutdown` lifecycle the caller
+    must drive around serving."""
+    return ApSchedulerJobs()

@@ -8,6 +8,9 @@ nothing depends inward on it except the composition root (`deps.py`).
   table itself lives in `common/schemas/`).
 - `rabbit/` — `RabbitConnector`, the `NewsPublisher` implementation.
 - `collectors/` — `Pull`/`PushCollector` implementations (RSS, Web, Telegram).
+- `scheduling/` — `ApSchedulerJobs`, the `JobScheduler` implementation on APScheduler's
+  `AsyncIOScheduler`. The only place that knows about job ids and `replace_existing`; owns
+  the `start`/`shutdown` lifecycle `main.py` drives around serving.
 - `crawlers/` — the HTTP-facing adapters: `Crawl4AiPageFetcher` (`PageFetcher`, the
   one HTTP fetch in the service — type auto-detection, feed XML, article HTML) and
   `FeedparserFeedReader` (`FeedReader`, parses the fetched feed) behind `RssCollector`.

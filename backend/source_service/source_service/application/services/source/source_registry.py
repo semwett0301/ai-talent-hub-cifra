@@ -1,55 +1,59 @@
 """Source registry — reconciles each source to the runtime.
 
-The single `SourceRegistrar` the CRUD use-case depends on. Dispatches by source
-type: pull sources (RSS/Web) get a periodic fetch→publish job on APScheduler, push
-sources (Telegram) get a live subscription. `register` applies one source's desired
-state (schedule/subscribe when enabled, tear down when disabled), `unregister`
-removes it, `load` bootstraps every enabled source at startup.
+The runtime side of a source, injected straight into the CRUD use case. Dispatches by
+source type: pull sources (RSS/Web) get a periodic fetch→publish job through the
+`JobScheduler` port, push sources (Telegram) get a live subscription. `register`
+applies one source's desired state (schedule/subscribe when enabled, tear down when
+disabled), `unregister` removes it, `load` bootstraps every enabled source at startup.
 """
 
 import uuid
+from dataclasses import dataclass
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from common.core.logging import get_logger
-from common.core.settings import settings
+from common.core.settings import SourceSchedulerSettings
 from common.entities.news import SourceType
 from common.schemas import Source
 
 from source_service.application.ports.source import (
+    JobScheduler,
     NewsPublisher,
     PullCollector,
     PushCollector,
-    SourceRegistrar,
     SourceRepository,
 )
 
 logger = get_logger(__name__)
 
-JOB_ID_PREFIX = "src-"
+
+@dataclass(frozen=True)
+class SourceCollectors:
+    """Where news comes from and where it goes: a collector per source type, plus the
+    publisher every pull run feeds. Wired once in `deps`."""
+
+    pull: dict[SourceType, PullCollector]
+    push: dict[SourceType, PushCollector]
+    publisher: NewsPublisher
 
 
-class SourceRegistry(SourceRegistrar):
+class SourceRegistry:
+    """Holds no scheduling mechanics of its own: it decides *what* a source's runtime
+    state should be, the `JobScheduler` port decides how a recurrence is made."""
+
     def __init__(
         self,
-        publisher: NewsPublisher,
-        pull_collectors: dict[SourceType, PullCollector],
-        push_collectors: dict[SourceType, PushCollector],
+        collectors: SourceCollectors,
+        scheduler: JobScheduler,
         repository: SourceRepository,
+        settings: SourceSchedulerSettings,
     ) -> None:
-        self._publisher = publisher
-        self._pull_collectors = pull_collectors
-        self._push_collectors = push_collectors
-        self._repository = repository
-        self._scheduler = AsyncIOScheduler()
-
-    def start(self) -> None:
-        self._scheduler.start()
-
-    def shutdown(self) -> None:
-        self._scheduler.shutdown(wait=False)
+        self.__collectors = collectors
+        self.__scheduler = scheduler
+        self.__repository = repository
+        self.__settings = settings
 
     async def load(self) -> None:
-        sources = await self._repository.list_enabled()
+        sources = await self.__repository.list_enabled()
         logger.info("registry loading: sources=%d", len(sources))
 
         for source in sources:
@@ -66,9 +70,9 @@ class SourceRegistry(SourceRegistrar):
             source.is_enabled,
         )
 
-        if source.type in self._pull_collectors:
+        if source.type in self.__collectors.pull:
             self.__apply_schedule(source)
-        elif source.type in self._push_collectors:
+        elif source.type in self.__collectors.push:
             await self.__apply_subscription(source)
         else:
             logger.warning("source has no collector: type=%s link=%s", source.type, source.link)
@@ -78,54 +82,38 @@ class SourceRegistry(SourceRegistrar):
             "source unregistering: id=%s type=%s link=%s", source.id, source.type, source.link
         )
 
-        if source.type in self._pull_collectors:
+        if source.type in self.__collectors.pull:
             self.__unschedule(source.id)
-        elif source.type in self._push_collectors:
-            await self._push_collectors[source.type].unsubscribe(source)
+        elif source.type in self.__collectors.push:
+            await self.__collectors.push[source.type].unsubscribe(source)
 
     def __apply_schedule(self, source: Source) -> None:
-        if source.is_enabled:
-            self.__schedule(source.id, source.poll_interval_seconds)
-        else:
+        if not source.is_enabled:
             self.__unschedule(source.id)
+            return
+
+        seconds = source.poll_interval_seconds or self.__settings.source_poll_interval_seconds
+        self.__scheduler.schedule(source.id, seconds, self.__run)
+        logger.info("pull source scheduled: id=%s every=%ss", source.id, seconds)
 
     async def __apply_subscription(self, source: Source) -> None:
-        collector = self._push_collectors[source.type]
+        collector = self.__collectors.push[source.type]
         if source.is_enabled:
             await collector.subscribe(source)
         else:
             await collector.unsubscribe(source)
 
-    def __schedule(self, source_id: uuid.UUID, interval: int | None) -> None:
-        seconds = interval or settings.sources.source_poll_interval_seconds
-        logger.info("pull source scheduled: id=%s every=%ss", source_id, seconds)
-
-        self._scheduler.add_job(
-            self.__run,
-            "interval",
-            seconds=seconds,
-            args=[source_id],
-            id=self.__job_id(source_id),
-            replace_existing=True,
-        )
-
     def __unschedule(self, source_id: uuid.UUID) -> None:
-        if self._scheduler.get_job(self.__job_id(source_id)) is None:
-            return
-
-        self._scheduler.remove_job(self.__job_id(source_id))
+        self.__scheduler.unschedule(source_id)
         logger.info("pull source unscheduled: id=%s", source_id)
 
-    def __job_id(self, source_id: uuid.UUID) -> str:
-        return f"{JOB_ID_PREFIX}{source_id}"
-
     async def __run(self, source_id: uuid.UUID) -> None:
-        source = await self._repository.get(source_id)
+        source = await self.__repository.get(source_id)
         if source is None or not source.is_enabled:
             logger.info("pull run skipped: id=%s (gone or disabled)", source_id)
             return
 
-        collector = self._pull_collectors.get(source.type)
+        collector = self.__collectors.pull.get(source.type)
         if collector is None:
             logger.warning("pull run skipped: no collector for type=%s", source.type)
             return
@@ -133,5 +121,5 @@ class SourceRegistry(SourceRegistrar):
         items = await collector.fetch(source)
         logger.info("pull run fetched: link=%s items=%d", source.link, len(items))
 
-        published = await self._publisher.publish_news(items)
+        published = await self.__collectors.publisher.publish_news(items)
         logger.info("pull run published: link=%s items=%d", source.link, published)

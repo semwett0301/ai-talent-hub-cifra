@@ -1,6 +1,6 @@
 """CRUD use-cases over sources — orchestrates the repository port.
 
-Every mutation reconciles the runtime through the injected `SourceRegistrar`:
+Every mutation reconciles the runtime through the injected `SourceRegistry`:
 create/update (re)register the source, delete unregisters it — so pull scheduling
 and push subscriptions stay in sync without a restart. `create`/`update` also
 auto-detect the source's `type` from its `link` (clients never send `type`).
@@ -15,14 +15,16 @@ from common.schemas import Source
 from source_service.application.dto.source import SourceCreate, SourceUpdate
 from source_service.application.parse import find_rss_feed_link, is_telegram_link
 from source_service.application.ports.scraping import PageFetcher
-from source_service.application.ports.source import SourceRegistrar, SourceRepository
+from source_service.application.ports.source import SourceRepository
+
+from .source_registry import SourceRegistry
 
 logger = get_logger(__name__)
 
 
 class SourceService:
     def __init__(
-        self, repo: SourceRepository, registrar: SourceRegistrar, page_fetcher: PageFetcher
+        self, repo: SourceRepository, registrar: SourceRegistry, page_fetcher: PageFetcher
     ) -> None:
         self._repo = repo
         self._registrar = registrar

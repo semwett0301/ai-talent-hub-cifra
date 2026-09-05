@@ -35,11 +35,11 @@ async def lifespan(app: FastAPI):
     await page_crawler.start()
 
     # Registry: CRUD reaches it via app.state to (un)schedule/(un)subscribe live.
-    registry = deps.build_registry(rabbit, telegram, page_fetcher, page_crawler)
+    scheduler = deps.build_job_scheduler()
+    registry = deps.build_registry(rabbit, scheduler, telegram, (page_fetcher, page_crawler))
     await registry.load()
 
-    registry.start()
-
+    scheduler.start()
     app.state.registrar = registry
 
     logger.info("source_service started")
@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
     finally:
         logger.info("source_service stopping")
 
-        registry.shutdown()
+        scheduler.shutdown()
         await telegram.stop()
         await page_crawler.close()
         await page_fetcher.close()

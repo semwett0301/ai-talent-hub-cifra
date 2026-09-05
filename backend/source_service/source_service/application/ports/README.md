@@ -6,7 +6,7 @@ Impls **inherit** the port (explicit conformance). **Grouped by domain**, the wa
 README, nothing lives at the root. One port per implementation: two services sharing one
 adapter share one interface.
 
-- `source/` — `SourceRepository`, `SourceRegistrar`, `PullCollector` / `PushCollector`,
+- `source/` — `SourceRepository`, `JobScheduler`, `PullCollector` / `PushCollector`,
   `NewsPublisher`: sources as records, as a running schedule, and the news they produce.
 - `scraping/` — `PageFetcher`, `FeedReader` (+ `FeedEntry`), `PageCrawler` (+ `FetchedPage`,
   `PageLink`) and `CrawlLlm` (+ `ListingVerdict`, `DateGuess`): reaching pages, feeds and

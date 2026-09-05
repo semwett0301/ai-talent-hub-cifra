@@ -37,7 +37,7 @@ concrete wiring happens once, at the composition root.
 | `deps.py` | **Composition root** — builds the concrete implementations and injects them into application (registry, repository, publisher). | everything |
 
 Inversion in practice: application defines a `Protocol` port (`SourceRepository`,
-`NewsPublisher`, `PullCollector`/`PushCollector`, `SourceRegistrar`); infrastructure
+`NewsPublisher`, `PullCollector`/`PushCollector`, `JobScheduler`); infrastructure
 supplies a class that **implements** it (inherits the port); `deps.py` constructs the
 impl and passes it in. Application never imports a concrete infra class — only its own
 ports. The ports type against the shared `common.schemas.Source` and
