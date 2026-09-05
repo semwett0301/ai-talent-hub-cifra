@@ -9,12 +9,13 @@ canonical link), which is why that field is the key.
 
 import asyncio
 
-from domain.core.logging import get_logger
-from domain.entities.news import NewsDTO
-from domain.schemas import Source
+from common.core.logging import get_logger
+from common.entities.news import NewsDTO
+from common.schemas import Source
 
 from source_service.application.parse import ExtractedArticle, extract_article
-from source_service.application.ports import FeedEntry, FeedReader, PageFetcher, PullCollector
+from source_service.application.ports.scraping import FeedEntry, FeedReader, PageFetcher
+from source_service.application.ports.source import PullCollector
 
 MAX_CONCURRENT_EXTRACTIONS = 4
 
@@ -27,10 +28,10 @@ def _to_news_dto(source: Source, entry: FeedEntry, article: ExtractedArticle | N
     title = article.title if article is not None and article.title else entry.title
     published_at = entry.published_at or (article.published_at if article is not None else None)
 
-    return NewsDTO(
-        source_link=source.link,
-        source_type=source.type,
-        source_reliability=source.reliability,
+    return NewsDTO.for_source(
+        source.link,
+        source.type,
+        source.reliability,
         url=entry.url,
         text=text,
         published_at=published_at,

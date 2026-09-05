@@ -10,7 +10,7 @@ Blocking (lxml) — callers on the event loop run it via `asyncio.to_thread`.
 from dataclasses import dataclass
 from datetime import datetime
 
-from domain.core.logging import get_logger
+from common.core.logging import get_logger
 from newsplease import NewsPlease
 
 logger = get_logger(__name__)
