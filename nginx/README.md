@@ -10,7 +10,8 @@ The edge — the only service exposed to the host (port 80).
   Dozzle's own, see `../dozzle/README.md`). Currently `/api/sources/*` → `source_service:8000` with the **whole
   `/api/sources` prefix stripped** (`/api/sources` → `/`, `/api/sources/5` → `/5`,
   `/api/sources/openapi.json` → `/openapi.json`), so the OpenAPI spec is reachable
-  at `/api/sources/openapi.json`.
+  at `/api/sources/openapi.json`; likewise `/api/news/*` → `news_service:8000`
+  (`${NEWS_API_PREFIX}`) and `/api/npa/*` → `npa_service:8000` (`${NPA_API_PREFIX}`).
 Notes: the `.template` file is processed by the nginx image's built-in
 docker-entrypoint envsubst step at container start (`*.template` under
 `/etc/nginx/templates/` → `/etc/nginx/conf.d/*.conf`), substituting
@@ -19,7 +20,7 @@ docker-entrypoint envsubst step at container start (`*.template` under
 alone since they aren't set as env vars. `SOURCES_API_PREFIX` is defined **once**,
 in the repo-root `.env` (see `../.env.example`), and shared with
 `source_service` (which reads it back as FastAPI's `root_path` via
-`domain.core.settings.settings.sources_api_prefix`) — change the prefix there, not here.
+`common.core.settings.settings.sources_api_prefix`) — change the prefix there, not here.
 
 The API location is a regex (`~ ^${SOURCES_API_PREFIX}(?:/(.*))?$` + `rewrite …
 break`) so it matches the bare collection and sub-paths without a trailing-slash

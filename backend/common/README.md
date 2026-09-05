@@ -6,7 +6,7 @@ infra and contracts but the **ORM schemas** too, so every service (and the migra
 uses the same table definitions.
 
 A regular workspace member: the `pyproject.toml` here declares the `common` package,
-whose code lives in the nested `domain/` dir (like every service's `<name>/<name>/`).
+whose code lives in the nested `common/` dir (like every service's `<name>/<name>/`).
 
 - `pyproject.toml` — the `common` package + its runtime deps (pydantic, SQLAlchemy,
   asyncpg, aio-pika); services depend on it via `{ workspace = true }`.
@@ -18,9 +18,10 @@ whose code lives in the nested `domain/` dir (like every service's `<name>/<name
   reuses).
 - `common/entities/` — business shapes, **grouped by domain** (not by technical kind).
   `entities/news/` holds `NewsDTO`, its `SourceType`, and the routing key — all in
-  `dto.py`.
-- `common/schemas/` — the SQLAlchemy ORM models for the shared DB (`Source`, …). One
-  history for all, applied by the `migrator`, which imports `common.schemas`.
+  `dto.py`; `entities/npa/` holds `NpaDTO`, the HTTP contract between `news_service`
+  and `npa_service`.
+- `common/schemas/` — the SQLAlchemy ORM models for the shared DB (`Source`, `News`,
+  `Npa`). One history for all, applied by the `migrator`, which imports `common.schemas`.
 
 Notes: keep this coherent — it's the one place every service shares. New tables go in
 `common/schemas/`; new business shapes in `common/entities/`.

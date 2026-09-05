@@ -9,3 +9,4 @@ class EdgeSettings(SettingsTemplate):
 
     sources_api_prefix: str = "/api/sources"
     news_api_prefix: str = "/api/news"
+    npa_api_prefix: str = "/api/npa"

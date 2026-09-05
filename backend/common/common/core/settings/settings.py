@@ -9,6 +9,7 @@ from .templates import (
     EdgeSettings,
     LlmSettings,
     NewsConsumerSettings,
+    NpaSettings,
     PostgresSettings,
     RabbitSettings,
     SourceSchedulerSettings,
@@ -27,6 +28,7 @@ class Settings(BaseModel):
     edge: EdgeSettings = Field(default_factory=EdgeSettings)
     sources: SourceSchedulerSettings = Field(default_factory=SourceSchedulerSettings)
     news: NewsConsumerSettings = Field(default_factory=NewsConsumerSettings)
+    npa: NpaSettings = Field(default_factory=NpaSettings)
     telegram: TelegramSettings = Field(default_factory=TelegramSettings)
     web_crawl: WebCrawlSettings = Field(default_factory=WebCrawlSettings)
     llm: LlmSettings = Field(default_factory=LlmSettings)

@@ -121,12 +121,35 @@ services:
       NEWS_BATCH_INTERVAL_SECONDS: ${NEWS_BATCH_INTERVAL_SECONDS:-60}
       NEWS_REQUEUE_ON_STORE_ERROR: ${NEWS_REQUEUE_ON_STORE_ERROR:-true}
       NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
+      NPA_SERVICE_URL: http://npa_service:8000
     expose:
       - "8000"
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+      npa_service:
+        condition: service_started
+
+  # Legislative acts (НПА): list / get / create on /api/npa; news_service posts escalated alerts here.
+  npa_service:
+    build:
+      context: ./backend
+      dockerfile: npa_service/Dockerfile
+    logging: *default-logging
+    environment:
+      <<: *postgres-env
+      APP_NAME: ${APP_NAME:-AI Analytical Center}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      DEBUG: ${DEBUG:-true}
+      NPA_API_PREFIX: ${NPA_API_PREFIX:-/api/npa}
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
@@ -159,12 +182,14 @@ services:
     environment:
       SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
       NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
+      NPA_API_PREFIX: ${NPA_API_PREFIX:-/api/npa}
       LOGS_PREFIX: ${LOGS_PREFIX:-/logs}
     ports:
       - "80:80"
     depends_on:
       - source_service
       - news_service
+      - npa_service
       - dozzle
 
 volumes:

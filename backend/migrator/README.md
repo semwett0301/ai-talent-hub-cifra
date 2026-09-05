@@ -18,7 +18,9 @@ for all services, so migrations live here (not per service): the migrator runs
   `0005_seed_test_source` seeds the `Тест` Telegram channel used for manual
   end-to-end checks; `0006_source_rss_link` adds the `rss_link` column with its
   `type = rss` CHECK constraint; `0007_news_table` creates the `news` table
-  `news_service` writes bus messages into, with `url` UNIQUE as the dedupe key).
+  `news_service` writes bus messages into, with `url` UNIQUE as the dedupe key;
+  `0008_npa_table` creates the `npa` table `npa_service` stores legislative acts in,
+  `url` UNIQUE; `0009_source_is_relevant` adds `is_relevant` plus its CHECK constraint).
 - `pyproject.toml` — runtime deps `common` + `alembic` + `psycopg2-binary`. Every
   ORM model comes from `common.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.

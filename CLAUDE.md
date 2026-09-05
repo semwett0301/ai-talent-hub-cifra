@@ -36,8 +36,11 @@ backend/                  # all Python — a single uv workspace (services are s
     source_service/       #   importable package (uniquely named, not generic `app`)
     Dockerfile            #   image build (context ./backend)
     pyproject.toml        #   depends on `common`
-  news_service/           # project news-service — RabbitMQ → DB batch consumer + news list/dismiss
+  news_service/           # project news-service — RabbitMQ → DB batch consumer + news list/dismiss/escalate-to-NPA
     news_service/         #   importable package; same onion layout as source_service
+    Dockerfile, pyproject.toml
+  npa_service/            # project npa-service — legislative acts (НПА): list/get/create; called by news_service over HTTP
+    npa_service/          #   importable package; same onion layout
     Dockerfile, pyproject.toml
   migrator/               # one-shot Alembic runner — owns the shared DB schema history
     migrations/           #   single Alembic history (all services) + alembic.ini
@@ -49,10 +52,10 @@ frontend/                 # React SPA — Vite + TypeScript + React Router
   public/                 #   static assets served as-is
   .oxlintrc.json          #   linter config
 dozzle/                   # log viewer config: users.yml (gitignored login) + README
-nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service, /api/news/* → news_service, /logs/* → dozzle (own login)
+nginx/                    # edge: serves static SPA + reverse-proxies /api/sources/* → source_service, /api/news/* → news_service, /api/npa/* → npa_service, /logs/* → dozzle (own login)
   Dockerfile              #   multi-stage: node build → nginx serving dist/
   templates/default.conf.template
-docker-compose.yml        # root: nginx (public) + migrator + source_service + news_service + postgres + rabbitmq + dozzle (internal)
+docker-compose.yml        # root: nginx (public) + migrator + source_service + news_service + npa_service + postgres + rabbitmq + dozzle (internal)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
 terraform/                # DigitalOcean infra (Terraform + cloud-init)
@@ -80,7 +83,7 @@ one run may make and how many at once — reuse it, don't hand-roll a semaphore)
 ## Networking (docker)
 
 - **Only nginx publishes a host port (80).** Backend services (`source_service`,
-  `news_service`), `postgres`, and `rabbitmq` are reachable only on the internal
+  `news_service`, `npa_service`), `postgres`, and `rabbitmq` are reachable only on the internal
   compose network (`expose`, no host ports) — everything else stays closed.
 - The `nginx` image serves the static React SPA (fallback to `index.html`) and
   gives each backend its own **`/api/<service>/` namespace**. Currently it
@@ -88,7 +91,9 @@ one run may make and how many at once — reuse it, don't hand-roll a semaphore)
   `/api/sources` prefix stripped (so `/api/sources` → `/`,
   `/api/sources/openapi.json` → `/openapi.json`), so the OpenAPI spec is reachable
   at `/api/sources/openapi.json`. `news_service` has the sibling **`/api/news/*` →
-  `news_service:8000`** location (`NEWS_API_PREFIX`). New services get their own
+  `news_service:8000`** location (`NEWS_API_PREFIX`), `npa_service` has **`/api/npa/*` →
+  `npa_service:8000`** (`NPA_API_PREFIX`). `news_service` also calls `npa_service`
+  directly over the compose network (`NPA_SERVICE_URL`), not via nginx. New services get their own
   `/api/<name>/` location until a full API gateway lands (`plans/api-gateway.md`).
   **`/logs/*` → `dozzle:8080`** (`LOGS_PREFIX`, prefix kept; Dozzle does its own login
   from the gitignored `dozzle/users.yml`) is the container-log viewer — not an API namespace.

@@ -6,11 +6,17 @@ from typing import Protocol
 from common.entities.news import NewsDTO
 from common.schemas import News
 
+from news_service.application.ports.transaction import NewsTransaction
+
 
 class NewsRepository(Protocol):
-    """Persistence operations over news; mutations commit."""
+    """Persistence operations over news; mutations commit (except inside `begin()`)."""
 
     async def list_all(self, limit: int, offset: int) -> list[News]: ...
+
+    def begin(self) -> NewsTransaction:
+        """Open one transaction to stage mutations in; see `NewsTransaction`."""
+        ...
 
     async def add_many(self, items: list[NewsDTO]) -> int:
         """Insert a batch in one transaction, skipping urls already stored; returns

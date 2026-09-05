@@ -3,8 +3,8 @@
 # to Dozzle (which does its own login).
 #
 # .template: processed by the nginx image's built-in docker-entrypoint envsubst
-# step at container start, substituting ${SOURCES_API_PREFIX} / ${NEWS_API_PREFIX}
-# (and any other env var actually set in the container) into
+# step at container start, substituting ${SOURCES_API_PREFIX} / ${NEWS_API_PREFIX} /
+# ${NPA_API_PREFIX} (and any other env var actually set in the container) into
 # /etc/nginx/conf.d/default.conf. nginx's
 # own $-variables ($host, $remote_addr, $scheme, $uri, $1, ...) are left alone —
 # envsubst only touches names that exist in the environment.
@@ -44,6 +44,13 @@ server {
 
         rewrite ^${NEWS_API_PREFIX}(?:/(.*))?$ /$1 break;
         proxy_pass $news_backend;
+    }
+
+    location ~ ^${NPA_API_PREFIX}(?:/(.*))?$ {
+        set $npa_backend http://npa_service:8000;
+
+        rewrite ^${NPA_API_PREFIX}(?:/(.*))?$ /$1 break;
+        proxy_pass $npa_backend;
     }
 
     # Container logs UI (Dozzle, DOZZLE_BASE=${LOGS_PREFIX}): prefix kept, auth is

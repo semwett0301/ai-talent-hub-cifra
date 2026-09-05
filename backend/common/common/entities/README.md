@@ -8,6 +8,8 @@ holding everything about that concept.
   exchange), its `SourceType`, and the routing key — grouped together (a news item
   always has a source), all in `dto.py`.
 - `source/` — the `Source` resource's own shapes, e.g. `SourceReliability`.
+- `npa/` — the `npa` domain (legislative acts): `NpaDTO`, the HTTP contract
+  `news_service` posts to `npa_service` and `npa_service` accepts on create.
 
 Notes: keep these dependency-light (pydantic + stdlib) so any service can depend on an
 entity without pulling DB/LLM infra. Add a sibling subpackage per new domain. `news`

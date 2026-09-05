@@ -5,6 +5,7 @@ from .base import ENV_FILE, SettingsTemplate
 from .edge import EdgeSettings
 from .llm import LlmSettings
 from .news import NewsConsumerSettings
+from .npa import NpaSettings
 from .postgres import PostgresSettings
 from .rabbit import RabbitSettings
 from .sources import SourceSchedulerSettings
@@ -17,6 +18,7 @@ __all__ = [
     "EdgeSettings",
     "LlmSettings",
     "NewsConsumerSettings",
+    "NpaSettings",
     "PostgresSettings",
     "RabbitSettings",
     "SettingsTemplate",

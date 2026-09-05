@@ -9,7 +9,8 @@ from common.core.rabbit import BatchConsumerConfig, RabbitBatchConsumer
 from common.core.settings import settings
 from common.entities.news import ROUTING_PREFIX, NewsDTO
 
-from news_service.application.services import NewsFeed, NewsIngestor
+from news_service.application.services import NewsFeed, NewsIngestor, NpaEscalation
+from news_service.infrastructure.gateways import HttpNpaGateway
 from news_service.infrastructure.repositories import NewsRepo
 
 # Every per-type routing key (`news.raw.telegram`, `news.raw.rss`, …).
@@ -19,6 +20,11 @@ NEWS_BINDING_KEY = f"{ROUTING_PREFIX}.#"
 def get_news_feed() -> NewsFeed:
     """FastAPI use case. NewsRepo opens a session per call, so no request binding."""
     return NewsFeed(NewsRepo())
+
+
+def get_npa_escalation() -> NpaEscalation:
+    """FastAPI use case: dismiss + register in npa_service (over HTTP) as one unit."""
+    return NpaEscalation(NewsRepo(), HttpNpaGateway(settings.npa.npa_service_url))
 
 
 def build_consumer() -> RabbitBatchConsumer[NewsDTO]:

@@ -1,7 +1,7 @@
 """source: add is_relevant, enforce it stays disabled once not relevant
 
-Revision ID: 0008_source_is_relevant
-Revises: 0007_news_table
+Revision ID: 0009_source_is_relevant
+Revises: 0008_npa_table
 Create Date: 2026-09-05
 
 Adds `is_relevant` (default true) plus a CHECK constraint keeping a non-relevant
@@ -13,8 +13,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0008_source_is_relevant"
-down_revision: str | None = "0007_news_table"
+revision: str = "0009_source_is_relevant"
+down_revision: str | None = "0008_npa_table"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

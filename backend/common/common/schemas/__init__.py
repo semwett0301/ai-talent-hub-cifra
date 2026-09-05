@@ -4,6 +4,7 @@ Plain in-memory shapes (no DB involvement) live in `../entities/` instead.
 """
 
 from common.schemas.news import News
+from common.schemas.npa import Npa
 from common.schemas.source import Source
 
-__all__ = ["News", "Source"]
+__all__ = ["News", "Npa", "Source"]
