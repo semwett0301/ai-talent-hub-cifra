@@ -100,6 +100,20 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
+      # A fresh droplet is "active" before cloud-init finishes (deploy user, /opt dir, Docker).
+      - name: Wait for cloud-init
+        env:
+          SSH_HOST: ${{ steps.host.outputs.host }}
+        run: |
+          for _ in $(seq 1 60); do
+            if ssh -i ~/.ssh/deploy_key -o ConnectTimeout=10 -o BatchMode=yes \
+                 "$DEPLOY_USER@$SSH_HOST" test -f /var/lib/cloud/bootstrap-complete 2>/dev/null; then
+              echo "cloud-init finished"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::cloud-init did not finish within 10 minutes on $SSH_HOST"; exit 1
+
       - name: Rsync to deploy path
         env:
           SSH_HOST: ${{ steps.host.outputs.host }}
