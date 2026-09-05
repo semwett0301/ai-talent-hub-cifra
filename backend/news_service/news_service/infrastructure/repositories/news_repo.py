@@ -66,23 +66,18 @@ class NewsRepo(NewsRepository):
 
         try:
             async with async_session_factory() as session:
-                inserted = await self.__insert_batch(session, items)
+                # A source deleted while the batch was in flight is detached, not a failed
+                # insert; a delete between the two statements only costs one nack + requeue.
+                known = await _known_source_ids(session, items)
+                rows = [item.model_dump() for item in _detach_orphans(items, known)]
+
+                # Urls already stored are skipped by the DB.
+                stmt = insert(News).values(rows).on_conflict_do_nothing(index_elements=[News.url])
+                result = await session.execute(stmt)
                 await session.commit()
         except STORE_ERRORS as error:
             raise NewsStoreError(f"news batch insert failed: items={len(items)}") from error
 
-        return inserted
-
-    @staticmethod
-    async def __insert_batch(session: AsyncSession, items: list[NewsDTO]) -> int:
-        # A source deleted while the batch was in flight is detached, not a failed insert;
-        # a delete landing between the two statements only costs one nack + requeue.
-        known = await _known_source_ids(session, items)
-        rows = [item.model_dump() for item in _detach_orphans(items, known)]
-
-        # Urls already stored are skipped by the DB.
-        stmt = insert(News).values(rows).on_conflict_do_nothing(index_elements=[News.url])
-        result = await session.execute(stmt)
         return result.rowcount
 
     async def mark_alert(self, news_id: uuid.UUID) -> News | None:
