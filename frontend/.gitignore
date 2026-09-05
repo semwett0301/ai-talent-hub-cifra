@@ -12,11 +12,6 @@ dist
 dist-ssr
 *.local
 
-# env (VITE_ vars are build-time/public; keep real values out of git)
-.env
-.env.*
-!.env.example
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

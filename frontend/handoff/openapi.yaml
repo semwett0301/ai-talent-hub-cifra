@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: GS Labs Monitoring API
+  version: 0.1.0
+paths:
+  /api/v1/news:
+    get:
+      summary: Cursor-paginated news feed
+      parameters:
+        - { name: query, in: query, schema: { type: string } }
+        - { name: period, in: query, schema: { enum: [24h, 3d] } }
+        - { name: attention, in: query, schema: { type: boolean } }
+      responses: { '200': { description: OK } }
+  /api/v1/news/{id}/state:
+    patch:
+      summary: Update the current user's news state
+      responses: { '200': { description: OK } }
+  /api/v1/sources:
+    get: { summary: List sources, responses: { '200': { description: OK } } }
+    post: { summary: Create source, responses: { '201': { description: Created } } }
+  /api/v1/sources/{id}:
+    patch: { summary: Update source frequency or tracking, responses: { '200': { description: OK } } }
+  /api/v1/uploads:
+    post: { summary: Create a signed PDF upload, responses: { '201': { description: Created } } }
+  /api/v1/npa:
+    get: { summary: List registry or updates, responses: { '200': { description: OK } } }
+    post: { summary: Track an NPA from URL or uploaded PDF, responses: { '202': { description: Accepted } } }
+  /api/v1/npa/{id}:
+    get: { summary: NPA detail with versions and changes, responses: { '200': { description: OK } } }
+  /api/v1/alerts:
+    get: { summary: List NPA signals from news, responses: { '200': { description: OK } } }
