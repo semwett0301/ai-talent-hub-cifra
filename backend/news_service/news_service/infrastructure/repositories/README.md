@@ -6,9 +6,10 @@ over SQLAlchemy.
 - `news_repo.py` — `NewsRepo`: implements `NewsRepository` (`list_all(limit, offset)`,
   `mark_alert`, and `add_many`). **Opens a fresh session per call** (`async_session_factory`), so one repo serves both request
   handlers and the long-lived consumer. `add_many` runs one transaction for the whole
-  batch: `SELECT` the batch's `source_id`s that still exist, null the rest (module
-  helpers `_known_source_ids` / `_detach_orphans`, one WARNING per batch naming the
-  gone ids), then a single `INSERT … ON CONFLICT (url) DO NOTHING`; returns the
+  batch: `SELECT` the batch's `source_id`s that still exist, skip the items whose source
+  is gone (module helpers `_known_source_ids` / `_drop_orphans`, one WARNING per batch
+  naming the gone ids; `0` when nothing is left), then a single
+  `INSERT … ON CONFLICT (url) DO NOTHING`; returns the
   inserted row count, a driver/connection failure is raised as `NewsStoreError`. `begin()` returns a `SqlNewsTransaction`; `mark_alert`
   is implemented on top of it (stage + commit).
 - `news_transaction.py` — `SqlNewsTransaction`: implements `NewsTransaction` over one

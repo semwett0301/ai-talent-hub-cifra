@@ -23,24 +23,22 @@ logger = get_logger(__name__)
 
 
 async def _known_source_ids(session: AsyncSession, items: list[NewsDTO]) -> set[uuid.UUID]:
-    wanted = {item.source_id for item in items if item.source_id is not None}
-    if not wanted:
-        return set()
-
+    wanted = {item.source_id for item in items}
     rows = await session.execute(select(Source.id).where(Source.id.in_(wanted)))
     return set(rows.scalars().all())
 
 
-def _detach_orphans(items: list[NewsDTO], known: set[uuid.UUID]) -> list[NewsDTO]:
-    """Null `source_id` where the source is gone, so the FK never fails the whole batch."""
-    orphans = {item.source_id for item in items if item.source_id and item.source_id not in known}
+def _drop_orphans(items: list[NewsDTO], known: set[uuid.UUID]) -> list[NewsDTO]:
+    """Skip items whose source is gone: a row needs its source, so the FK never fails the batch."""
+    orphans = {item.source_id for item in items if item.source_id not in known}
     if orphans:
-        logger.warning("news sources gone, detached: ids=%s", sorted(map(str, orphans)))
+        logger.warning(
+            "news sources gone, items skipped: ids=%s items=%d",
+            sorted(map(str, orphans)),
+            sum(item.source_id in orphans for item in items),
+        )
 
-    return [
-        item.model_copy(update={"source_id": None}) if item.source_id in orphans else item
-        for item in items
-    ]
+    return [item for item in items if item.source_id not in orphans]
 
 
 class NewsRepo(NewsRepository):
@@ -66,10 +64,12 @@ class NewsRepo(NewsRepository):
 
         try:
             async with async_session_factory() as session:
-                # A source deleted while the batch was in flight is detached, not a failed
+                # A source deleted while the batch was in flight is skipped, not a failed
                 # insert; a delete between the two statements only costs one nack + requeue.
                 known = await _known_source_ids(session, items)
-                rows = [item.model_dump() for item in _detach_orphans(items, known)]
+                rows = [item.model_dump() for item in _drop_orphans(items, known)]
+                if not rows:
+                    return 0
 
                 # Urls already stored are skipped by the DB.
                 stmt = insert(News).values(rows).on_conflict_do_nothing(index_elements=[News.url])

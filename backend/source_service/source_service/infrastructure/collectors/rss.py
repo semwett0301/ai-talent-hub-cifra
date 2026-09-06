@@ -9,7 +9,6 @@ pull emits the feeds' current entries and forgets them — downstream dedupes on
 """
 
 import asyncio
-from dataclasses import dataclass
 
 from common.core.logging import get_logger
 from common.entities.news import NewsDTO
@@ -24,30 +23,22 @@ MAX_CONCURRENT_EXTRACTIONS = 4
 logger = get_logger(__name__)
 
 
-@dataclass(frozen=True)
-class _FeedItem:
-    """One feed entry together with the feed it came from."""
-
-    entry: FeedEntry
-    feed_url: str
-
-
-def _to_news_dto(source: Source, item: _FeedItem, article: ExtractedArticle | None) -> NewsDTO:
-    entry = item.entry
+def _to_news_dto(source: Source, entry: FeedEntry, article: ExtractedArticle | None) -> NewsDTO:
     # Full article text when extraction worked; the feed's own summary otherwise.
     text = article.text if article is not None else entry.summary
-    title = article.title if article is not None and article.title else entry.title
+    # A titleless entry falls back to its text, the same last resort the Telegram collector uses.
+    title = (article.title if article is not None and article.title else entry.title) or text
     published_at = entry.published_at or (article.published_at if article is not None else None)
 
     return NewsDTO.for_source(
-        source.link,
-        source.type,
-        source.reliability,
-        source_id=source.id,
+        source,
         url=entry.url,
+        title=title,
         text=text,
+        excerpt=entry.summary or None,
         published_at=published_at,
-        raw={"title": title, "summary": entry.summary, "feed_url": item.feed_url},
+        updated_at=entry.updated_at,
+        source_tags=entry.tags,
     )
 
 
@@ -61,43 +52,46 @@ class RssCollector(PullCollector):
             logger.warning("rss fetch skipped: id=%s link=%s (no feeds)", source.id, source.link)
             return []
 
-        items = await self.__read_feeds(source.rss_links)
-        if not items:
+        entries = await self.__read_feeds(source.rss_links)
+        if not entries:
             return []
 
-        return await self.__collect(source, items)
+        return await self.__collect(source, entries)
 
-    async def __read_feeds(self, feeds: list[RssLink]) -> list[_FeedItem]:
+    async def __read_feeds(self, feeds: list[RssLink]) -> list[FeedEntry]:
         """Every feed's entries, an entry URL kept once — the feed that listed it first."""
         seen_urls: set[str] = set()
-        items: list[_FeedItem] = []
+        entries: list[FeedEntry] = []
 
         for feed in feeds:
-            entries = await self.__feed_reader.read(feed.url)
-            fresh = [entry for entry in entries if entry.url not in seen_urls]
+            fresh = [
+                entry
+                for entry in await self.__feed_reader.read(feed.url)
+                if entry.url not in seen_urls
+            ]
 
             seen_urls.update(entry.url for entry in fresh)
-            items.extend(_FeedItem(entry, feed.url) for entry in fresh)
+            entries.extend(fresh)
 
-        return items
+        return entries
 
-    async def __collect(self, source: Source, items: list[_FeedItem]) -> list[NewsDTO]:
+    async def __collect(self, source: Source, entries: list[FeedEntry]) -> list[NewsDTO]:
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_EXTRACTIONS)
 
         async with asyncio.TaskGroup() as group:
             tasks = [
-                group.create_task(self.__collect_one(source, item, semaphore)) for item in items
+                group.create_task(self.__collect_one(source, entry, semaphore)) for entry in entries
             ]
 
         return [task.result() for task in tasks]
 
     async def __collect_one(
-        self, source: Source, item: _FeedItem, semaphore: asyncio.Semaphore
+        self, source: Source, entry: FeedEntry, semaphore: asyncio.Semaphore
     ) -> NewsDTO:
         async with semaphore:
-            article = await self.__extract(item.entry.url)
+            article = await self.__extract(entry.url)
 
-        return _to_news_dto(source, item, article)
+        return _to_news_dto(source, entry, article)
 
     async def __extract(self, url: str) -> ExtractedArticle | None:
         html = await self.__page_fetcher.fetch(url)

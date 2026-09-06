@@ -63,11 +63,11 @@ implement `fetch`/`subscribe` in its infra file; register it in `deps`.
 `WebCrawlCollector` is a `PullCollector`: for each `WEB` source it runs
 `services.web.WebCrawl` (hubs → cards → article harvest, see
 `application/services/web/README.md`) on the service's shared browser and
-publishes one `NewsDTO` per accepted article to `news.raw.web`. The compact shared fields
-are `url`, `text`, `published_at` and source attributes. All agent data is kept
-as JSON under `raw`: convenient keys include `title`, `author`, `description`,
-`image_url`, `canonical_url`, `date_source` and `date_evidence`; the complete
-serialised domain `Article` (status, content, publication) is `raw.article`.
+publishes one `NewsDTO` per accepted article to `news.raw.web`: `url` (the final URL),
+`title`, `text`, `excerpt` (the page description), `published_at`,
+`updated_at` (the page's `modified`), `source_tags` (the page's section) and the source
+attributes. Crawl provenance (date technique, evidence, the full `Article`) is logged,
+not published.
 
 The LLM is used only when it has credentials: for ambiguous publication dates
 and to classify listing pages. Without credentials the deterministic
@@ -100,7 +100,7 @@ crawler = build_page_crawler()
 asyncio.run(crawler.start())
 items = asyncio.run(build_web_collector(crawler).fetch(source))
 print(f"collected={len(items)}")
-for item in items[:3]: print(item.url, item.raw["title"])
+for item in items[:3]: print(item.url, item.title)
 '
 ```
 

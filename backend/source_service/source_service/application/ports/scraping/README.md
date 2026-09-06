@@ -8,7 +8,8 @@ Reaching pages, feeds and sites, and the crawl's language model.
 - `rss_feed_finder.py` — `RssFeedFinder` (`find`): every RSS feed URL a site address leads
   to — advertised in its pages or served at well-known paths — for `SourceService`'s type
   auto-detection. Implemented by `FeedsearchRssFeedFinder`.
-- `feed_reader.py` — `FeedReader` (`read`) + its return shape `FeedEntry`: one RSS/Atom feed
+- `feed_reader.py` — `FeedReader` (`read`) + its return shape `FeedEntry` (`url`, `title`,
+  `summary`, `published_at`, `updated_at`, `tags`): one RSS/Atom feed
   downloaded and parsed for `RssCollector`. Implemented by `FeedparserFeedReader`.
 - `page_crawler.py` — `PageCrawler`: the browser. `crawl_page` / `crawl_pages` /
   `crawl_articles` return `FetchedPage`s (url, final_url, html, markdown, title, internal

@@ -13,6 +13,8 @@ calls it without a session string, and catches `RPCError` for a stale one, so
 a headless container never blocks on stdin.
 """
 
+import re
+
 from common.core.logging import get_logger
 from common.entities.news import NewsDTO
 from common.schemas import Source
@@ -27,6 +29,11 @@ from source_service.application.ports.source import NewsPublisher, PushCollector
 TELEGRAM_BASE_URL = "https://t.me"
 CLIENT_SESSION_NAME = "source_service"
 
+# A post has no headline: its first sentence (or first line) stands in. The `0014`
+# migration backfills old rows with the same expression in SQL — keep the two in step.
+FIRST_SENTENCE_RE = re.compile(r"^\s*[^.!?\n]+[.!?]?")
+HASHTAG_RE = re.compile(r"#(\w+)")
+
 logger = get_logger(__name__)
 
 
@@ -36,6 +43,16 @@ def _message_url(chat: Chat, message: Message) -> str:
         return f"{TELEGRAM_BASE_URL}/{chat.username}/{message.id}"
 
     return f"{TELEGRAM_BASE_URL}/c/{chat.id}/{message.id}"
+
+
+def _first_sentence(text: str) -> str | None:
+    match = FIRST_SENTENCE_RE.match(text)
+    return match.group().strip() or None if match else None
+
+
+def _hashtags(text: str) -> list[str]:
+    # dict.fromkeys dedupes while keeping the order the tags appear in.
+    return list(dict.fromkeys(HASHTAG_RE.findall(text)))
 
 
 def _build_client(api_id: int | None, api_hash: str | None, session: str) -> Client | None:
@@ -52,15 +69,18 @@ def _build_client(api_id: int | None, api_hash: str | None, session: str) -> Cli
 
 
 def _to_news_dto(source: Source, chat: Chat, message: Message) -> NewsDTO:
+    # A media post keeps its text in `caption`; a plain post in `text` — never both.
+    text = message.caption or message.text or ""
+    url = _message_url(chat, message)
+
     return NewsDTO.for_source(
-        source.link,
-        source.type,
-        source.reliability,
-        source_id=source.id,
-        url=_message_url(chat, message),
-        text=message.text or message.caption or "",
+        source,
+        url=url,
+        title=_first_sentence(text) or text,
+        text=text,
         published_at=message.date,
-        raw={"chat_id": chat.id, "message_id": message.id},
+        updated_at=message.edit_date,
+        source_tags=_hashtags(text),
     )
 
 

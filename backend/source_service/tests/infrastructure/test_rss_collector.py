@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from common.entities.news import SourceType
 from common.entities.source import SourceReliability
@@ -11,8 +13,8 @@ SHARED_ENTRY = "https://example.test/news/shared"
 SECTION_ENTRY = "https://example.test/news/section-only"
 
 
-def entry(url: str) -> FeedEntry:
-    return FeedEntry(url=url, title="Title", summary="Summary", published_at=None)
+def entry(url: str, title: str = "Title") -> FeedEntry:
+    return FeedEntry(url=url, title=title, summary="Summary", published_at=None, tags=["Tech"])
 
 
 class FakeFeedReader:
@@ -32,6 +34,7 @@ class UnreachablePageFetcher:
 
 def rss_source(*feed_urls: str) -> Source:
     source = Source(
+        id=uuid.uuid4(),
         name="Example",
         link="https://example.test",
         type=SourceType.RSS,
@@ -58,13 +61,30 @@ async def test_reads_every_feed_and_collects_a_shared_entry_once():
 
 
 @pytest.mark.asyncio
-async def test_remembers_which_feed_listed_the_entry_first():
-    reader = FakeFeedReader({MAIN_FEED: [entry(SHARED_ENTRY)], SECTION_FEED: [entry(SHARED_ENTRY)]})
+async def test_takes_the_entry_as_the_first_feed_listed_it():
+    reader = FakeFeedReader(
+        {MAIN_FEED: [entry(SHARED_ENTRY, "First")], SECTION_FEED: [entry(SHARED_ENTRY, "Second")]}
+    )
     collector = RssCollector(reader, UnreachablePageFetcher())
 
     news = await collector.fetch(rss_source(MAIN_FEED, SECTION_FEED))
 
-    assert [item.raw["feed_url"] for item in news] == [MAIN_FEED]
+    assert [item.title for item in news] == ["First"]
+
+
+@pytest.mark.asyncio
+async def test_maps_the_feed_entry_onto_the_flat_news_fields():
+    source = rss_source(MAIN_FEED)
+    reader = FakeFeedReader({MAIN_FEED: [entry(SECTION_ENTRY)]})
+    collector = RssCollector(reader, UnreachablePageFetcher())
+
+    [item] = await collector.fetch(source)
+
+    assert item.source_id == source.id
+    assert item.source_name == "Example"
+    assert item.text == "Summary"  # the page was unreachable: the feed summary stands in
+    assert item.excerpt == "Summary"
+    assert item.source_tags == ["Tech"]
 
 
 @pytest.mark.asyncio
