@@ -28,7 +28,9 @@ def _current_stage(stages: list[Tag]) -> Tag:
 
 
 def _event_dates(root: Tag) -> list[datetime]:
-    dates = [_parse_date(str(node.get("data-eventdate"))) for node in root.select("[data-eventdate]")]
+    dates = [
+        _parse_date(str(node.get("data-eventdate"))) for node in root.select("[data-eventdate]")
+    ]
     valid_dates = [value for value in dates if value is not None]
     if not valid_dates:
         raise InvalidNpaPageError("bill has no valid update date")

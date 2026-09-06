@@ -63,9 +63,7 @@ class _OverallSummaryResponse(BaseModel):
 
 
 class OpenRouterChangeSummarizer(ChangeSummarizer):
-    def __init__(
-        self, api_key: str | None, base_url: str | None, config: NpaSettings
-    ) -> None:
+    def __init__(self, api_key: str | None, base_url: str | None, config: NpaSettings) -> None:
         self.__api_key = api_key
         self.__base_url = base_url or DEFAULT_BASE_URL
         self.__model_name = config.npa_change_model
@@ -82,7 +80,9 @@ class OpenRouterChangeSummarizer(ChangeSummarizer):
         logger.info("npa change analysis started: chars=%d", len(diff))
         articles_response = await self.__invoke_articles(diff)
         overall_response = await self.__invoke_overall(diff)
-        logger.info("npa change analysis completed: articles=%d", len(articles_response.article_changes))
+        logger.info(
+            "npa change analysis completed: articles=%d", len(articles_response.article_changes)
+        )
         articles = tuple(
             ArticleChange(row.article, row.summary, row.before, row.after)
             for row in articles_response.article_changes
@@ -94,11 +94,12 @@ class OpenRouterChangeSummarizer(ChangeSummarizer):
             prompt = ChatPromptTemplate.from_messages(
                 [("system", ARTICLE_CHANGES_SYSTEM), ("human", CHANGE_INPUT)]
             )
-            response = await (prompt | self.__model(self.__article_max_output_tokens).with_structured_output(
-                _ArticleChangesResponse
-            )).ainvoke(
-                {"diff": diff}
-            )
+            response = await (
+                prompt
+                | self.__model(self.__article_max_output_tokens).with_structured_output(
+                    _ArticleChangesResponse
+                )
+            ).ainvoke({"diff": diff})
         except MODEL_ERRORS as error:
             raise ChangeModelError("OpenRouter NPA article analysis failed") from error
         if not isinstance(response, _ArticleChangesResponse):
@@ -110,14 +111,18 @@ class OpenRouterChangeSummarizer(ChangeSummarizer):
             prompt = ChatPromptTemplate.from_messages(
                 [("system", OVERALL_SUMMARY_SYSTEM), ("human", CHANGE_INPUT)]
             )
-            response = await (prompt | self.__model(self.__overall_max_output_tokens).with_structured_output(
-                _OverallSummaryResponse
-            )).ainvoke(
-                {"diff": diff}
-            )
+            response = await (
+                prompt
+                | self.__model(self.__overall_max_output_tokens).with_structured_output(
+                    _OverallSummaryResponse
+                )
+            ).ainvoke({"diff": diff})
         except MODEL_ERRORS as error:
             raise ChangeModelError("OpenRouter NPA overall analysis failed") from error
-        if not isinstance(response, _OverallSummaryResponse) or not response.overall_summary.strip():
+        if (
+            not isinstance(response, _OverallSummaryResponse)
+            or not response.overall_summary.strip()
+        ):
             raise ChangeModelError("OpenRouter returned an empty NPA overall analysis")
         return response
 

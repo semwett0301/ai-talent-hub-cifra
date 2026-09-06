@@ -12,6 +12,7 @@ from npa_service.api.routes import health, npa
 configure_logging()
 logger = get_logger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler = deps.build_daily_monitor()

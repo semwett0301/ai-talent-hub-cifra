@@ -15,9 +15,7 @@ URL = "https://sozd.duma.gov.ru/bill/1-8"
 
 async def test_registration_stops_when_bill_is_already_published() -> None:
     repo = _Repo()
-    stored = await NpaRegistration(repo, _Source(_snapshot("arrh_d11", "text", True))).register(
-        URL
-    )
+    stored = await NpaRegistration(repo, _Source(_snapshot("arrh_d11", "text", True))).register(URL)
 
     assert stored.tracking_status == NpaTrackingStatus.PUBLISHED
     assert repo.added_status == NpaTrackingStatus.PUBLISHED

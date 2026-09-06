@@ -23,9 +23,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "npa_version",
-        sa.Column(
-            "id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False
-        ),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("npa_id", sa.Uuid(), nullable=False),
         sa.Column("stage", sa.String(length=256), nullable=False),
         sa.Column("stage_code", sa.String(length=32), nullable=False),
@@ -86,7 +84,10 @@ def _add_current_state_columns() -> None:
     op.add_column(
         "npa",
         sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
     )
 
@@ -100,6 +101,4 @@ def _tracking_status_column() -> sa.Column:
         native_enum=False,
         length=16,
     )
-    return sa.Column(
-        "tracking_status", status_type, server_default="unsupported", nullable=False
-    )
+    return sa.Column("tracking_status", status_type, server_default="unsupported", nullable=False)

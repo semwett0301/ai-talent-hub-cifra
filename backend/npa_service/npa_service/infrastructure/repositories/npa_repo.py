@@ -53,9 +53,7 @@ def _apply_fields(row: Npa, update_value: TrackedUpdate) -> None:
     fields["tracking_status"] = update_value.status
     fields["summary"] = update_value.change.overall if update_value.change else None
     fields["article_changes"] = (
-        [asdict(article) for article in update_value.change.articles]
-        if update_value.change
-        else []
+        [asdict(article) for article in update_value.change.articles] if update_value.change else []
     )
     for name, value in fields.items():
         setattr(row, name, value)
@@ -116,10 +114,14 @@ class NpaRepo(NpaRepository):
     async def mark_checked(
         self, npa_id: uuid.UUID, snapshot: BillSnapshot, checked_at: datetime
     ) -> None:
-        stmt = update(Npa).where(Npa.id == npa_id).values(
-            title=snapshot.title,
-            source_updated_at=snapshot.updated_at,
-            last_checked_at=checked_at,
+        stmt = (
+            update(Npa)
+            .where(Npa.id == npa_id)
+            .values(
+                title=snapshot.title,
+                source_updated_at=snapshot.updated_at,
+                last_checked_at=checked_at,
+            )
         )
         async with async_session_factory() as session:
             await session.execute(stmt)
