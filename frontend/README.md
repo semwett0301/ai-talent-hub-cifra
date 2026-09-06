@@ -21,8 +21,8 @@ React 19 + Vite + TypeScript SPA, built to static files and served by the `nginx
 - `src/components/ui/` — shadcn / Base UI primitives; `toast.tsx` is ours, mounted once
   in `main.tsx`, and the rest is unchanged.
 - `src/data/` — remaining demo fixtures for НПА (`npa.ts`, `news.ts` — the latter only
-  feeds `NpaPage`'s alerts tab) and `newsPlaceholders.ts`: stable made-up relevance /
-  priority / kind / summary / impact for live news items, seeded by id, until the LLM
+  feeds `NpaPage`'s alerts tab) and `newsPlaceholders.ts`: stable made-up AI summary /
+  impact for live news items, seeded by id, until the LLM
   stage produces the real ones — the screen keeps its full layout meanwhile.
 - `src/globals.d.ts` — the compile-time API-prefix constants.
 - `UI_GUIDELINES.md`, `UI_IMPLEMENTATION.md`, `handoff/` — product and design notes.
@@ -61,9 +61,9 @@ npm run api:gen        # regenerate src/api/schema.*.d.ts from a running backend
   false` keeps fields that have server-side defaults optional in request bodies.
 - The generated file is committed so `npm run build` and CI never need a live backend.
 - `NewsPage` talks to `/api/news` only: `q`, `since` (the period, rounded to the minute
-  so the query key is stable) and `visibility` go to the server — the «Скрытые» tab is the
-  same list with `visibility=dismissed`; the details panel hides (`POST /{id}/dismiss`,
-  destructive button) or restores (`POST /{id}/restore`, primary button) the open item. The fields
+  so the query key is stable) and `visibility` go to the server — the «Архив» tab is the
+  same list with `visibility=dismissed`; the details panel archives (`POST /{id}/dismiss`,
+  destructive button) or brings back (`POST /{id}/restore`, primary button) the open item. The fields
   the backend cannot supply yet (relevance, priority, kind, AI summary, impact) come from
   `src/data/newsPlaceholders.ts`; the summary edit dialog still saves to `sessionStorage`
   because the summary itself is a placeholder.

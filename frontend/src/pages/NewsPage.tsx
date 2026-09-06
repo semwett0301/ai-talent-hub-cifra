@@ -3,9 +3,18 @@ import { EyeOff, ExternalLink, Pencil, RotateCcw, Sparkles } from "lucide-react"
 
 import { errorMessage } from "@/api/client"
 import { useErrorToast } from "@/api/errorToast"
-import { PERIODS, excerptOf, formatMoment, formatToday, newsMoment, sinceHoursAgo } from "@/api/news"
+import {
+  DEFAULT_PERIOD_HOURS,
+  PERIODS,
+  excerptOf,
+  formatMoment,
+  formatToday,
+  newsMoment,
+  sinceHoursAgo,
+} from "@/api/news"
 import type { NewsOut, NewsVisibility } from "@/api/news"
 import { useDismissNews, useNews, useRestoreNews } from "@/api/newsMutations"
+import { RELIABILITY_LABELS } from "@/api/sources"
 import { Choice, SearchField } from "@/components/monitoring/Shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,20 +30,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { withPlaceholders, type NewsItemView } from "@/data/newsPlaceholders"
 import { useSessionState } from "@/hooks/useSessionState"
 
-// The feed's tabs. «Скрытые» is the only one the server answers differently: it lists
-// what the reader hid instead of what is in the inbox.
-const FILTERS = ["Все", "Требует внимания", "Новости", "Скрытые"] as const
-type Filter = (typeof FILTERS)[number]
+// The feed's two tabs: the inbox, and the archive — what the reader hid (`visibility=dismissed`).
+const TABS = ["Новости", "Архив"] as const
+type Tab = (typeof TABS)[number]
 
 const PAGE_SIZE = 200
 const SEARCH_DEBOUNCE_MS = 300
 const SKELETON_CARDS = [0, 1, 2, 3]
-
-const PRIORITY_LABELS = {
-  critical: "• Требует внимания",
-  warning: "• Важно",
-  normal: "• Информация",
-} as const
 
 function useDebounced(value: string, delayMs: number): string {
   const [debounced, setDebounced] = useState(value)
@@ -45,20 +47,14 @@ function useDebounced(value: string, delayMs: number): string {
   return debounced
 }
 
-function visibilityOf(filter: Filter): NewsVisibility {
-  return filter === "Скрытые" ? "dismissed" : "visible"
-}
-
-function matchesFilter(item: NewsItemView, filter: Filter): boolean {
-  if (filter === "Требует внимания") return item.priority === "critical"
-  if (filter === "Новости") return item.kind === filter
-  return true
+function visibilityOf(tab: Tab): NewsVisibility {
+  return tab === "Архив" ? "dismissed" : "visible"
 }
 
 export function NewsPage() {
   const [query, setQuery] = useState("")
-  const [filter, setFilter] = useState<Filter>("Все")
-  const [period, setPeriod] = useState(String(PERIODS[0].hours))
+  const [tab, setTab] = useState<Tab>("Новости")
+  const [period, setPeriod] = useState(String(DEFAULT_PERIOD_HOURS))
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [edits, setEdits] = useSessionState<Record<string, string>>("news-edits", {})
   const [editing, setEditing] = useState(false)
@@ -70,17 +66,14 @@ export function NewsPage() {
   const feed = useNews({
     since,
     limit: PAGE_SIZE,
-    visibility: visibilityOf(filter),
+    visibility: visibilityOf(tab),
     ...(search ? { q: search } : {}),
   })
   const dismiss = useDismissNews()
   const restore = useRestoreNews()
   const reportError = useErrorToast()
 
-  const items = useMemo(
-    () => (feed.data?.items ?? []).map(withPlaceholders).filter((item) => matchesFilter(item, filter)),
-    [feed.data, filter],
-  )
+  const items = useMemo(() => (feed.data?.items ?? []).map(withPlaceholders), [feed.data])
   const item = items.find((entry) => entry.id === selectedId) ?? items[0]
 
   function toggleHidden(selected: NewsItemView) {
@@ -90,7 +83,7 @@ export function NewsPage() {
       { params: { path: { news_id: selected.id } } },
       {
         onSuccess: () =>
-          setNotice(isHidden ? "Материал возвращён во «Входящие»." : "Материал скрыт. Он во вкладке «Скрытые»."),
+          setNotice(isHidden ? "Материал возвращён из архива." : "Материал перенесён в архив."),
         onError: reportError,
       },
     )
@@ -108,7 +101,7 @@ export function NewsPage() {
         <section className="panel feed">
           <div className="section-heading">
             <h2>
-              {filter === "Скрытые" ? "Скрытые" : "Входящие"} <span>{feed.data ? items.length : "…"}</span>
+              {tab === "Архив" ? "Архив" : "Входящие"} <span>{feed.data ? items.length : "…"}</span>
             </h2>
             <span className="small muted">{formatToday()}</span>
           </div>
@@ -118,14 +111,14 @@ export function NewsPage() {
             placeholder="Поиск по заголовку и тексту"
           />
           <div className="filters">
-            {FILTERS.map((label) => (
+            {TABS.map((label) => (
               <Button
                 key={label}
                 size="sm"
                 variant="outline"
-                aria-pressed={filter === label}
-                className={filter === label ? "active-filter" : ""}
-                onClick={() => setFilter(label)}
+                aria-pressed={tab === label}
+                className={tab === label ? "active-filter" : ""}
+                onClick={() => setTab(label)}
               >
                 {label}
               </Button>
@@ -155,9 +148,9 @@ export function NewsPage() {
             ))}
             {feed.data && !items.length && (
               <div className="empty-state">
-                {filter === "Скрытые"
-                  ? "Скрытых материалов нет."
-                  : "Материалы не найдены. Измените запрос или фильтры."}
+                {tab === "Архив"
+                  ? "В архиве пусто."
+                  : "Материалы не найдены. Измените запрос или период."}
               </div>
             )}
           </div>
@@ -227,7 +220,6 @@ function NewsDetails({
   return (
     <>
       <div className="detail-meta">
-        <Badge className={`status ${item.priority}`}>{PRIORITY_LABELS[item.priority]}</Badge>
         <span>{formatMoment(newsMoment(item))}</span>
       </div>
       <a className="detail-title" href={item.url} target="_blank" rel="noopener noreferrer">
@@ -237,9 +229,12 @@ function NewsDetails({
           Открыть оригинал
         </span>
       </a>
-      <p className="muted small">
-        {item.source_name} · {item.kind}
-      </p>
+      <div className="detail-source">
+        <span className="detail-source-name">{item.source_name}</span>
+        <Badge className={`reliability ${item.source_reliability}`} title="Приоритет источника">
+          {RELIABILITY_LABELS[item.source_reliability]}
+        </Badge>
+      </div>
       <div className="summary-box">
         <h3>
           <Sparkles />
@@ -261,12 +256,12 @@ function NewsDetails({
         {isHidden ? (
           <Button variant="default" disabled={isBusy} onClick={onToggleHidden}>
             <RotateCcw />
-            Восстановить
+            Вернуть из архива
           </Button>
         ) : (
           <Button variant="destructive" disabled={isBusy} onClick={onToggleHidden}>
             <EyeOff />
-            Скрыть
+            В архив
           </Button>
         )}
       </div>
@@ -286,7 +281,7 @@ function NewsCard({
   return (
     <Button
       variant="ghost"
-      className={`news-card ${item.priority} ${selected ? "selected" : ""}`}
+      className={`news-card ${selected ? "selected" : ""}`}
       aria-pressed={selected}
       onClick={onSelect}
     >
@@ -294,7 +289,6 @@ function NewsCard({
         <span>
           {item.source_name} · {formatMoment(newsMoment(item))}
         </span>
-        <span>{getNoiseLabel(item.relevance)}</span>
       </span>
       <strong>{item.title}</strong>
       <span className="excerpt">{excerptOf(item satisfies NewsOut)}</span>
@@ -309,11 +303,4 @@ function NewsCard({
       )}
     </Button>
   )
-}
-
-function getNoiseLabel(score: number) {
-  if (score < 50) return "Шум"
-  if (score < 65) return "Релевантно"
-  if (score < 80) return "Важно"
-  return "Горячая новость"
 }

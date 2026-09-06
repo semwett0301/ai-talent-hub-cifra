@@ -83,23 +83,6 @@ p {
   color: var(--muted-foreground);
   margin-top: 6px;
 }
-.brand {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  color: #579df0;
-  letter-spacing: 1px;
-  font-size: 21px;
-  white-space: nowrap;
-}
-.demo-label {
-  color: #8fa1b8;
-  border: 1px solid var(--border);
-  padding: 5px 8px;
-  border-radius: 5px;
-  font-size: 10px;
-  letter-spacing: 0;
-}
 .avatar {
   width: 29px;
   height: 29px;
@@ -112,9 +95,6 @@ p {
   font-size: 10px;
   font-weight: 700;
   flex-shrink: 0;
-}
-.avatar.purple {
-  background: #b08af0;
 }
 .workspace {
   display: grid;
@@ -352,6 +332,38 @@ p {
   padding: 4px 7px;
   font-weight: 400;
 }
+/* The source, shown as the item's provenance: its name large, its kind as a chip. */
+.detail-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 16px;
+}
+.detail-source-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #cfe0f5;
+  letter-spacing: 0.2px;
+}
+/* Source reliability as a traffic light: high green, medium yellow, low red. */
+.reliability[data-slot="badge"] {
+  border: 0;
+  border-radius: 15px;
+  padding: 5px 10px;
+  font-size: 10px;
+}
+.reliability.high {
+  background: #103a35;
+  color: #69d5b3;
+}
+.reliability.medium {
+  background: #3a2c15;
+  color: #e6b24f;
+}
+.reliability.low {
+  background: #3a1f2a;
+  color: #fa7b83;
+}
 .detail-meta {
   display: flex;
   justify-content: space-between;
@@ -568,9 +580,6 @@ p {
   .details {
     padding: 16px 12px;
   }
-  .brand .demo-label {
-    display: none;
-  }
   .feature-strip {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -598,12 +607,6 @@ p {
   .sidebar {
     min-height: 600px;
   }
-  .brand {
-    font-size: 16px;
-  }
-  .brand .avatar {
-    display: none;
-  }
   h1 {
     font-size: 26px;
   }
@@ -623,9 +626,6 @@ p {
   }
   .masthead {
     align-items: flex-start;
-  }
-  .brand {
-    display: none;
   }
   .workspace,
   .is-collapsed .workspace {

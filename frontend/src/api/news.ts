@@ -4,11 +4,13 @@ export type NewsOut = components["schemas"]["NewsOut"]
 export type NewsListParams = NonNullable<operations["list_news__get"]["parameters"]["query"]>
 export type NewsVisibility = components["schemas"]["NewsVisibility"]
 
-// The feed's two periods, as the filter offers them. The server takes an absolute `since`.
+// The feed's periods, as the filter offers them. The server takes an absolute `since`.
 export const PERIODS = [
   { hours: 24, label: "За 24 часа" },
+  { hours: 48, label: "За 2 дня" },
   { hours: 72, label: "За 3 дня" },
 ] as const
+export const DEFAULT_PERIOD_HOURS = 72
 
 const HOUR_MS = 60 * 60 * 1000
 const MINUTE_MS = 60 * 1000
