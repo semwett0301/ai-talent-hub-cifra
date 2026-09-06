@@ -4,7 +4,8 @@ DTOs for the `News` resource — one class per module, re-exported from `__init_
 (import as `from news_service.application.dto.news import NewsOut`).
 
 - `out.py` — `NewsOut`: the response shape (`from_attributes=True`, built from ORM) —
-  the `NewsDTO` fields plus `id`, `is_alert`, `created_at`.
+  the `NewsDTO` fields plus `id`, persisted `summary`, `event_cluster_id`, `is_alert`,
+  and `created_at`.
 
 No input DTOs: news is written only by the bus consumer (`NewsDTO` from `common`),
 dismiss takes just the id from the path, and escalation's body is the shared

@@ -5,16 +5,14 @@ infrastructure implements); depends on the shared `common` package (schemas +
 entities), never on concrete infra. Collaborators are injected by the composition
 root (`deps.py`).
 
-- `ports/` — the interfaces (Protocols): `NewsRepository` (data access) with its
-  `NewsTransaction` (a held-open unit of work), `NewsBatchHandler` (the shared
-  `common.core.rabbit.BatchHandler` narrowed to `NewsDTO` — what the bus consumer hands
-  a batch to), and `NpaGateway` (the outbound call to `npa_service`).
+- `ports/` — repository, event-model, embedding, batch-handler, transaction, and NPA
+  gateway protocols.
 - `dto/` — the response DTO (Pydantic) for the read API.
-- `services/` — `NewsFeed` (list / dismiss), `NewsIngestor` (batch ingest, implements
-  `NewsBatchHandler`), and `NpaEscalation` (dismiss + register an act, atomically), one
-  class per module.
-- `errors.py` — `NewsStoreError` (subclasses `BatchStoreError`: a batch write failed;
-  the shared consumer nacks it — requeue by default, `NEWS_REQUEUE_ON_STORE_ERROR`);
+- `services/` — `NewsFeed` (list / dismiss), `NewsIngestor` (staged batch ingest),
+  `NewsDeduplicator` (same-event clustering), and `NpaEscalation` (dismiss + register an
+  act, atomically), one class per module.
+- `errors/` — persistence/model/embedding errors mapped to `BatchStoreError` so the
+  shared consumer nacks and retries the batch;
   `NpaGatewayError` / `NpaConflictError` (npa_service did not confirm the act / already
   has that `url`) — the API maps them to 502 / 409.
 

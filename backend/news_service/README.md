@@ -1,6 +1,7 @@
 # news_service
 
-Consumer service: **RabbitMQ `news` exchange → batch → `news` table**, plus a read API:
+Consumer service: **RabbitMQ `news` exchange → summarized batch → event dedup → `news` table**,
+plus a read API:
 list what's stored, dismiss an item (`is_alert = true`), or **escalate** it into a
 legislative act — dismiss + a synchronous create in `npa_service`, committed only when
 that service confirmed. Every `NewsDTO` published by `source_service` is stored as-is,
@@ -11,30 +12,33 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
 
 - `Dockerfile` — image (FastAPI + Uvicorn). Multi-stage: uv builds a self-contained
   `.venv`, copied onto a clean `python:3.12-slim`. Migrations live in `migrator`.
-- `pyproject.toml` — deps on `common` + fastapi, uvicorn, aio-pika, httpx (the call
-  to `npa_service`). Ships a uniquely named top-level package `news_service`.
+- `pyproject.toml` — deps on `common`, API/bus libraries, LangChain/OpenRouter,
+  sentence-transformers, and pgvector through `common`.
 - `news_service/`
   - `main.py` — FastAPI app + lifespan; starts/stops the consumer built by `deps`.
     Routers own paths from the root; nginx maps `/api/news/*` onto them
     (`root_path = settings.news_api_prefix`, so `/api/news/docs` works behind nginx).
-  - `deps.py` — **composition root**: builds `NewsRepo`, `NewsIngestor`, and the
-    shared `common.core.rabbit.RabbitBatchConsumer[NewsDTO]` (bound with
+  - `deps.py` — **composition root**: builds the read and dedup repositories, event
+    models, embedder, use cases, and the shared `RabbitBatchConsumer[NewsDTO]` (bound with
     `NEWS_BINDING_KEY` = `news.raw.#`); provides `get_news_feed` and
     `get_npa_escalation` (with `HttpNpaGateway` on `settings.npa.npa_service_url`) for the routes.
-  - `application/` — `ports/` (`NewsRepository`, `NewsTransaction`, `NewsBatchHandler`,
-    `NpaGateway`) + `dto/news/` + `services/` (`NewsFeed` list/dismiss, `NewsIngestor`
-    batch store, `NpaEscalation` dismiss + register act) + `errors.py`.
-  - `infrastructure/` — port implementations: `repositories/` (`NewsRepo`, a session
-    per call, one-statement batch insert; `SqlNewsTransaction` for the held-open unit
-    of work) and `gateways/` (`HttpNpaGateway` → `npa_service`). No rabbit code here —
-    the batching consumer is the shared one in `common/core/rabbit/`.
+  - `application/` — ports, response DTOs, staged ingestion/dedup services, feed, and
+    NPA escalation.
+  - `domain/dedup/` — event summaries, candidates, decisions, and policy.
+  - `infrastructure/` — read/dedup repositories, OpenRouter models, local embeddings,
+    and the NPA HTTP gateway. The batching consumer stays in `common/core/rabbit/`.
   - `api/routes/` — FastAPI routers only: `news.py` (`GET /`, `POST /{id}/dismiss`,
     `POST /{id}/npa`), `health.py`.
+
+Each unseen URL passes through batched primary-event extraction and a persisted per-news
+summary. The summary checkpoint is committed before local embedding; the whole prepared batch
+is then retrieved against the HNSW cosine index and conservatively aligned to candidate event
+clusters. A retry resumes the first incomplete stage without repeating summarization.
 
 Notes: batching (in `common.core.rabbit`) = `prefetch_count == NEWS_BATCH_SIZE` (100)
 + a flush every `NEWS_BATCH_INTERVAL_SECONDS` (60) **or** when the buffer is full,
 whichever first — one transaction per batch, acks only after commit, nack on
-`NewsStoreError` (a `BatchStoreError`) — requeued while `NEWS_REQUEUE_ON_STORE_ERROR`
+`BatchStoreError` — requeued while `NEWS_REQUEUE_ON_STORE_ERROR`
 is `true` (default), dropped otherwise.
 Escalation (`POST /{id}/npa`, body = `common.entities.npa.NpaDTO`) runs inside one DB
 transaction: stage `is_alert = true` → POST the act to `npa_service` → commit; if the

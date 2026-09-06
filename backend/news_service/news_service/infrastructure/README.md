@@ -4,9 +4,9 @@ Implementations of the application ports plus adapters to the outside world (DB,
 message bus). Depends on `application` (the ports) and `common`; nothing depends
 inward on it except the composition root (`deps.py`).
 
-- `repositories/` — `NewsRepo` over the ORM, a session per call (the `News` table
-  itself lives in `common/schemas/`); `add_many` is the one-statement batch insert;
-  `SqlNewsTransaction` is the held-open unit of work `begin()` returns.
+- `repositories/` — `NewsRepo` for the read side, `SqlDedupRepository` for summarized
+  ingestion/pgvector clustering, and `SqlNewsTransaction` for held-open API mutations.
+- `dedup/` — OpenRouter structured model stages, local CPU embeddings, and prompts.
 - `gateways/` — `HttpNpaGateway`: the `NpaGateway` port over httpx, POSTing acts to
   `npa_service` (`settings.npa.npa_service_url`).
 

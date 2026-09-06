@@ -1,0 +1,190 @@
+import uuid
+from datetime import UTC, datetime
+
+import pytest
+from common.entities.news import NewsDTO, SourceType
+from common.entities.source import SourceReliability
+from news_service.application.errors import NewsProcessingError, SummaryEmbeddingError
+from news_service.application.services.news_ingestor import NewsIngestor
+from news_service.domain.dedup import EventSummary, StoredNewsState
+
+
+def _news(url: str) -> NewsDTO:
+    return NewsDTO(
+        source_link="https://source.test",
+        source_type=SourceType.WEB,
+        source_reliability=SourceReliability.MEDIUM,
+        url=url,
+        text="Acme launched a product.",
+        published_at=datetime(2026, 9, 5, tzinfo=UTC),
+    )
+
+
+class _Repository:
+    def __init__(self, events: list[str], states=None) -> None:
+        self.events = events
+        self.states = states or {}
+        self.saved = []
+        self.pending = []
+        self.unembedded = []
+
+    async def list_states(self, urls):
+        self.events.append("states")
+        return self.states
+
+    async def save_summaries(self, items):
+        self.events.append("save")
+        self.saved = items
+        self.unembedded = [prepared.summary for prepared in items]
+
+    async def list_unembedded(self, urls):
+        self.events.append("unembedded")
+        return self.unembedded
+
+    async def save_embeddings(self, summaries):
+        self.events.append("save_embeddings")
+        self.pending = summaries
+
+    async def list_pending(self, urls):
+        self.events.append("pending")
+        return self.pending
+
+
+class _Models:
+    def __init__(self, events: list[str]) -> None:
+        self.events = events
+        self.calls = 0
+
+    async def summarize(self, targets):
+        self.events.append("summarize")
+        self.calls += 1
+        return [
+            EventSummary(
+                target.news_id,
+                target.news.url,
+                "Acme launched a product",
+                {"primary_event_found": True},
+                target.news.published_at,
+            )
+            for target in targets
+        ]
+
+
+class _Embedder:
+    def __init__(self, events: list[str]) -> None:
+        self.events = events
+        self.calls = 0
+
+    def embed(self, summaries):
+        self.events.append("embed")
+        self.calls += 1
+        return [[1.0] for _ in summaries]
+
+
+class _FailingEmbedder(_Embedder):
+    def embed(self, summaries):
+        self.events.append("embed")
+        raise SummaryEmbeddingError("failed")
+
+
+class _Deduplicator:
+    def __init__(self, events: list[str]) -> None:
+        self.events = events
+        self.processed = []
+
+    async def process(self, summaries):
+        self.events.append("dedup")
+        self.processed = summaries
+
+
+@pytest.mark.asyncio
+async def test_batch_is_fully_summarized_and_saved_before_deduplication():
+    events: list[str] = []
+    repository = _Repository(events)
+    models = _Models(events)
+    embedder = _Embedder(events)
+    deduplicator = _Deduplicator(events)
+    ingestor = NewsIngestor(repository, models, embedder, deduplicator)  # type: ignore[arg-type]
+
+    inserted = await ingestor.handle_batch([_news("https://news.test/1")])
+
+    assert inserted == 1
+    assert events == [
+        "states",
+        "summarize",
+        "save",
+        "unembedded",
+        "embed",
+        "save_embeddings",
+        "pending",
+        "dedup",
+    ]
+    assert repository.pending[0].embedding == (1.0,)
+
+
+@pytest.mark.asyncio
+async def test_retry_reuses_saved_summary_and_only_resumes_deduplication():
+    events: list[str] = []
+    news_id = uuid.uuid4()
+    states = {"https://news.test/1": StoredNewsState(news_id, has_summary=True)}
+    repository = _Repository(events, states)
+    repository.pending = [
+        EventSummary(
+            news_id,
+            "https://news.test/1",
+            "saved summary",
+            {"primary_event_found": True},
+            datetime(2026, 9, 5, tzinfo=UTC),
+            (1.0,),
+        )
+    ]
+    repository.unembedded = []
+    models = _Models(events)
+    embedder = _Embedder(events)
+    deduplicator = _Deduplicator(events)
+    ingestor = NewsIngestor(repository, models, embedder, deduplicator)  # type: ignore[arg-type]
+
+    inserted = await ingestor.handle_batch([_news("https://news.test/1")])
+
+    assert inserted == 0
+    assert events == ["states", "unembedded", "pending", "dedup"]
+    assert models.calls == 0
+    assert embedder.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_embedding_failure_happens_after_summary_is_persisted():
+    events: list[str] = []
+    repository = _Repository(events)
+    ingestor = NewsIngestor(
+        repository,
+        _Models(events),
+        _FailingEmbedder(events),
+        _Deduplicator(events),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(NewsProcessingError):
+        await ingestor.handle_batch([_news("https://news.test/1")])
+
+    assert events == ["states", "summarize", "save", "unembedded", "embed"]
+    assert repository.saved[0].summary.text == "Acme launched a product"
+
+
+@pytest.mark.asyncio
+async def test_repeated_url_inside_batch_is_summarized_once():
+    events: list[str] = []
+    repository = _Repository(events)
+    models = _Models(events)
+    ingestor = NewsIngestor(
+        repository,
+        models,
+        _Embedder(events),
+        _Deduplicator(events),  # type: ignore[arg-type]
+    )
+
+    inserted = await ingestor.handle_batch(
+        [_news("https://news.test/1"), _news("https://news.test/1")]
+    )
+
+    assert inserted == 1
+    assert len(repository.saved) == 1

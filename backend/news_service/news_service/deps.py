@@ -9,9 +9,18 @@ from common.core.rabbit import BatchConsumerConfig, RabbitBatchConsumer
 from common.core.settings import settings
 from common.entities.news import ROUTING_PREFIX, NewsDTO
 
-from news_service.application.services import NewsFeed, NewsIngestor, NpaEscalation
+from news_service.application.services import (
+    NewsDeduplicator,
+    NewsFeed,
+    NewsIngestor,
+    NpaEscalation,
+)
+from news_service.infrastructure.dedup import (
+    OpenRouterEventModels,
+    SentenceTransformerSummaryEmbedder,
+)
 from news_service.infrastructure.gateways import HttpNpaGateway
-from news_service.infrastructure.repositories import NewsRepo
+from news_service.infrastructure.repositories import NewsRepo, SqlDedupRepository
 
 # Every per-type routing key (`news.raw.telegram`, `news.raw.rss`, …).
 NEWS_BINDING_KEY = f"{ROUTING_PREFIX}.#"
@@ -39,4 +48,16 @@ def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
         batch_interval_seconds=settings.news.batch_interval_seconds,
         requeue_on_store_error=settings.news.requeue_on_store_error,
     )
-    return RabbitBatchConsumer(config, NewsIngestor(NewsRepo()), NewsDTO)
+    dedup_repository = SqlDedupRepository()
+    event_models = OpenRouterEventModels(
+        settings.llm.openrouter_api_key,
+        settings.llm.openrouter_base_url,
+        settings.news_dedup,
+    )
+    embedder = SentenceTransformerSummaryEmbedder(
+        settings.news_dedup.embedding_model,
+        settings.news_dedup.embedding_batch_size,
+    )
+    deduplicator = NewsDeduplicator(dedup_repository, event_models, settings.news_dedup)
+    handler = NewsIngestor(dedup_repository, event_models, embedder, deduplicator)
+    return RabbitBatchConsumer(config, handler, NewsDTO)

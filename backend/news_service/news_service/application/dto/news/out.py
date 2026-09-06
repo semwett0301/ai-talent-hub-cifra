@@ -22,5 +22,7 @@ class NewsOut(BaseModel):
     text: str
     published_at: datetime | None
     raw: dict[str, Any]
+    summary: str | None
+    event_cluster_id: uuid.UUID | None
     is_alert: bool
     created_at: datetime

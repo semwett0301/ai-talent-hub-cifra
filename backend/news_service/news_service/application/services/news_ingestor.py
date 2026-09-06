@@ -1,26 +1,60 @@
-"""Batch ingest use case — stores one batch of consumed news through the repository port.
+"""Batch ingest: summarize every unseen news row, persist it, then deduplicate the batch."""
 
-Implements `NewsBatchHandler`: the shared bus consumer hands over a batch, this writes
-it in one transaction. Duplicates by `url` — repeats inside the batch as much as urls
-already stored — are skipped by the DB (`ON CONFLICT DO NOTHING`), so no dedupe happens
-here. Storage failures propagate as `NewsStoreError` (a `BatchStoreError`) so the
-consumer nacks the batch (requeue or drop, per its config).
-"""
+import uuid
 
 from common.core.logging import get_logger
 from common.entities.news import NewsDTO
 
-from news_service.application.ports import NewsBatchHandler, NewsRepository
+from news_service.application.errors import (
+    EventModelError,
+    NewsProcessingError,
+    SummaryEmbeddingError,
+)
+from news_service.application.ports import (
+    DedupRepository,
+    EventModels,
+    NewsBatchHandler,
+    SummaryEmbedder,
+)
+from news_service.application.services.news_deduplicator import NewsDeduplicator
+from news_service.domain.dedup import NewsTarget, PreparedNews
 
 logger = get_logger(__name__)
 
 
 class NewsIngestor(NewsBatchHandler):
-    def __init__(self, repo: NewsRepository) -> None:
-        self.__repo = repo
+    def __init__(
+        self,
+        repository: DedupRepository,
+        models: EventModels,
+        embedder: SummaryEmbedder,
+        deduplicator: NewsDeduplicator,
+    ) -> None:
+        self.__repository = repository
+        self.__models = models
+        self.__embedder = embedder
+        self.__deduplicator = deduplicator
 
     async def handle_batch(self, items: list[NewsDTO]) -> int:
-        inserted = await self.__repo.add_many(items)
+        unique_items = _unique_by_url(items)
+        states = await self.__repository.list_states([item.url for item in unique_items])
+        targets = [
+            NewsTarget(states[item.url].news_id if item.url in states else uuid.uuid4(), item)
+            for item in unique_items
+            if item.url not in states or not states[item.url].has_summary
+        ]
+        try:
+            await self.__summarize_and_save(targets)
+            urls = [item.url for item in unique_items]
+            await self.__embed_and_save(urls)
+            pending = await self.__repository.list_pending(urls)
+            await self.__deduplicator.process(pending)
+        except (EventModelError, SummaryEmbeddingError) as error:
+            raise NewsProcessingError(
+                f"news batch processing failed: items={len(items)}"
+            ) from error
+
+        inserted = sum(item.url not in states for item in unique_items)
 
         logger.info(
             "news batch stored: received=%d inserted=%d skipped=%d",
@@ -29,3 +63,37 @@ class NewsIngestor(NewsBatchHandler):
             len(items) - inserted,
         )
         return inserted
+
+    async def __summarize_and_save(self, targets: list[NewsTarget]) -> None:
+        if not targets:
+            return
+
+        summaries = await self.__models.summarize(targets)
+        items_by_id = {target.news_id: target.news for target in targets}
+        prepared = [PreparedNews(items_by_id[summary.news_id], summary) for summary in summaries]
+        await self.__repository.save_summaries(prepared)
+        logger.info("news summaries stored: items=%d", len(prepared))
+
+    async def __embed_and_save(self, urls: list[str]) -> None:
+        summaries = await self.__repository.list_unembedded(urls)
+        if not summaries:
+            return
+        vectors = self.__embedder.embed([summary.text for summary in summaries])
+        if len(vectors) != len(summaries):
+            raise SummaryEmbeddingError("embedding count does not match summary count")
+        embedded = [
+            summary.with_embedding(vector)
+            for summary, vector in zip(summaries, vectors, strict=True)
+        ]
+        await self.__repository.save_embeddings(embedded)
+
+
+def _unique_by_url(items: list[NewsDTO]) -> list[NewsDTO]:
+    urls: set[str] = set()
+    unique: list[NewsDTO] = []
+    for item in items:
+        if item.url in urls:
+            continue
+        urls.add(item.url)
+        unique.append(item)
+    return unique

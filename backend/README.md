@@ -11,7 +11,8 @@ directories (no `services/` wrapper).
 - `source_service/` — ingestion service: CRUD sources, collect news (Telegram push
   + RSS pull implemented, Web crawl a stub), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
 - `news_service/` — consumer service: reads the `news` exchange in batches (prefetch +
-  deferred ack), stores each `NewsDTO` once per `url` in the `news` table, serves
+  deferred ack), stores each `NewsDTO` once per `url`, persists a per-news event summary
+  and pgvector embedding, then assigns a precision-first event cluster; serves
   list + dismiss on `/api/news`; `POST /{id}/npa` escalates an alert into a
   legislative act (dismiss + synchronous create in `npa_service`, atomically).
   See `../plans/news-service.md`.

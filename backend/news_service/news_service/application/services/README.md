@@ -6,11 +6,12 @@ Application services — use cases, one public class per module (re-exported fro
 - `news_feed.py` — `NewsFeed`: the read side over `NewsRepository` — `list` (paged,
   newest first) and `dismiss` (flips `is_alert` to true; returns None for an unknown
   id, which the API maps to 404).
-- `news_ingestor.py` — `NewsIngestor`: the `NewsBatchHandler` implementation the bus
-  consumer calls. Writes the batch through `add_many` (one transaction; the DB skips
-  duplicate urls, including repeats inside the batch — no dedupe in code), logs one
-  `news batch stored` line per batch. Lets `NewsStoreError` propagate so the consumer
-  nacks instead of acknowledging (requeue by default, see `NEWS_REQUEUE_ON_STORE_ERROR`).
+- `news_ingestor.py` — `NewsIngestor`: checkpoints every per-news summary first, embeds
+  summaries still missing vectors, then passes all pending rows into event deduplication.
+  Retries reuse stored summaries instead of calling the LLM again.
+- `news_deduplicator.py` — `NewsDeduplicator`: plans pgvector candidates only after the
+  full batch is summarized, applies the temporal gate, aligns preclusters in one batched
+  LLM stage, and persists fail-closed cluster assignments.
 - `npa_escalation.py` — `NpaEscalation`: `escalate(news_id, NpaDTO)` — inside one
   `NewsRepository.begin()` transaction: stage `is_alert = true`, `NpaGateway.create`
   the act, commit. None (nothing sent) for an unknown id; a `NpaGatewayError` from the
