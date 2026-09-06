@@ -24,6 +24,8 @@ Alembic — the **shared** schema history for all services on the one database
   (FK `ON DELETE CASCADE`, `(source_id, url)` UNIQUE), carrying existing values over, and
   replaces the CHECK with the `rss_link_requires_rss_source` trigger — an `rss_link` row
   is refused unless its source is `type = 'rss'`.
+  `0013_npa_tracking_versions` adds current tracking state and immutable text/version
+  history with overall and per-article summaries.
 
 Notes: run from `../` (the migrator dir) — `uv run alembic -c alembic.ini upgrade head`.
 Autogenerate: `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`. Models

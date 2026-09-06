@@ -3,7 +3,10 @@
 import uuid
 from datetime import datetime
 
+from common.entities.npa import NpaTrackingStatus
 from pydantic import BaseModel, ConfigDict
+
+from npa_service.application.dto.npa.article_change_out import ArticleChangeOut
 
 
 class NpaOut(BaseModel):
@@ -11,7 +14,18 @@ class NpaOut(BaseModel):
 
     id: uuid.UUID
     url: str
+    bill_number: str | None
     title: str
-    text: str
+    stage: str | None
+    stage_code: str | None
+    document_url: str | None
+    source_updated_at: datetime | None
+    last_checked_at: datetime | None
+    tracking_status: NpaTrackingStatus
+    summary: str | None
+    summary_kind: str | None
+    initial_summary_status: str | None
+    article_changes: list[ArticleChangeOut]
     published_at: datetime | None
     created_at: datetime
+    updated_at: datetime

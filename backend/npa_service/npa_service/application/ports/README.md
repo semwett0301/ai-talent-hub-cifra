@@ -3,9 +3,10 @@
 The interfaces application depends on and infrastructure implements (`Protocol`).
 Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py`.
 
-- `repositories.py` — `NpaRepository`: `list_all(limit, offset)` (newest first),
-  `get(id)` (None when unknown), `add(NpaDTO)` (inserts and returns the row; raises
-  `NpaAlreadyExistsError` when the `url` is already stored).
+- `repositories.py` — current/tracked reads, immutable versions, registration, atomic
+  transitions, and unchanged-check metadata.
+- `npa_source.py` — authoritative State Duma snapshot input.
+- `change_summarizer.py` — plain-language comparison of two texts.
 
-Notes: ports reference `common.schemas.Npa` and the shared `common.entities.npa.NpaDTO`
-contract directly.
+Notes: port implementations are injected in `deps.py`; application services never import
+HTTP, DOCX, OpenRouter, APScheduler, or SQLAlchemy session mechanics.
