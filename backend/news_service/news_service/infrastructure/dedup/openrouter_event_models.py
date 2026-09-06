@@ -4,7 +4,7 @@ import json
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from common.core.logging import get_logger
@@ -181,9 +181,8 @@ class OpenRouterEventModels(EventModels):
             )
             chain = prompt | spec.model.with_structured_output(spec.schema)
             for batch in _chunks(inputs, self.__batch_size):
-                responses.extend(
-                    await chain.abatch(batch, config={"max_concurrency": self.__batch_size})
-                )
+                generated = await chain.abatch(batch, config={"max_concurrency": self.__batch_size})
+                responses.extend(cast(list[T | None], generated))
         except MODEL_ERRORS as error:
             raise EventModelError(f"event model batch failed: items={len(inputs)}") from error
         return responses
@@ -191,7 +190,7 @@ class OpenRouterEventModels(EventModels):
     def __make_model(self, model: str) -> ChatOpenRouter:
         try:
             return ChatOpenRouter(
-                model=model,
+                model_name=model,
                 api_key=self.__api_key,
                 base_url=self.__base_url,
                 temperature=0.0,

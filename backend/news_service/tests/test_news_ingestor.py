@@ -6,7 +6,7 @@ from common.entities.news import NewsDTO, SourceType
 from common.entities.source import SourceReliability
 from news_service.application.errors import NewsProcessingError, SummaryEmbeddingError
 from news_service.application.services.news_ingestor import NewsIngestor
-from news_service.domain.dedup import EventSummary, StoredNewsState
+from news_service.domain.dedup import EventSummary, PreparedNews, StoredNewsState
 
 
 def _news(url: str) -> NewsDTO:
@@ -24,9 +24,9 @@ class _Repository:
     def __init__(self, events: list[str], states=None) -> None:
         self.events = events
         self.states = states or {}
-        self.saved = []
-        self.pending = []
-        self.unembedded = []
+        self.saved: list[PreparedNews] = []
+        self.pending: list[EventSummary] = []
+        self.unembedded: list[EventSummary] = []
 
     async def list_states(self, urls):
         self.events.append("states")
@@ -90,7 +90,7 @@ class _FailingEmbedder(_Embedder):
 class _Deduplicator:
     def __init__(self, events: list[str]) -> None:
         self.events = events
-        self.processed = []
+        self.processed: list[EventSummary] = []
 
     async def process(self, summaries):
         self.events.append("dedup")

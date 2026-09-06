@@ -4,7 +4,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from common.core.settings import NewsDedupSettings
 from news_service.application.services.news_deduplicator import NewsDeduplicator
-from news_service.domain.dedup import CandidateCluster, EventSummary, MembershipDecision
+from news_service.domain.dedup import (
+    CandidateCluster,
+    ClusterAssignment,
+    EventSummary,
+    MembershipDecision,
+    Precluster,
+)
 
 
 def _summary(news_id: uuid.UUID, hour: int = 10) -> EventSummary:
@@ -24,7 +30,7 @@ def _summary(news_id: uuid.UUID, hour: int = 10) -> EventSummary:
 class _Repository:
     def __init__(self, first: EventSummary) -> None:
         self.first = first
-        self.assignments = []
+        self.assignments: list[ClusterAssignment] = []
         self.query_count = 0
 
     async def find_candidates(self, query):
@@ -40,7 +46,7 @@ class _Repository:
 class _Models:
     def __init__(self, decision: str) -> None:
         self.decision = decision
-        self.preclusters = []
+        self.preclusters: list[Precluster] = []
 
     async def align(self, preclusters):
         self.preclusters = preclusters
