@@ -1,10 +1,12 @@
 """Offline tests for strict URLs, Duma HTML, and Word extraction."""
 
+import subprocess
 from io import BytesIO
 
 import pytest
 from docx import Document
 from npa_service.application.errors import InvalidNpaUrlError
+from npa_service.infrastructure.duma.doc_parser import DocParser
 from npa_service.infrastructure.duma.docx_parser import DocxParser
 from npa_service.infrastructure.duma.page_parser import DumaPageParser
 from npa_service.infrastructure.duma.url import normalize_duma_bill_url
@@ -56,6 +58,18 @@ def test_extracts_paragraphs_and_tables_from_docx() -> None:
 
     assert "Статья 1. Новое правило" in text
     assert "Было | Стало" in text
+
+
+def test_extracts_text_from_legacy_doc_with_antiword(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(*args, **kwargs) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(args, 0, "Статья 1. Текст законопроекта", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        DocParser().parse(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1legacy")
+        == "Статья 1. Текст законопроекта"
+    )
 
 
 def _bill_html() -> str:

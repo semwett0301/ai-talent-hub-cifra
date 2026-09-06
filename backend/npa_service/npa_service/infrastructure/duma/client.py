@@ -6,6 +6,7 @@ from common.core.logging import get_logger
 from npa_service.application.errors import InvalidNpaPageError, NpaSourceUnavailableError
 from npa_service.application.ports import NpaSource
 from npa_service.domain import BillSnapshot
+from npa_service.infrastructure.duma.doc_parser import DocParser
 from npa_service.infrastructure.duma.docx_parser import DocxParser
 from npa_service.infrastructure.duma.page_parser import DumaPageParser
 from npa_service.infrastructure.duma.pdf_parser import PdfParser
@@ -15,6 +16,7 @@ from npa_service.infrastructure.duma.url import (
 )
 
 logger = get_logger(__name__)
+LEGACY_DOC_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
 
 async def _read_limited(response: httpx.Response, max_bytes: int) -> bytes:
@@ -50,6 +52,7 @@ class DumaClient(NpaSource):
         )
         self.__max_document_bytes = max_document_bytes
         self.__page_parser = DumaPageParser()
+        self.__doc_parser = DocParser()
         self.__docx_parser = DocxParser()
         self.__pdf_parser = PdfParser()
 
@@ -86,8 +89,8 @@ class DumaClient(NpaSource):
             raise NpaSourceUnavailableError(f"State Duma fetch failed: url={url}") from error
 
     def __parse_document(self, content: bytes) -> str:
-        return (
-            self.__pdf_parser.parse(content)
-            if content.startswith(b"%PDF")
-            else self.__docx_parser.parse(content)
-        )
+        if content.startswith(b"%PDF"):
+            return self.__pdf_parser.parse(content)
+        if content.startswith(LEGACY_DOC_MAGIC):
+            return self.__doc_parser.parse(content)
+        return self.__docx_parser.parse(content)
