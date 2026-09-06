@@ -9,8 +9,8 @@ root (`deps.py`).
   gateway protocols.
 - `dto/` — the response DTO (Pydantic) for the read API.
 - `services/` — `NewsFeed` (list / dismiss), `NewsIngestor` (staged batch ingest),
-  `NewsDeduplicator` (same-event clustering), and `NpaEscalation` (dismiss + register an
-  act, atomically), one class per module.
+  `NewsDeduplicator` (same-event clustering), `NewsRanker` (one result per cluster), and
+  `NpaEscalation` (dismiss + register an act atomically), one class per module.
 - `errors/` — persistence/model/embedding errors mapped to `BatchStoreError` so the
   shared consumer nacks and retries the batch;
   `NpaGatewayError` / `NpaConflictError` (npa_service did not confirm the act / already

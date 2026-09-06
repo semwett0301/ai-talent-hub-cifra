@@ -129,11 +129,16 @@ How each consumer picks it up:
 | `NEWS_DEDUP_CANDIDATE_WINDOW_DAYS` / `NEWS_DEDUP_TOP_K_CANDIDATES` / `NEWS_DEDUP_MIN_RETRIEVAL_SCORE` | pgvector candidate window, limit, and minimum cosine similarity. | `5` / `6` / `0.16` | no |
 | `NEWS_DEDUP_HARD_TIME_TOLERANCE_DAYS` | Explicit event-time gap that blocks a merge before the verifier. | `1` | no |
 | `NEWS_DEDUP_REJECT_IF_ANY_UNCERTAIN_CANDIDATE` | Refuse auto-merge when any competing candidate stays uncertain. | `true` | no |
+| `NEWS_RANKING_IMPACT_MODEL` / `NEWS_RANKING_RERANKER_MODEL` | OpenRouter models for cluster impact/urgency assessment and semantic reranking. | `deepseek/deepseek-v4-flash-0731` / `voyageai/rerank-2.5-lite` | no |
+| `NEWS_RANKING_LLM_BATCH_SIZE` / `NEWS_RANKING_RERANKER_BATCH_SIZE` | Maximum items per impact-model and reranker batch. | `70` / `70` | no |
+| `NEWS_RANKING_RERANKER_TIMEOUT_SECONDS` / `NEWS_RANKING_MAX_CLUSTER_CHARS` | Reranker timeout and maximum cluster-document length. | `60` / `12000` | no |
 
 `news_service` requires `OPENROUTER_API_KEY`. Each unseen URL is extracted and summarized;
 summary/extraction are committed first, vectors are filled in the next checkpoint, and only
 then does pgvector retrieval plus LLM alignment assign `event_cluster_id`. A retry resumes the
-first incomplete checkpoint without paying for summarization again.
+first incomplete checkpoint without paying for summarization again. Every affected cluster is
+then evaluated once against the packaged GS Labs profile; one explainable result is upserted into
+`news_cluster_ranking` even when the cluster contains multiple news rows.
 
 ### news_service → npa_service
 

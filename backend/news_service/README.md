@@ -1,6 +1,6 @@
 # news_service
 
-Consumer service: **RabbitMQ `news` exchange → summarized batch → event dedup → `news` table**,
+Consumer service: **RabbitMQ → summary checkpoint → event dedup → cluster ranking → DB**,
 plus a read API:
 list what's stored, dismiss an item (`is_alert = true`), or **escalate** it into a
 legislative act — dismiss + a synchronous create in `npa_service`, committed only when
@@ -18,22 +18,23 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
   - `main.py` — FastAPI app + lifespan; starts/stops the consumer built by `deps`.
     Routers own paths from the root; nginx maps `/api/news/*` onto them
     (`root_path = settings.news_api_prefix`, so `/api/news/docs` works behind nginx).
-  - `deps.py` — **composition root**: builds the read and dedup repositories, event
-    models, embedder, use cases, and the shared `RabbitBatchConsumer[NewsDTO]` (bound with
+  - `deps.py` — **composition root**: builds the read, dedup, and ranking repositories,
+    model adapters, embedder, use cases, and the shared `RabbitBatchConsumer[NewsDTO]` (bound with
     `NEWS_BINDING_KEY` = `news.raw.#`); provides `get_news_feed` and
     `get_npa_escalation` (with `HttpNpaGateway` on `settings.npa.npa_service_url`) for the routes.
-  - `application/` — ports, response DTOs, staged ingestion/dedup services, feed, and
-    NPA escalation.
-  - `domain/dedup/` — event summaries, candidates, decisions, and policy.
-  - `infrastructure/` — read/dedup repositories, OpenRouter models, local embeddings,
-    and the NPA HTTP gateway. The batching consumer stays in `common/core/rabbit/`.
+  - `application/` — ports, response DTOs, staged ingestion/dedup/ranking services,
+    feed, and NPA escalation.
+  - `domain/` — pure dedup and cluster-ranking entities/rules.
+  - `infrastructure/` — repositories, OpenRouter models, the packaged GS Labs profile,
+    local embeddings, and the NPA HTTP gateway.
   - `api/routes/` — FastAPI routers only: `news.py` (`GET /`, `POST /{id}/dismiss`,
     `POST /{id}/npa`), `health.py`.
 
 Each unseen URL passes through batched primary-event extraction and a persisted per-news
 summary. The summary checkpoint is committed before local embedding; the whole prepared batch
 is then retrieved against the HNSW cosine index and conservatively aligned to candidate event
-clusters. A retry resumes the first incomplete stage without repeating summarization.
+clusters. Each affected cluster is ranked as one object and upserted once into
+`news_cluster_ranking`. A retry resumes without repeating completed summary or dedup checkpoints.
 
 Notes: batching (in `common.core.rabbit`) = `prefetch_count == NEWS_BATCH_SIZE` (100)
 + a flush every `NEWS_BATCH_INTERVAL_SECONDS` (60) **or** when the buffer is full,

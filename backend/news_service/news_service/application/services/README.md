@@ -7,11 +7,13 @@ Application services — use cases, one public class per module (re-exported fro
   newest first) and `dismiss` (flips `is_alert` to true; returns None for an unknown
   id, which the API maps to 404).
 - `news_ingestor.py` — `NewsIngestor`: checkpoints every per-news summary first, embeds
-  summaries still missing vectors, then passes all pending rows into event deduplication.
-  Retries reuse stored summaries instead of calling the LLM again.
+  missing vectors, then runs the injected dedup and ranking stages in order. Retries reuse
+  stored summaries instead of calling the LLM again.
 - `news_deduplicator.py` — `NewsDeduplicator`: plans pgvector candidates only after the
   full batch is summarized, applies the temporal gate, aligns preclusters in one batched
   LLM stage, and persists fail-closed cluster assignments.
+- `news_ranker.py` — `NewsRanker`: loads each affected cluster once, assesses impact and
+  urgency, combines dense/BM25/reranker context, and persists one explainable result per cluster.
 - `npa_escalation.py` — `NpaEscalation`: `escalate(news_id, NpaDTO)` — inside one
   `NewsRepository.begin()` transaction: stage `is_alert = true`, `NpaGateway.create`
   the act, commit. None (nothing sent) for an unknown id; a `NpaGatewayError` from the

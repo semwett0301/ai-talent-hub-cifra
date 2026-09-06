@@ -87,14 +87,15 @@ class _FailingEmbedder(_Embedder):
         raise SummaryEmbeddingError("failed")
 
 
-class _Deduplicator:
-    def __init__(self, events: list[str]) -> None:
+class _Stage:
+    def __init__(self, events: list[str], name: str) -> None:
         self.events = events
-        self.processed: list[EventSummary] = []
+        self.name = name
+        self.processed: list[str] = []
 
-    async def process(self, summaries):
-        self.events.append("dedup")
-        self.processed = summaries
+    async def process(self, urls):
+        self.events.append(self.name)
+        self.processed = urls
 
 
 @pytest.mark.asyncio
@@ -103,8 +104,14 @@ async def test_batch_is_fully_summarized_and_saved_before_deduplication():
     repository = _Repository(events)
     models = _Models(events)
     embedder = _Embedder(events)
-    deduplicator = _Deduplicator(events)
-    ingestor = NewsIngestor(repository, models, embedder, deduplicator)  # type: ignore[arg-type]
+    deduplicator = _Stage(events, "dedup")
+    ranker = _Stage(events, "ranking")
+    ingestor = NewsIngestor(
+        repository,
+        models,
+        embedder,
+        (deduplicator, ranker),  # type: ignore[arg-type]
+    )
 
     inserted = await ingestor.handle_batch([_news("https://news.test/1")])
 
@@ -116,8 +123,8 @@ async def test_batch_is_fully_summarized_and_saved_before_deduplication():
         "unembedded",
         "embed",
         "save_embeddings",
-        "pending",
         "dedup",
+        "ranking",
     ]
     assert repository.pending[0].embedding == (1.0,)
 
@@ -141,13 +148,19 @@ async def test_retry_reuses_saved_summary_and_only_resumes_deduplication():
     repository.unembedded = []
     models = _Models(events)
     embedder = _Embedder(events)
-    deduplicator = _Deduplicator(events)
-    ingestor = NewsIngestor(repository, models, embedder, deduplicator)  # type: ignore[arg-type]
+    deduplicator = _Stage(events, "dedup")
+    ranker = _Stage(events, "ranking")
+    ingestor = NewsIngestor(
+        repository,
+        models,
+        embedder,
+        (deduplicator, ranker),  # type: ignore[arg-type]
+    )
 
     inserted = await ingestor.handle_batch([_news("https://news.test/1")])
 
     assert inserted == 0
-    assert events == ["states", "unembedded", "pending", "dedup"]
+    assert events == ["states", "unembedded", "dedup", "ranking"]
     assert models.calls == 0
     assert embedder.calls == 0
 
@@ -160,7 +173,7 @@ async def test_embedding_failure_happens_after_summary_is_persisted():
         repository,
         _Models(events),
         _FailingEmbedder(events),
-        _Deduplicator(events),  # type: ignore[arg-type]
+        (_Stage(events, "dedup"), _Stage(events, "ranking")),  # type: ignore[arg-type]
     )
 
     with pytest.raises(NewsProcessingError):
@@ -179,7 +192,7 @@ async def test_repeated_url_inside_batch_is_summarized_once():
         repository,
         models,
         _Embedder(events),
-        _Deduplicator(events),  # type: ignore[arg-type]
+        (_Stage(events, "dedup"), _Stage(events, "ranking")),  # type: ignore[arg-type]
     )
 
     inserted = await ingestor.handle_batch(

@@ -19,6 +19,9 @@ class per module (re-exported from `__init__.py`).
   `summary_embedding`, and `event_cluster_id` persist the staged dedup pipeline;
   `summary_embedding` has an HNSW cosine index. `raw` is JSONB and `is_alert`
   (default false) is the flag the dismiss endpoint sets.
+- `news_cluster_ranking.py` — one explainable relevance result per deduplicated
+  `event_cluster_id`; reranking an affected cluster updates this row rather than
+  duplicating the score on every member news item.
 - `npa.py` — `Npa`: ORM model for the `npa` table (legislative acts), written by
   `npa_service`. `common.entities.npa.NpaDTO` fields plus `id`/`created_at`; `url` is
   `UNIQUE` (one row per act).

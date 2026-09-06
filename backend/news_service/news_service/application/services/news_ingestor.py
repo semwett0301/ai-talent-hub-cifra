@@ -1,4 +1,4 @@
-"""Batch ingest: summarize every unseen news row, persist it, then deduplicate the batch."""
+"""Batch ingest: checkpoint summaries, then run ordered post-summary stages."""
 
 import uuid
 
@@ -8,15 +8,16 @@ from common.entities.news import NewsDTO
 from news_service.application.errors import (
     EventModelError,
     NewsProcessingError,
+    RankingModelError,
     SummaryEmbeddingError,
 )
 from news_service.application.ports import (
     DedupRepository,
     EventModels,
     NewsBatchHandler,
+    NewsPipelineStage,
     SummaryEmbedder,
 )
-from news_service.application.services.news_deduplicator import NewsDeduplicator
 from news_service.domain.dedup import NewsTarget, PreparedNews
 
 logger = get_logger(__name__)
@@ -28,12 +29,12 @@ class NewsIngestor(NewsBatchHandler):
         repository: DedupRepository,
         models: EventModels,
         embedder: SummaryEmbedder,
-        deduplicator: NewsDeduplicator,
+        stages: tuple[NewsPipelineStage, ...],
     ) -> None:
         self.__repository = repository
         self.__models = models
         self.__embedder = embedder
-        self.__deduplicator = deduplicator
+        self.__stages = stages
 
     async def handle_batch(self, items: list[NewsDTO]) -> int:
         unique_items = _unique_by_url(items)
@@ -47,9 +48,9 @@ class NewsIngestor(NewsBatchHandler):
             await self.__summarize_and_save(targets)
             urls = [item.url for item in unique_items]
             await self.__embed_and_save(urls)
-            pending = await self.__repository.list_pending(urls)
-            await self.__deduplicator.process(pending)
-        except (EventModelError, SummaryEmbeddingError) as error:
+            for stage in self.__stages:
+                await stage.process(urls)
+        except (EventModelError, RankingModelError, SummaryEmbeddingError) as error:
             raise NewsProcessingError(
                 f"news batch processing failed: items={len(items)}"
             ) from error

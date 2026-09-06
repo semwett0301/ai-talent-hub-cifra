@@ -5,8 +5,8 @@
 
 - `templates/` — one group per concern, each a `SettingsTemplate` (pydantic-settings)
   that reads its variables flat from the environment / repo-root `.env`:
-  `app`, `postgres`, `rabbit`, `edge`, `sources`, `news`, `news_dedup`, `telegram`,
-  `web_crawl`, `llm`.
+  `app`, `postgres`, `rabbit`, `edge`, `sources`, `news`, `news_dedup`,
+  `news_ranking`, `telegram`, `web_crawl`, `llm`.
   See `templates/README.md`.
 - `settings.py` — `Settings`: the aggregate, one field per group
   (`settings.postgres.async_database_url`, `settings.web_crawl.days`,

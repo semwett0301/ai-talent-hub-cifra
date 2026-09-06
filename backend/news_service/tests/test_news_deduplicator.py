@@ -30,8 +30,12 @@ def _summary(news_id: uuid.UUID, hour: int = 10) -> EventSummary:
 class _Repository:
     def __init__(self, first: EventSummary) -> None:
         self.first = first
+        self.pending: list[EventSummary] = []
         self.assignments: list[ClusterAssignment] = []
         self.query_count = 0
+
+    async def list_pending(self, urls):
+        return self.pending
 
     async def find_candidates(self, query):
         self.query_count += 1
@@ -70,8 +74,9 @@ async def test_proven_same_member_joins_the_earlier_batch_cluster():
         models,
         NewsDedupSettings(),  # type: ignore[arg-type]
     )
+    repository.pending = [second, first]
 
-    await deduplicator.process([second, first])
+    await deduplicator.process([first.url, second.url])
 
     assert [assignment.cluster_id for assignment in repository.assignments] == [
         first.news_id,
@@ -90,8 +95,9 @@ async def test_uncertain_member_gets_an_isolated_cluster():
         _Models("UNCERTAIN"),
         NewsDedupSettings(),  # type: ignore[arg-type]
     )
+    repository.pending = [first, second]
 
-    await deduplicator.process([first, second])
+    await deduplicator.process([first.url, second.url])
 
     assert repository.assignments[1].cluster_id == second.news_id
 
@@ -118,8 +124,9 @@ async def test_explicit_time_conflict_skips_the_llm_and_blocks_merge():
         models,
         NewsDedupSettings(),  # type: ignore[arg-type]
     )
+    repository.pending = [first, second]
 
-    await deduplicator.process([first, second])
+    await deduplicator.process([first.url, second.url])
 
     assert repository.assignments[1].cluster_id == second.news_id
     assert models.preclusters == []

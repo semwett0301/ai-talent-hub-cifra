@@ -13,6 +13,7 @@ from news_service.application.services import (
     NewsDeduplicator,
     NewsFeed,
     NewsIngestor,
+    NewsRanker,
     NpaEscalation,
 )
 from news_service.infrastructure.dedup import (
@@ -20,7 +21,12 @@ from news_service.infrastructure.dedup import (
     SentenceTransformerSummaryEmbedder,
 )
 from news_service.infrastructure.gateways import HttpNpaGateway
-from news_service.infrastructure.repositories import NewsRepo, SqlDedupRepository
+from news_service.infrastructure.ranking import OpenRouterRankingModels, load_company_profile
+from news_service.infrastructure.repositories import (
+    NewsRepo,
+    SqlDedupRepository,
+    SqlRankingRepository,
+)
 
 # Every per-type routing key (`news.raw.telegram`, `news.raw.rss`, …).
 NEWS_BINDING_KEY = f"{ROUTING_PREFIX}.#"
@@ -39,7 +45,19 @@ def get_npa_escalation() -> NpaEscalation:
 def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
     """The bus entry point; owns a `start`/`stop` lifecycle the caller drives around
     serving. Parses deliveries into `NewsDTO` and feeds batches to `NewsIngestor`."""
-    config = BatchConsumerConfig(
+    dedup_repository = SqlDedupRepository()
+    embedder = SentenceTransformerSummaryEmbedder(
+        settings.news_dedup.embedding_model,
+        settings.news_dedup.embedding_batch_size,
+    )
+    event_models = _event_models()
+    stages = _build_pipeline(dedup_repository, event_models, embedder)
+    handler = NewsIngestor(dedup_repository, event_models, embedder, stages)
+    return RabbitBatchConsumer(_consumer_config(), handler, NewsDTO)
+
+
+def _consumer_config() -> BatchConsumerConfig:
+    return BatchConsumerConfig(
         url=settings.rabbit.rabbitmq_url,
         exchange_name=settings.rabbit.news_exchange,
         queue_name=settings.news.queue,
@@ -48,16 +66,31 @@ def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
         batch_interval_seconds=settings.news.batch_interval_seconds,
         requeue_on_store_error=settings.news.requeue_on_store_error,
     )
-    dedup_repository = SqlDedupRepository()
-    event_models = OpenRouterEventModels(
+
+
+def _event_models() -> OpenRouterEventModels:
+    return OpenRouterEventModels(
         settings.llm.openrouter_api_key,
         settings.llm.openrouter_base_url,
         settings.news_dedup,
     )
-    embedder = SentenceTransformerSummaryEmbedder(
-        settings.news_dedup.embedding_model,
-        settings.news_dedup.embedding_batch_size,
-    )
+
+
+def _build_pipeline(
+    dedup_repository: SqlDedupRepository,
+    event_models: OpenRouterEventModels,
+    embedder: SentenceTransformerSummaryEmbedder,
+) -> tuple[NewsDeduplicator, NewsRanker]:
     deduplicator = NewsDeduplicator(dedup_repository, event_models, settings.news_dedup)
-    handler = NewsIngestor(dedup_repository, event_models, embedder, deduplicator)
-    return RabbitBatchConsumer(config, handler, NewsDTO)
+    ranking_models = OpenRouterRankingModels(
+        settings.llm.openrouter_api_key,
+        settings.llm.openrouter_base_url,
+        settings.news_ranking,
+    )
+    ranker = NewsRanker(
+        SqlRankingRepository(),
+        ranking_models,
+        embedder,
+        load_company_profile(),
+    )
+    return deduplicator, ranker

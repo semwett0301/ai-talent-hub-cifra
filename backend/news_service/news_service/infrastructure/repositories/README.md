@@ -10,6 +10,8 @@ over SQLAlchemy.
 - `dedup_repo.py` — `SqlDedupRepository`: checkpoints summaries before embeddings,
   resumes either stage while the cluster is null, retrieves candidates through cosine
   pgvector search, loads the oldest/newest anchors, and writes final assignments.
+- `ranking_repo.py` — `SqlRankingRepository`: loads each affected dedup cluster once
+  using bounded oldest/newest anchors and upserts one cluster-level relevance result.
 - `news_transaction.py` — `SqlNewsTransaction`: implements `NewsTransaction` over one
   `AsyncSession` it owns — `mark_alert` flushes without committing, `commit()` commits,
   `__aexit__` rolls back whatever is still pending (a no-op after a commit) and closes

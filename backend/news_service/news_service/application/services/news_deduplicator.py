@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from common.core.logging import get_logger
 from common.core.settings import NewsDedupSettings
 
-from news_service.application.ports import DedupRepository, EventModels
+from news_service.application.ports import DedupRepository, EventModels, NewsPipelineStage
 from news_service.domain.dedup import (
     CandidateQuery,
     ClusterAssignment,
@@ -42,7 +42,7 @@ class _AlignmentGroup:
     candidates: list[EventSummary] = field(default_factory=list)
 
 
-class NewsDeduplicator:
+class NewsDeduplicator(NewsPipelineStage):
     def __init__(
         self,
         repository: DedupRepository,
@@ -53,7 +53,8 @@ class NewsDeduplicator:
         self.__models = models
         self.__config = config
 
-    async def process(self, summaries: list[EventSummary]) -> None:
+    async def process(self, urls: list[str]) -> None:
+        summaries = await self.__repository.list_pending(urls)
         if not summaries:
             logger.info("news dedup skipped: reason=no_pending_summaries")
             return

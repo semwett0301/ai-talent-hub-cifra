@@ -21,7 +21,8 @@ Alembic — the **shared** schema history for all services on the one database
   `0009_source_is_relevant` adds `is_relevant` (default true) plus a CHECK constraint
   keeping a non-relevant source always disabled too (`is_relevant OR NOT is_enabled`);
   `0010_news_source_id` links news back to sources; `0011_news_event_dedup` enables
-  pgvector and adds the per-news summary, extraction, embedding, cluster id, and indexes.
+  pgvector and adds the per-news summary, extraction, embedding, cluster id, and indexes;
+  `0012_news_cluster_ranking` creates one explainable relevance result per event cluster.
 
 Notes: run from `../` (the migrator dir) — `uv run alembic -c alembic.ini upgrade head`.
 Autogenerate: `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`. Models

@@ -12,7 +12,8 @@ directories (no `services/` wrapper).
   + RSS pull implemented, Web crawl a stub), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
 - `news_service/` — consumer service: reads the `news` exchange in batches (prefetch +
   deferred ack), stores each `NewsDTO` once per `url`, persists a per-news event summary
-  and pgvector embedding, then assigns a precision-first event cluster; serves
+  and pgvector embedding, assigns a precision-first event cluster, then stores one
+  explainable relevance result per affected cluster; serves
   list + dismiss on `/api/news`; `POST /{id}/npa` escalates an alert into a
   legislative act (dismiss + synchronous create in `npa_service`, atomically).
   See `../plans/news-service.md`.
@@ -34,7 +35,7 @@ concrete wiring happens once, at the composition root.
 
 | Layer | Holds | Depends on |
 |-------|-------|-----------|
-| `common` (shared) | ORM **schemas** (`Source`, `News`, `Npa`) + business **entities** (`NewsDTO`, `NpaDTO`) + `core` infra. Shared across all services. | SQLAlchemy / pydantic |
+| `common` (shared) | ORM **schemas** (`Source`, `News`, `NewsClusterRanking`, `Npa`) + business **entities** (`NewsDTO`, `NpaDTO`) + `core` infra. Shared across all services. | SQLAlchemy / pydantic |
 | `domain/` (per service, optional) | The service's own entities and pure rules — `source_service`: `Article`, `Hub`, scoring, URL/date rules. No I/O. | common |
 | `application/` | Use cases / orchestration, the **ports** (interfaces) infra implements, and DTOs. | common, service `domain/` |
 | `infrastructure/` | Implementations of the ports: repositories, RabbitMQ, collectors (feedparser / Playwright / kurigram), external APIs. | application, common |

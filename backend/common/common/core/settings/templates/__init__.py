@@ -6,6 +6,7 @@ from .edge import EdgeSettings
 from .llm import LlmSettings
 from .news import NewsConsumerSettings
 from .news_dedup import NewsDedupSettings
+from .news_ranking import NewsRankingSettings
 from .npa import NpaSettings
 from .postgres import PostgresSettings
 from .rabbit import RabbitSettings
@@ -20,6 +21,7 @@ __all__ = [
     "LlmSettings",
     "NewsConsumerSettings",
     "NewsDedupSettings",
+    "NewsRankingSettings",
     "NpaSettings",
     "PostgresSettings",
     "RabbitSettings",
