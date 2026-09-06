@@ -965,6 +965,17 @@ html {
   background: #3a1f28;
   color: #ff8a93;
 }
+/* The name keeps its place; the crawler's verdict rides beside it as a badge. */
+.source-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* The frequency select sits inside a table cell — keep it from stretching the column. */
+.source-frequency {
+  max-width: 190px;
+}
 .source-actions {
   display: flex;
   gap: 4px;

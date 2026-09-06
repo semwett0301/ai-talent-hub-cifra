@@ -36,7 +36,9 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     `type` from its `link` via `parse/` + the `PageFetcher` port — clients never
     send `type`; an RSS feed's URL is stored in `rss_link`, scraping-only and also
     never client-supplied; `normalized_link` is derived from `link` on every write so the
-    same address can't be added twice) and `SourceRegistry` (the runtime registrar — pull
+    same address can't be added twice; the schedule follows the type — null for Telegram,
+    the configured default for a new pull source — and a changed link clears a stale
+    `is_relevant=false`) and `SourceRegistry` (the runtime registrar — pull
     scheduling + push subscription, kept in sync with CRUD). `errors.py` holds the failures
     callers act on.
   - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a

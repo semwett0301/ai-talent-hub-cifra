@@ -9,8 +9,8 @@ React 19 + Vite + TypeScript SPA, built to static files and served by the `nginx
   service's OpenAPI spec (`npm run api:gen`) and committed; `client.ts` builds the
   `openapi-fetch` client plus `openapi-react-query` hooks; `sourceMutations.ts` wraps the
   queries/mutations so every write invalidates the list in one place; `sources.ts` holds
-  the view vocabulary (type and reliability labels, the nine poll intervals, the
-  realtime/no-schedule labels).
+  the view vocabulary (type and reliability labels, the poll intervals — the first is
+  the one the server assigns a new source — and the realtime label).
 - `src/pages/` — one component per route: `SourcesPage` (live API), `NewsPage` and
   `NpaPage` (still on `src/data/` fixtures).
 - `src/components/sources/` — the Sources screen: row, create/edit dialog, delete dialog.

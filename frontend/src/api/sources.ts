@@ -23,8 +23,10 @@ export function isReliability(value: string): value is SourceReliability {
   return value in RELIABILITY_LABELS
 }
 
-// The nine intervals the UI offers; the DB stores plain seconds, so the list lives here.
+// The intervals the UI offers; the DB stores plain seconds, so the list lives here. The
+// first one is what the server assigns a new pull source (SOURCE_POLL_INTERVAL_SECONDS).
 export const FREQUENCIES = [
+  { seconds: 300, label: "Каждые 5 минут" },
   { seconds: 1800, label: "Каждые 30 мин" },
   { seconds: 3600, label: "Каждый час" },
   { seconds: 10800, label: "Каждые 3 часа" },
@@ -36,20 +38,20 @@ export const FREQUENCIES = [
   { seconds: 7776000, label: "Каждый квартал" },
 ] as const
 
-export const DEFAULT_FREQUENCY = FREQUENCIES[0].seconds
-const REALTIME_LABEL = "В реальном времени"
-const NO_SCHEDULE_LABEL = "—"
+export const REALTIME_LABEL = "В реальном времени"
 
-/** Telegram is a push source — it has no interval to show, it streams. */
+/** Telegram is a push source — it streams, so it has no interval to pick. */
 export function isScheduled(source: Pick<Source, "type">): boolean {
   return source.type !== "telegram"
 }
 
-export function frequencyLabel(source: Source): string {
-  if (!isScheduled(source)) return REALTIME_LABEL
-  if (!source.is_relevant) return NO_SCHEDULE_LABEL
+/** An interval the server chose that the list doesn't offer still needs an option. */
+export function frequencyOptions(seconds: number | null): { value: string; label: string }[] {
+  const known = FREQUENCIES.map(({ seconds: value, label }) => ({
+    value: String(value),
+    label,
+  }))
+  if (seconds === null || FREQUENCIES.some((option) => option.seconds === seconds)) return known
 
-  const match = FREQUENCIES.find((option) => option.seconds === source.poll_interval_seconds)
-
-  return match?.label ?? `Каждые ${source.poll_interval_seconds ?? DEFAULT_FREQUENCY} с`
+  return [{ value: String(seconds), label: `Каждые ${seconds} с` }, ...known]
 }

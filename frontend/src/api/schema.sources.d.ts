@@ -73,8 +73,6 @@ export interface components {
             name: string;
             /** Link */
             link: string;
-            /** Poll Interval Seconds */
-            poll_interval_seconds?: number | null;
             /**
              * Is Enabled
              * @default true

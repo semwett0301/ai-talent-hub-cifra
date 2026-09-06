@@ -1,6 +1,7 @@
 import uuid
 
 import pytest
+from common.core.settings import SourceSchedulerSettings
 from common.entities.news import SourceType
 from common.schemas import Source
 from source_service.application.dto.source import SourceCreate, SourceUpdate
@@ -9,9 +10,13 @@ from source_service.application.ports.source import SourceRepository
 from source_service.application.services.source import SourceService
 
 TELEGRAM_LINK = "https://t.me/example"
+DEFAULT_INTERVAL = 300
+CUSTOM_INTERVAL = 86400
 
 
-def source(*, link: str = "https://example.test", relevant: bool = True) -> Source:
+def source(
+    *, link: str = "https://example.test", relevant: bool = True, interval: int | None = None
+) -> Source:
     return Source(
         id=uuid.uuid4(),
         name="Example",
@@ -20,6 +25,7 @@ def source(*, link: str = "https://example.test", relevant: bool = True) -> Sour
         type=SourceType.WEB,
         is_enabled=False,
         is_relevant=relevant,
+        poll_interval_seconds=interval,
     )
 
 
@@ -69,7 +75,8 @@ class FakeFetcher:
 
 def build():
     repo, fetcher = FakeRepo(), FakeFetcher()
-    return SourceService(repo, FakeRegistry(), fetcher), repo, fetcher
+    settings = SourceSchedulerSettings(source_poll_interval_seconds=DEFAULT_INTERVAL)
+    return SourceService(repo, FakeRegistry(), fetcher, settings), repo, fetcher
 
 
 @pytest.mark.asyncio
@@ -121,3 +128,54 @@ async def test_update_refuses_to_enable_a_non_relevant_source():
 
     with pytest.raises(SourceNotRelevantError):
         await service.update(source(relevant=False), SourceUpdate(is_enabled=True))
+
+
+@pytest.mark.asyncio
+async def test_create_schedules_a_pull_source_on_the_default_interval():
+    service, repo, _ = build()
+
+    await service.create(SourceCreate(name="Example", link="https://example.test"))
+
+    assert repo.created["poll_interval_seconds"] == DEFAULT_INTERVAL
+
+
+@pytest.mark.asyncio
+async def test_create_leaves_a_telegram_source_unscheduled():
+    service, repo, _ = build()
+
+    await service.create(SourceCreate(name="Channel", link=TELEGRAM_LINK))
+
+    assert repo.created["poll_interval_seconds"] is None
+
+
+@pytest.mark.asyncio
+async def test_a_new_link_clears_the_crawler_s_irrelevance_verdict():
+    service, _, _ = build()
+
+    updated = await service.update(
+        source(relevant=False), SourceUpdate(link="https://another.test")
+    )
+
+    assert updated.is_relevant
+
+
+@pytest.mark.asyncio
+async def test_a_link_change_keeps_an_interval_the_operator_chose():
+    service, _, _ = build()
+
+    updated = await service.update(
+        source(interval=CUSTOM_INTERVAL), SourceUpdate(link="https://another.test")
+    )
+
+    assert updated.poll_interval_seconds == CUSTOM_INTERVAL
+
+
+@pytest.mark.asyncio
+async def test_becoming_telegram_drops_the_schedule():
+    service, _, _ = build()
+
+    updated = await service.update(
+        source(interval=CUSTOM_INTERVAL), SourceUpdate(link=TELEGRAM_LINK)
+    )
+
+    assert updated.poll_interval_seconds is None

@@ -31,6 +31,7 @@ function SourcesTable({
           <TableHead>Тип</TableHead>
           <TableHead>Частота</TableHead>
           <TableHead>Отслеживание</TableHead>
+          <TableHead>Надёжность</TableHead>
           <TableHead>Действия</TableHead>
         </TableRow>
       </TableHeader>

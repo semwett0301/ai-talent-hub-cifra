@@ -87,7 +87,7 @@ def get_source_service(request: Request) -> SourceService:
     The runtime registry and page fetcher are app-lifetime singletons on `app.state`."""
     registrar: SourceRegistry = request.app.state.registrar
     page_fetcher: PageFetcher = request.app.state.page_fetcher
-    return SourceService(SourceRepo(), registrar, page_fetcher)
+    return SourceService(SourceRepo(), registrar, page_fetcher, settings.sources)
 
 
 def build_rabbit() -> RabbitConnector:

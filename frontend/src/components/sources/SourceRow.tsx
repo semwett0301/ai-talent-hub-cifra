@@ -1,10 +1,20 @@
 import { Landmark, Pencil, Rss, Send, Trash2 } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { TableCell, TableRow } from "@/components/ui/table"
+import { Choice } from "@/components/monitoring/Shared"
 import { useUpdateSource } from "@/api/sourceMutations"
-import { TYPE_LABELS, frequencyLabel, type Source, type SourceType } from "@/api/sources"
+import {
+  REALTIME_LABEL,
+  RELIABILITY_LABELS,
+  TYPE_LABELS,
+  frequencyOptions,
+  isScheduled,
+  type Source,
+  type SourceType,
+} from "@/api/sources"
 
 const NOT_A_NEWS_RESOURCE = "Не новостной ресурс"
 
@@ -27,6 +37,7 @@ export function SourceRow({
 }) {
   const update = useUpdateSource()
   const Icon = ICONS[source.type as SourceType]
+  const byId = { params: { path: { source_id: source.id } } }
 
   return (
     <TableRow className={rowClassName(source)}>
@@ -36,23 +47,40 @@ export function SourceRow({
             <Icon size={25} />
           </span>
           <div>
-            <strong>{source.name}</strong>
-            <p>{source.is_relevant ? source.link : NOT_A_NEWS_RESOURCE}</p>
+            <div className="source-name">
+              <strong>{source.name}</strong>
+              {!source.is_relevant && <Badge variant="destructive">{NOT_A_NEWS_RESOURCE}</Badge>}
+            </div>
+            <p>{source.link}</p>
           </div>
         </div>
       </TableCell>
       <TableCell className="source-type">{TYPE_LABELS[source.type as SourceType]}</TableCell>
-      <TableCell className="source-type">{frequencyLabel(source)}</TableCell>
+      <TableCell className="source-type">
+        {isScheduled(source) ? (
+          <div className="source-frequency">
+            <Choice
+              label={`Частота проверки ${source.name}`}
+              value={String(source.poll_interval_seconds)}
+              onChange={(seconds) =>
+                update.mutate({ ...byId, body: { poll_interval_seconds: Number(seconds) } })
+              }
+              options={frequencyOptions(source.poll_interval_seconds)}
+            />
+          </div>
+        ) : (
+          REALTIME_LABEL
+        )}
+      </TableCell>
       <TableCell>
         <Switch
           aria-label={`Отслеживание ${source.name}`}
           checked={source.is_enabled}
           disabled={!source.is_relevant || update.isPending}
-          onCheckedChange={(is_enabled) =>
-            update.mutate({ params: { path: { source_id: source.id } }, body: { is_enabled } })
-          }
+          onCheckedChange={(is_enabled) => update.mutate({ ...byId, body: { is_enabled } })}
         />
       </TableCell>
+      <TableCell className="source-type">{RELIABILITY_LABELS[source.reliability]}</TableCell>
       <TableCell>
         <div className="source-actions">
           <Button

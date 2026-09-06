@@ -8,11 +8,17 @@ re-exported from `__init__.py`.
   and (when `link` changes) `update` auto-detect `type` via the injected
   `PageFetcher` + `application.parse` — clients never send `type`. When the
   detected feed is RSS, the feed URL is stored in `rss_link` (also server-only,
-  never accepted from a client); `link` itself is never rewritten. `is_relevant` is
-  not client-settable either (only `WebCrawlCollector` sets it); `update` rejects
-  (`ValueError`, turned into a 422 at the route) a PATCH that would enable a source
-  already marked `is_relevant=false` — the DB CHECK constraint backs this up
-  regardless of who writes the row.
+  never accepted from a client); `link` itself is never rewritten. The detected type
+  also decides the **schedule**: a push source (Telegram) gets `poll_interval_seconds
+  = null`, a pull source keeps the interval it already had and otherwise starts on
+  `SourceSchedulerSettings.source_poll_interval_seconds` — clients pick an interval
+  only by PATCHing an existing row, never on create. `is_relevant` is not
+  client-settable either (only `WebCrawlCollector` sets it false); `update` rejects
+  a PATCH that would enable a source still marked `is_relevant=false` (409/422 via
+  `api/errors.py`), and the DB CHECK constraint backs this up regardless of who
+  writes the row. **A changed `link` resets `is_relevant` to true** — the verdict
+  belonged to the old address — so editing a source is the way out of that state,
+  and a bare `is_enabled` PATCH still hits the refusal.
 - `source_registry.py` — `SourceRegistry`: what a source's runtime state should be.
   Dispatches by source type — pull → a job through the `JobScheduler` port, push →
   subscription — and applies `is_enabled` in both directions. Takes its collectors and the

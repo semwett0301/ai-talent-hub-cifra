@@ -14,24 +14,15 @@ import { Choice } from "@/components/monitoring/Shared"
 import { errorDetail } from "@/api/client"
 import { useCreateSource, useUpdateSource } from "@/api/sourceMutations"
 import {
-  DEFAULT_FREQUENCY,
   DEFAULT_RELIABILITY,
-  FREQUENCIES,
   RELIABILITY_LABELS,
-  TYPE_LABELS,
   isReliability,
-  isScheduled,
   type Source,
   type SourceReliability,
 } from "@/api/sources"
 
 const URL_ERROR = "Укажите полный адрес сайта, RSS или канала: https://…"
 const SAVE_ERROR = "Не удалось сохранить источник."
-
-const frequencyOptions = FREQUENCIES.map(({ seconds, label }) => ({
-  value: String(seconds),
-  label,
-}))
 
 const reliabilityOptions = Object.entries(RELIABILITY_LABELS).map(([value, label]) => ({
   value,
@@ -56,9 +47,6 @@ function isWellFormed(url: string): boolean {
 function SourceForm({ source, onDone }: { source: Source | null; onDone: () => void }) {
   const [name, setName] = useState(source?.name ?? "")
   const [link, setLink] = useState(source?.link ?? "")
-  const [frequency, setFrequency] = useState(
-    String(source?.poll_interval_seconds ?? DEFAULT_FREQUENCY)
-  )
   const [reliability, setReliability] = useState<SourceReliability>(
     source?.reliability ?? DEFAULT_RELIABILITY
   )
@@ -78,7 +66,6 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
     const body = {
       name: name.trim(),
       link: link.trim(),
-      poll_interval_seconds: Number(frequency),
       reliability,
     }
     const handlers = {
@@ -121,12 +108,6 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
           placeholder="https://example.com/rss"
         />
       </label>
-      {source && (
-        <div className="form-field">
-          <span>Тип источника</span>
-          <p className="small muted">{TYPE_LABELS[source.type]}</p>
-        </div>
-      )}
       <div className="form-field">
         <span>Надёжность источника</span>
         <Choice
@@ -136,17 +117,6 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
           options={reliabilityOptions}
         />
       </div>
-      {(!source || isScheduled(source)) && (
-        <div className="form-field">
-          <span>Частота проверки</span>
-          <Choice
-            label="Частота проверки"
-            value={frequency}
-            onChange={setFrequency}
-            options={frequencyOptions}
-          />
-        </div>
-      )}
       {error && (
         <p role="alert" className="form-error">
           {error}
