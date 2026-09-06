@@ -1,0 +1,4 @@
+-e ./backend/common
+aio-pika==9.5.4
+pandas==2.3.2
+pydantic==2.12.5

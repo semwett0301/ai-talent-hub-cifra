@@ -149,6 +149,22 @@ How each consumer picks it up:
 |---|---|---|---|
 | `RABBITMQ_URL` | AMQP connection URL. Compose overrides it to the internal `rabbitmq` host. | `amqp://guest:guest@localhost:5672/` | **yes** |
 | `NEWS_EXCHANGE` | Exchange collected news is published to. | `news` | no |
+| `CSV_PATH` | Headerless `news` export read only by `send_dataset.py`. | `news.csv` | no |
+
+The one-shot `send_dataset.py` utility validates a headerless `news` table CSV export
+against the shared `NewsDTO` and publishes it through the same durable topic exchange,
+routing-key helper, JSON serializer, and persistent message property as `source_service`.
+It requires the exchange to exist and does not create, purge, or otherwise change broker
+topology. Install its local dependencies with
+`python -m pip install -r requirements-send-dataset.txt`, set `CSV_PATH` and the existing
+`RABBITMQ_URL` / `NEWS_EXCHANGE`, then validate before publishing:
+
+```bash
+python send_dataset.py --dry-run
+python send_dataset.py --limit 1
+python send_dataset.py --limit 10
+python send_dataset.py
+```
 
 ### source_service scheduler
 
