@@ -1,0 +1,12 @@
+# Dev-only image: Vite dev server with HMR. Used by docker-compose.dev.yml, never deployed.
+# Build context = repo root (shares the root .dockerignore with nginx/Dockerfile).
+# Only the dependencies are baked in; the source is bind-mounted at run time, and
+# /app/node_modules is an anonymous volume so the host's macOS binaries never leak in.
+FROM node:22-alpine
+
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

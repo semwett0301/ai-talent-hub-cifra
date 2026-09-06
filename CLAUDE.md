@@ -56,6 +56,7 @@ nginx/                    # edge: serves static SPA + reverse-proxies /api/sourc
   Dockerfile              #   multi-stage: node build → nginx serving dist/
   templates/default.conf.template
 docker-compose.yml        # root: nginx (public) + migrator + source_service + news_service + npa_service + postgres + rabbitmq + dozzle (internal)
+docker-compose.dev.yml    # optional overlay: frontend_dev (Vite HMR on :5173, source bind-mounted, /api proxied to nginx)
 .github/workflows/        # backend.yml (ruff), frontend.yml (oxlint)
 .claude/                  # rules/ + skills/ (agent harness)
 terraform/                # DigitalOcean infra (Terraform + cloud-init)
@@ -169,6 +170,8 @@ npm run api:gen                   # regenerate src/api/schema.*.d.ts from a runn
 
 # Full stack (from repo root) — reachable at http://localhost/
 docker compose up --build
+# + Vite dev server with hot reload on http://localhost:5173 (edits in frontend/ reload live)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 ## CI

@@ -1,0 +1,36 @@
+# Dev overlay: a Vite dev server with hot module reload on top of the full stack.
+# Not standalone — merge it over docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# (or set COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml in .env and use
+# plain `docker compose up --build`).
+#
+# http://localhost:5173  live frontend from ./frontend (edits reload in the browser)
+# http://localhost/      the built bundle from the nginx image, as in production
+#
+# Vite proxies /api/* to nginx over the compose network, so the API, DB and broker are
+# the same ones the built bundle talks to. The 5173 host port is the one deliberate
+# exception to "only nginx publishes a port" — a dev server never runs on the server.
+services:
+  frontend_dev:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    environment:
+      DEV_API_TARGET: http://nginx
+      SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
+      NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
+      NPA_API_PREFIX: ${NPA_API_PREFIX:-/api/npa}
+    volumes:
+      - ./frontend:/app
+      # Anonymous volume: keeps the image's linux node_modules over the host's macOS ones.
+      # After a package.json change run `up --build -V` so it is recreated from the new image.
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - nginx

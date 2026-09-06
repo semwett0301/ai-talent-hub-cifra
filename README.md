@@ -28,6 +28,8 @@ media, regulators, and Telegram channels.
   service exposed to the host.
 - `docker-compose.yml` — nginx (public) + source_service + news_service + npa_service
   + migrator + postgres + rabbitmq (internal).
+- `docker-compose.dev.yml` — optional overlay adding a Vite dev server with hot reload
+  on `localhost:5173` (see **Run**).
 
 ## Run
 
@@ -38,6 +40,29 @@ docker compose up --build -d   # everything, reachable at http://localhost/
 
 Local dev: backend `cd backend && uv run uvicorn source_service.main:app --reload --app-dir source_service`;
 frontend `cd frontend && npm install && npm run dev`.
+
+### Frontend with hot reload inside Compose
+
+`docker-compose.dev.yml` is an overlay on top of `docker-compose.yml` that adds one
+service, `frontend_dev`: a Vite dev server (`frontend/Dockerfile.dev`) with `./frontend`
+bind-mounted into it, so an edit shows up in the browser without a rebuild.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+- `http://localhost:5173` — the live frontend (HMR). Vite proxies `/api/*` to the `nginx`
+  container, so it talks to the same backend, DB and broker as everything else.
+- `http://localhost/` — still the built bundle from the nginx image, exactly as deployed.
+- Dependencies are baked into the dev image and kept in an anonymous volume over
+  `/app/node_modules` (the host's macOS binaries must not leak into the linux container).
+  After changing `package.json`, restart with `up --build -V` so that volume is recreated.
+- Prefer typing less? Put `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml` into
+  your `.env` (commented out in `.env.example`) and plain `docker compose up --build` picks
+  the overlay up. `.env` is not deployed, so the server never gets it.
+- Alternatively skip the container: with the stack up, `cd frontend && npm run dev` on the
+  host does the same thing on `localhost:5173` (`vite.config.ts` proxies `/api` to
+  `http://localhost`) — faster on macOS, since there is no bind mount in the way.
 
 ### Migrations
 

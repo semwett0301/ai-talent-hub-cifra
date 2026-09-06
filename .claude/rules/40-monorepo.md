@@ -69,7 +69,9 @@ docker-compose.yml, README, CLAUDE.md, .github, .claude   ← root
 - `docker-compose.yml` lives at the repo root and orchestrates all parts.
 - **Only nginx publishes a host port (80).** Backend services (`source_service`,
   `news_service`, `npa_service`), `postgres`, and `rabbitmq` are internal-only (`expose`, no host
-  `ports`). There is no separate frontend container.
+  `ports`). There is no separate frontend container. The one exception is the local-only
+  `docker-compose.dev.yml` overlay, whose `frontend_dev` (Vite HMR) publishes 5173 — it
+  never runs on the server.
 - The `nginx` image (`nginx/Dockerfile`, build context = repo root) serves the SPA
   (fallback to `index.html`) and gives each backend its own `/api/<service>/`
   namespace — currently **`/api/sources/*` → `source_service:8000`** with the whole
