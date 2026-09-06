@@ -7,11 +7,10 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { DeleteSourceDialog } from "@/components/sources/DeleteSourceDialog"
 import { SourceFormDialog } from "@/components/sources/SourceFormDialog"
 import { SourceRow } from "@/components/sources/SourceRow"
-import { errorDetail } from "@/api/client"
+import { errorMessage } from "@/api/client"
 import { useSources } from "@/api/sourceMutations"
 import type { Source } from "@/api/sources"
 
-const LOAD_ERROR = "Не удалось загрузить источники."
 const SKELETON_ROWS = [0, 1, 2]
 
 function SourcesTable({
@@ -75,7 +74,7 @@ export function SourcesPage() {
 
       {error && (
         <p role="alert" className="form-error">
-          {errorDetail(error, LOAD_ERROR)}
+          {errorMessage(error)}
         </p>
       )}
 

@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Choice } from "@/components/monitoring/Shared"
-import { errorDetail } from "@/api/client"
+import { useErrorToast } from "@/api/errorToast"
 import { useCreateSource, useUpdateSource } from "@/api/sourceMutations"
 import {
   DEFAULT_RELIABILITY,
@@ -22,7 +22,6 @@ import {
 } from "@/api/sources"
 
 const URL_ERROR = "Укажите полный адрес сайта, RSS или канала: https://…"
-const SAVE_ERROR = "Не удалось сохранить источник."
 
 const reliabilityOptions = Object.entries(RELIABILITY_LABELS).map(([value, label]) => ({
   value,
@@ -52,6 +51,7 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
   )
   const [error, setError] = useState("")
 
+  const showError = useErrorToast()
   const create = useCreateSource()
   const update = useUpdateSource()
   const isSaving = create.isPending || update.isPending
@@ -68,10 +68,7 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
       link: link.trim(),
       reliability,
     }
-    const handlers = {
-      onError: (failure: unknown) => setError(errorDetail(failure, SAVE_ERROR)),
-      onSuccess: onDone,
-    }
+    const handlers = { onError: showError, onSuccess: onDone }
 
     if (source) {
       update.mutate({ params: { path: { source_id: source.id } }, body }, handlers)

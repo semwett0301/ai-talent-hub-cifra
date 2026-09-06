@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { Choice } from "@/components/monitoring/Shared"
+import { useErrorToast } from "@/api/errorToast"
 import { useUpdateSource } from "@/api/sourceMutations"
 import {
   REALTIME_LABEL,
@@ -35,6 +36,7 @@ export function SourceRow({
   onEdit: (source: Source) => void
   onDelete: (source: Source) => void
 }) {
+  const showError = useErrorToast()
   const update = useUpdateSource()
   const Icon = ICONS[source.type as SourceType]
   const byId = { params: { path: { source_id: source.id } } }
@@ -63,7 +65,10 @@ export function SourceRow({
               label={`Частота проверки ${source.name}`}
               value={String(source.poll_interval_seconds)}
               onChange={(seconds) =>
-                update.mutate({ ...byId, body: { poll_interval_seconds: Number(seconds) } })
+                  update.mutate(
+                  { ...byId, body: { poll_interval_seconds: Number(seconds) } },
+                  { onError: showError }
+                )
               }
               options={frequencyOptions(source.poll_interval_seconds)}
             />
@@ -77,7 +82,9 @@ export function SourceRow({
           aria-label={`Отслеживание ${source.name}`}
           checked={source.is_enabled}
           disabled={!source.is_relevant || update.isPending}
-          onCheckedChange={(is_enabled) => update.mutate({ ...byId, body: { is_enabled } })}
+          onCheckedChange={(is_enabled) =>
+            update.mutate({ ...byId, body: { is_enabled } }, { onError: showError })
+          }
         />
       </TableCell>
       <TableCell className="source-type">{RELIABILITY_LABELS[source.reliability]}</TableCell>

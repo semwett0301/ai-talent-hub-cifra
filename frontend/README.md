@@ -7,7 +7,10 @@ React 19 + Vite + TypeScript SPA, built to static files and served by the `nginx
 
 - `src/api/` — the typed backend client. `schema.sources.d.ts` is **generated** from the
   service's OpenAPI spec (`npm run api:gen`) and committed; `client.ts` builds the
-  `openapi-fetch` client plus `openapi-react-query` hooks; `sourceMutations.ts` wraps the
+  `openapi-fetch` client plus `openapi-react-query` hooks and turns a failed response into
+  a message **by status code** (the server's own prose is English and never reaches the
+  screen); `errorToast.ts` is the hook every mutation reports failures through;
+  `sourceMutations.ts` wraps the
   queries/mutations so every write invalidates the list in one place; `sources.ts` holds
   the view vocabulary (type and reliability labels, the poll intervals — the first is
   the one the server assigns a new source — and the realtime label).
@@ -15,7 +18,8 @@ React 19 + Vite + TypeScript SPA, built to static files and served by the `nginx
   `NpaPage` (still on `src/data/` fixtures).
 - `src/components/sources/` — the Sources screen: row, create/edit dialog, delete dialog.
 - `src/components/monitoring/Shared.tsx` — `SearchField` and `Choice`.
-- `src/components/ui/` — shadcn / Base UI primitives, unchanged.
+- `src/components/ui/` — shadcn / Base UI primitives; `toast.tsx` is ours, mounted once
+  in `main.tsx`, and the rest is unchanged.
 - `src/data/` — remaining demo fixtures for News and НПА.
 - `src/globals.d.ts` — the compile-time API-prefix constants.
 - `UI_GUIDELINES.md`, `UI_IMPLEMENTATION.md`, `handoff/` — product and design notes.
