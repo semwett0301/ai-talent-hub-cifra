@@ -5,8 +5,8 @@ Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py
 
 - `repositories.py` — `NewsRepository`: `list_all(limit, offset)`, `mark_alert(id)`
   (sets `is_alert = true` and commits, None when the id is unknown), `add_many` — the
-  batch insert the consumer path uses (one transaction, duplicates by `url` skipped, a
-  `source_id` whose source is gone stored as NULL, returns the inserted count; raises
+  batch insert the consumer path uses (one transaction, duplicates by `url` skipped, an
+  item whose source is gone skipped, returns the inserted count; raises
   `NewsStoreError` on failure) — and `begin()`,
   which opens a `NewsTransaction`.
 - `transaction.py` — `NewsTransaction`: an async context manager over **one** DB

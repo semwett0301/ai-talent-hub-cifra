@@ -9,7 +9,9 @@ Collector implementations of the application collector ports — the per-source-
   fetches every entry's page through the `PageFetcher` port and extracts its full text
   with `application.parse.extract_article` (news-please); falls back to the feed summary
   when extraction comes back empty. Emits one `NewsDTO` per entry with `url` = the
-  entry's canonical link and `raw` = `{title, summary, feed_url}` (the feed it came from).
+  entry's canonical link, `title` = the extracted page title, else the entry's, else the
+  text; `excerpt` = the feed summary; `updated_at`, `source_tags` (the feed categories)
+  straight from the `FeedEntry`.
 - `web.py` — `WebCrawlCollector` (pull): hands the `Source` row to
   `application.services.web.WebCrawl` and emits each accepted `Article` via its own
   `to_news_dto(source)` — no business decision of its own. `WebCrawl` builds the `Site`,
@@ -17,7 +19,12 @@ Collector implementations of the application collector ports — the per-source-
   only shapes the result into `NewsDTO`.
 - `telegram.py` — `TelegramCollector` (push, kurigram — a Pyrogram fork, imported as
   `pyrogram`): joins channels and publishes each new post as a `common.entities.news.NewsDTO`
-  via the injected `NewsPublisher`. **Implemented.**
+  via the injected `NewsPublisher`. **Implemented.** A post has no headline, so `title` is
+  its **first sentence** (`FIRST_SENTENCE_RE`: up to the first `.`/`!`/`?` or line break,
+  else the whole text); the text is the media `caption` when present, else `text`, `source_tags` are its hashtags (`HASHTAG_RE`, `#(\w+)`, deduped in order),
+  `updated_at` is `edit_date`; no excerpt.
+  Migration `0014` backfills old rows with the same two expressions in SQL — change them
+  together.
 
 Notes: each collector **inherits its port** (`PullCollector` / `PushCollector`) so mypy
 verifies conformance at the definition site (nominal + structural double guard).

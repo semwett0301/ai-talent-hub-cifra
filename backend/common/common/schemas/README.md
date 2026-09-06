@@ -21,11 +21,12 @@ class per module (re-exported from `__init__.py`).
   for `type=rss` sources: a DB trigger (`rss_link_requires_rss_source`, migration
   `0013`) refuses the insert otherwise, regardless of who writes the row.
 - `news.py` — `News`: ORM model for the `news` table, written by `news_service` from
-  the bus. Same fields as `common.entities.news.NewsDTO` plus `id`/`created_at`;
-  `url` is `UNIQUE` (the dedupe key — a story is stored once), `source_id` is a
-  nullable, indexed FK to `source` with `ON DELETE SET NULL` (deleting a source keeps
-  its news, detached), `raw` is JSONB, `is_alert` (default false) is the flag the
-  dismiss endpoint sets.
+  the bus. Same fields as `common.entities.news.NewsDTO` plus `id`/`is_alert`/`created_at`,
+  one flat row (no JSON blob): `url` is `UNIQUE` (the dedupe key — a story is stored
+  once), `title` is `TEXT NOT NULL` with no length cap (the UI truncates), `source_id` is
+  a required, indexed FK to `source` with `ON DELETE CASCADE` (a source's news goes with
+  it), `source_name` is the name at collection time, `source_tags` is a `TEXT[]` column
+  (no index — tags are shown, never filtered on), `excerpt` / `updated_at` are nullable, `is_alert` (default false) is the flag the dismiss endpoint sets.
 - `npa.py` — `Npa`: ORM model for the `npa` table (legislative acts), written by
   `npa_service`. `common.entities.npa.NpaDTO` fields plus `id`/`created_at`; `url` is
   `UNIQUE` (one row per act).

@@ -3,9 +3,10 @@
 Consumer service: **RabbitMQ `news` exchange → batch → `news` table**, plus a read API:
 list what's stored, dismiss an item (`is_alert = true`), or **escalate** it into a
 legislative act — dismiss + a synchronous create in `npa_service`, committed only when
-that service confirmed. Every `NewsDTO` published by `source_service` is stored as-is,
-once per `url` (the DB's unique key — a story arriving twice, or from two sources,
-lands once). Design: `../../plans/news-service.md`, escalation: `../../plans/npa-service.md`.
+that service confirmed. Every `NewsDTO` published by `source_service` is stored as-is —
+one flat row, no JSON blob — once per `url` (the DB's unique key — a story arriving twice,
+or from two sources, lands once); an item whose source was deleted while the batch was in
+flight is skipped with a WARNING, since a row needs its source. Design: `../../plans/news-service.md`, escalation: `../../plans/npa-service.md`.
 
 Structured as **onion architecture** (layers depend inward; see `../README.md`):
 

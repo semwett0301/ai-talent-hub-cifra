@@ -27,7 +27,12 @@ for all services, so migrations live here (not per service): the migrator runs
   importing it, so the revision keeps applying the same way);
   `0012_telegram_has_no_schedule` clears `poll_interval_seconds` on telegram rows and
   adds the CHECK keeping it null there; `0013_rss_link_table` moves `source.rss_link`
-  into the one-to-many `rss_link` table, guarded by a trigger instead of the CHECK).
+  into the one-to-many `rss_link` table, guarded by a trigger instead of the CHECK;
+  `0014_news_flat_shape` replaces `news.raw` with typed columns (`title`, `excerpt`,
+  `updated_at`, `source_name`, `source_tags`), backfilled from `raw` — a
+  Telegram row's first sentence and hashtags by SQL regex, copied from the collector —
+  re-links orphans by `source_link`, deletes the rest and makes `source_id` NOT NULL with
+  ON DELETE CASCADE; its downgrade is lossy).
 - `pyproject.toml` — runtime deps `common` + `alembic` + `psycopg2-binary`. Every
   ORM model comes from `common.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.
