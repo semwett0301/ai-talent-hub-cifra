@@ -48,10 +48,7 @@ async def update_source(
     service: SourceService = Depends(get_source_service),
 ) -> SourceOut:
     source = await _get_or_404(service, source_id)
-    try:
-        updated = await service.update(source, payload)
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    updated = await service.update(source, payload)
     return SourceOut.model_validate(updated)
 
 

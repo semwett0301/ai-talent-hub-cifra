@@ -11,6 +11,8 @@ root (`deps.py`).
   reader, browser page crawler with `FetchedPage`, the crawl's LLM port `CrawlLlm` — every
   port that reaches the open web, so it is wider than `services/web`).
 - `dto/` — request/response DTOs (Pydantic) for the use cases.
+- `errors.py` — failures a caller can act on (`SourceAlreadyExistsError`,
+  `SourceNotRelevantError`); `api/errors.py` turns them into status codes.
 - `services/` — use cases and the steps they are composed of, grouped by domain:
   `source/` (`SourceService`, `SourceRegistry`) and `web/` (`WebCrawl` over `hubs/`,
   `listings/` and `articles/`). One class per module.

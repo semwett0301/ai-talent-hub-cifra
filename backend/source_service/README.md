@@ -35,13 +35,18 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     `SourceService` (CRUD over the repo port; auto-detects a source's
     `type` from its `link` via `parse/` + the `PageFetcher` port — clients never
     send `type`; an RSS feed's URL is stored in `rss_link`, scraping-only and also
-    never client-supplied) and `SourceRegistry` (the runtime registrar — pull
-    scheduling + push subscription, kept in sync with CRUD).
+    never client-supplied; `normalized_link` is derived from `link` on every write so the
+    same address can't be added twice) and `SourceRegistry` (the runtime registrar — pull
+    scheduling + push subscription, kept in sync with CRUD). `errors.py` holds the failures
+    callers act on.
   - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a
     session per call), `rabbit/` (`RabbitConnector`), `collectors/`
     (`Rss`/`WebCrawl`/`Telegram`), `crawlers/` (`Crawl4AiPageCrawler` — one browser for
     the service, `LiteLlmClient`, the HTTP fetcher and feedparser).
-  - `api/routes/` — FastAPI routers only: `sources.py` (CRUD), `health.py`.
+  - `api/` — `routes/` (FastAPI routers only: `sources.py` CRUD, `health.py`) and
+    `errors.py`, which maps application errors to status codes once for the whole app:
+    duplicate address → **409**, enabling a non-relevant source → **422**. A malformed
+    address is a **422** from Pydantic (`dto/source/link.py`).
 
 Notes: pull collectors run on `poll_interval_seconds`, falling back to
 `SOURCE_POLL_INTERVAL_SECONDS` (300s) when the row has none; push sources

@@ -21,6 +21,8 @@ class Source(Base):
     type: Mapped[SourceType] = mapped_column(SOURCE_TYPE)
     name: Mapped[str] = mapped_column(String(255))
     link: Mapped[str] = mapped_column(String(255))
+    # Same address spelled differently is the same source; set from `link`, never by a client.
+    normalized_link: Mapped[str] = mapped_column(String(255), unique=True)
     # Feed URL for RSS sources only; DB-enforced by a CHECK constraint, not the app.
     rss_link: Mapped[str | None] = mapped_column(String(255), nullable=True)
     reliability: Mapped[SourceReliability] = mapped_column(

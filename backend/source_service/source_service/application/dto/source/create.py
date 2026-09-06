@@ -3,10 +3,12 @@
 from common.entities.source import SourceReliability
 from pydantic import BaseModel
 
+from .link import SourceLink
+
 
 class SourceCreate(BaseModel):
     name: str
-    link: str
+    link: SourceLink
     poll_interval_seconds: int | None = None
     is_enabled: bool = True
     reliability: SourceReliability = SourceReliability.MEDIUM

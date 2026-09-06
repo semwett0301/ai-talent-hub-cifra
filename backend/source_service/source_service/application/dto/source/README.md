@@ -3,6 +3,8 @@
 DTOs for the `Source` resource — one class per module, re-exported from `__init__.py`
 (import as `from source_service.application.dto.source import SourceCreate`).
 
+- `link.py` — `SourceLink`: the annotated `str` both input DTOs use, rejecting anything
+  that is neither an http(s) URL nor a Telegram link (a 422 straight from Pydantic).
 - `create.py` — `SourceCreate`: fields accepted when creating a source, including
   `reliability` (`common.entities.source.SourceReliability`, defaults to
   `MEDIUM`). **No `type`** — `SourceService` auto-detects it from `link` (see

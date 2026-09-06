@@ -8,6 +8,7 @@ from common.core.settings import settings
 from fastapi import FastAPI
 
 from source_service import deps
+from source_service.api.errors import install_error_handlers
 from source_service.api.routes import health, sources
 
 # Logging setup + module logger
@@ -71,3 +72,4 @@ app = FastAPI(
 )
 app.include_router(health.router)
 app.include_router(sources.router)
+install_error_handlers(app)

@@ -5,7 +5,10 @@ class per module (re-exported from `__init__.py`).
 
 - `source.py` — `Source`: ORM model for the `source` table. `id` is a DB-generated
   UUID (`gen_random_uuid()`), not a serial int. `reliability`
-  (`common.entities.source.SourceReliability`) defaults to `medium`. `rss_link` is
+  (`common.entities.source.SourceReliability`) defaults to `medium`. `normalized_link`
+  is `link` folded to one spelling (`source_service.domain.urls.source_identity`) and
+  `UNIQUE` — the same address added twice is refused by the DB, which the API maps to a
+  409. `rss_link` is
   the discovered feed URL, set only for `type=rss` sources — enforced by a CHECK
   constraint, not the ORM. `is_relevant` (default true) is set false by
   `WebCrawlCollector` when a WEB crawl finds no candidates at all; a CHECK
