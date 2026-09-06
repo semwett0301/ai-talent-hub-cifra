@@ -11,13 +11,14 @@ GitHub Actions.
   3. `deploy` — reads the server IP from Terraform output (S3 state, no `SSH_HOST`
      secret), waits until cloud-init has finished (`/var/lib/cloud/bootstrap-complete`,
      up to 10 min — a replaced droplet is `active` long before Docker is installed),
-     rsyncs the repo to `/opt/<APP_NAME>`, writes the server `.env` (only `TELEGRAM_*`
-     from secrets; everything else keeps the compose defaults) and `dozzle/users.yml` (`LOGS_USER`/`LOGS_PASSWORD`
+     rsyncs the repo to `/opt/<APP_NAME>`, writes the server `.env` (only `TELEGRAM_*` and
+     `OPENROUTER_*` from secrets; everything else keeps the compose defaults) and `dozzle/users.yml` (`LOGS_USER`/`LOGS_PASSWORD`
      hashed on the runner with `dozzle generate`), both by scp, then
      `docker compose up -d --build`.
   Secrets: `DIGITALOCEAN_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-  `SSH_PUBLIC_KEY`, `APP_NAME`, `SSH_PRIVATE_KEY`, and optional `DEPLOY_USER`
-  (default `deploy`). SSH port is fixed at 22.
+  `SSH_PUBLIC_KEY`, `APP_NAME`, `SSH_PRIVATE_KEY`, `LOGS_USER`, `LOGS_PASSWORD`,
+  `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_SESSION`, `OPENROUTER_API_KEY`, and
+  optional `DEPLOY_USER` (default `deploy`) / `OPENROUTER_MODEL`. SSH port is fixed at 22.
 
 Notes: CI workflows are path-filtered so a change runs only the relevant job. The
 server host is not a secret — it lives in Terraform state and is resolved at deploy

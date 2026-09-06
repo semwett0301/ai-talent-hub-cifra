@@ -225,11 +225,13 @@ Terraform state via `terraform output -raw server_ipv4`.
 ### Server `.env`
 
 The `deploy` job builds it from secrets, so it holds only what must differ from the
-compose defaults — currently just the Telegram credentials:
+compose defaults — the Telegram credentials and the LLM key:
 
 | Key | Value on the server |
 |---|---|
 | `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` / `TELEGRAM_SESSION` | the secrets of the same name |
+| `OPENROUTER_API_KEY` | the secret of the same name — without it the crawler's LLM paths stay off |
+| `OPENROUTER_MODEL` | the secret of the same name; empty → `NEWS_AGENT_MODEL` default |
 
 Everything else (`DEBUG=true` — full logs on purpose, `ENVIRONMENT`, `POSTGRES_*`,
 `RABBITMQ_URL`, prefixes, `APP_NAME`) keeps the defaults from
@@ -256,6 +258,8 @@ Terraform inputs drop the `TF_VAR_` prefix:
 | `TELEGRAM_API_ID` | `TELEGRAM_API_ID` | `deploy` — server `.env` |
 | `TELEGRAM_API_HASH` | `TELEGRAM_API_HASH` | `deploy` — server `.env` |
 | `TELEGRAM_SESSION` | `TELEGRAM_SESSION` | `deploy` — server `.env` |
+| `OPENROUTER_API_KEY` | `OPENROUTER_API_KEY` | `deploy` — server `.env` (LLM agent key) |
+| `OPENROUTER_MODEL` | `OPENROUTER_MODEL` | `deploy` — server `.env` (optional model slug) |
 
 `POSTGRES_PASSWORD` stays at the compose default on the server (Postgres is internal to
 the compose network); to change it, add it to the "Write server .env" step and run
