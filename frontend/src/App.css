@@ -953,6 +953,28 @@ html {
 .source-disabled {
   opacity: 0.65;
 }
+/* A site the crawler found no news on: it cannot be enabled, so it reads as an error. */
+.source-irrelevant {
+  color: #ff8a93;
+}
+.source-irrelevant .source-identity p,
+.source-irrelevant .source-type {
+  color: #ff8a93;
+}
+.source-irrelevant .source-icon {
+  background: #3a1f28;
+  color: #ff8a93;
+}
+.source-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.source-skeleton {
+  height: 56px;
+  margin-top: 12px;
+  border-radius: 9px;
+}
 @media (max-width: 1100px) {
   .source-table td {
     padding: 15px 5px;

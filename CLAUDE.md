@@ -141,6 +141,10 @@ Frontend (React):
   services read, never a second copy. Nothing else from the environment reaches the
   browser — **no secrets**.
 - Routes are declared in `src/App.tsx`; one component per route under `src/pages/`.
+- **The API client is generated, not hand-written**: `src/api/schema.*.d.ts` comes from the
+  service's OpenAPI spec (`npm run api:gen`) and is committed; screens talk to the backend
+  through the `openapi-react-query` hooks in `src/api/`, with TanStack Query holding the
+  server state. `src/data/` fixtures remain only for the screens not yet migrated.
 - Lint with oxlint (`npm run lint`).
 
 ## Commands
@@ -158,9 +162,10 @@ uvx ruff@0.14.0 format --check backend
 # Frontend (from frontend/)
 cd frontend
 npm install
-npm run dev                       # Vite dev server
-npm run build                     # static build → dist/
+npm run dev                       # Vite dev server (/api proxied to the compose stack)
+npm run build                     # static build → dist/ (needs the *_API_PREFIX vars)
 npm run lint                      # oxlint
+npm run api:gen                   # regenerate src/api/schema.*.d.ts from a running backend
 
 # Full stack (from repo root) — reachable at http://localhost/
 docker compose up --build

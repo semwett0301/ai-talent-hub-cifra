@@ -34,12 +34,3 @@ export interface NpaItem {
   changes: { before: string; after: string }[];
   versions: { date: string; label: string }[];
 }
-export interface SourceItem {
-  id: string;
-  name: string;
-  description: string;
-  type: "Сайт" | "RSS" | "Telegram" | "Сайт / RSS";
-  frequency: string;
-  enabled: boolean;
-  url: string;
-}
