@@ -2,11 +2,25 @@ import type { components } from "./schema.sources"
 
 export type Source = components["schemas"]["SourceOut"]
 export type SourceType = components["schemas"]["SourceType"]
+export type SourceReliability = components["schemas"]["SourceReliability"]
 
 export const TYPE_LABELS: Record<SourceType, string> = {
   telegram: "Telegram",
   rss: "RSS",
   web: "Сайт",
+}
+
+// How much the analyst trusts what this source reports — curated, never inferred.
+export const RELIABILITY_LABELS: Record<SourceReliability, string> = {
+  high: "Высокая",
+  medium: "Средняя",
+  low: "Низкая",
+}
+
+export const DEFAULT_RELIABILITY: SourceReliability = "medium"
+
+export function isReliability(value: string): value is SourceReliability {
+  return value in RELIABILITY_LABELS
 }
 
 // The nine intervals the UI offers; the DB stores plain seconds, so the list lives here.

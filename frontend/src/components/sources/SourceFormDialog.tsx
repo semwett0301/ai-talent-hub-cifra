@@ -15,10 +15,14 @@ import { errorDetail } from "@/api/client"
 import { useCreateSource, useUpdateSource } from "@/api/sourceMutations"
 import {
   DEFAULT_FREQUENCY,
+  DEFAULT_RELIABILITY,
   FREQUENCIES,
+  RELIABILITY_LABELS,
   TYPE_LABELS,
+  isReliability,
   isScheduled,
   type Source,
+  type SourceReliability,
 } from "@/api/sources"
 
 const URL_ERROR = "Укажите полный адрес сайта, RSS или канала: https://…"
@@ -26,6 +30,11 @@ const SAVE_ERROR = "Не удалось сохранить источник."
 
 const frequencyOptions = FREQUENCIES.map(({ seconds, label }) => ({
   value: String(seconds),
+  label,
+}))
+
+const reliabilityOptions = Object.entries(RELIABILITY_LABELS).map(([value, label]) => ({
+  value,
   label,
 }))
 
@@ -50,6 +59,9 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
   const [frequency, setFrequency] = useState(
     String(source?.poll_interval_seconds ?? DEFAULT_FREQUENCY)
   )
+  const [reliability, setReliability] = useState<SourceReliability>(
+    source?.reliability ?? DEFAULT_RELIABILITY
+  )
   const [error, setError] = useState("")
 
   const create = useCreateSource()
@@ -67,6 +79,7 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
       name: name.trim(),
       link: link.trim(),
       poll_interval_seconds: Number(frequency),
+      reliability,
     }
     const handlers = {
       onError: (failure: unknown) => setError(errorDetail(failure, SAVE_ERROR)),
@@ -114,6 +127,15 @@ function SourceForm({ source, onDone }: { source: Source | null; onDone: () => v
           <p className="small muted">{TYPE_LABELS[source.type]}</p>
         </div>
       )}
+      <div className="form-field">
+        <span>Надёжность источника</span>
+        <Choice
+          label="Надёжность источника"
+          value={reliability}
+          onChange={(value) => isReliability(value) && setReliability(value)}
+          options={reliabilityOptions}
+        />
+      </div>
       {(!source || isScheduled(source)) && (
         <div className="form-field">
           <span>Частота проверки</span>
