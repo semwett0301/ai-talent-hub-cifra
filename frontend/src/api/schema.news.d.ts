@@ -173,13 +173,6 @@ export interface components {
              */
             created_at: string;
         };
-        /** NewsPage */
-        NewsPage: {
-            /** Items */
-            items: components["schemas"]["NewsOut"][];
-            /** Total */
-            total: number;
-        };
         /**
          * NewsVisibility
          * @description Which items the feed shows: the ones a reader has not hidden, only the hidden, or both.
@@ -264,8 +257,6 @@ export interface operations {
                 q?: string | null;
                 since?: string | null;
                 visibility?: components["schemas"]["NewsVisibility"];
-                limit?: number;
-                offset?: number;
             };
             header?: never;
             path?: never;
@@ -279,7 +270,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NewsPage"];
+                    "application/json": components["schemas"]["NewsOut"][];
                 };
             };
             /** @description Validation Error */

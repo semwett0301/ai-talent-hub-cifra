@@ -1,4 +1,4 @@
-"""NewsFeed — the read side of stored news: page through it, open one, hide and unhide."""
+"""NewsFeed — the read side of stored news: list it, open one, hide and unhide."""
 
 import uuid
 
@@ -15,11 +15,9 @@ class NewsFeed:
     def __init__(self, repo: NewsRepository) -> None:
         self.__repo = repo
 
-    async def list(self, query: NewsQuery) -> tuple[list[News], int]:
-        """The requested page and the total matching the same filters."""
-        items = await self.__repo.list_page(query)
-        total = await self.__repo.count(query)
-        return items, total
+    async def list(self, query: NewsQuery) -> list[News]:
+        """Every item matching the filters, newest publication first."""
+        return await self.__repo.list_matching(query)
 
     async def get(self, news_id: uuid.UUID) -> News | None:
         return await self.__repo.get(news_id)

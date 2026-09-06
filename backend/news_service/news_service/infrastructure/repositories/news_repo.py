@@ -71,19 +71,13 @@ class NewsRepo(NewsRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.__session = session
 
-    async def list_page(self, query: NewsQuery) -> list[News]:
+    async def list_matching(self, query: NewsQuery) -> list[News]:
         stmt = (
             select(News)
             .where(*_filters(query))
             .order_by(News.published_at.desc().nulls_last(), News.created_at.desc(), News.id)
-            .limit(query.limit)
-            .offset(query.offset)
         )
         return list((await self.__session.execute(stmt)).scalars().all())
-
-    async def count(self, query: NewsQuery) -> int:
-        stmt = select(func.count()).select_from(News).where(*_filters(query))
-        return (await self.__session.execute(stmt)).scalar_one()
 
     async def get(self, news_id: uuid.UUID) -> News | None:
         return await self.__session.get(News, news_id)

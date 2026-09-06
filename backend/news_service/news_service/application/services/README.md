@@ -3,8 +3,8 @@
 Application services — use cases, one public class per module (re-exported from
 `__init__.py`).
 
-- `news_feed.py` — `NewsFeed`: the read side over `NewsRepository` — `list(query)` (the
-  page plus the total matching the same filters, newest publication first), `get`,
+- `news_feed.py` — `NewsFeed`: the read side over `NewsRepository` — `list(query)` (every
+  item matching the filters, newest publication first), `get`,
   `dismiss` / `restore` (stage `dismissed_at` set / cleared, then `commit()`; None and no
   commit for an unknown id, which the API maps to 404).
 - `news_ingestor.py` — `NewsIngestor`: the `NewsBatchHandler` implementation the bus

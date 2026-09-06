@@ -17,12 +17,8 @@ class NewsRepository(Protocol):
     a whole batch) has succeeded. A unit of work that ends without `commit()` rolls back.
     """
 
-    async def list_page(self, query: NewsQuery) -> list[News]:
-        """The page `query` asks for, newest publication first."""
-        ...
-
-    async def count(self, query: NewsQuery) -> int:
-        """How many rows match `query`'s filters, ignoring its page."""
+    async def list_matching(self, query: NewsQuery) -> list[News]:
+        """Every row matching `query`'s filters, newest publication first."""
         ...
 
     async def get(self, news_id: uuid.UUID) -> News | None: ...

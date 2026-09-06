@@ -15,12 +15,9 @@ class FakeRepo:
         self.queries: list[NewsQuery] = []
         self.commits = 0
 
-    async def list_page(self, query: NewsQuery) -> list[News]:
+    async def list_matching(self, query: NewsQuery) -> list[News]:
         self.queries.append(query)
         return [self.news] if self.news else []
-
-    async def count(self, query: NewsQuery) -> int:
-        return 1 if self.news else 0
 
     async def mark_dismissed(self, news_id: uuid.UUID) -> News | None:
         if self.news is not None and self.news.dismissed_at is None:
@@ -41,14 +38,13 @@ def feed(news: News | None) -> tuple[NewsFeed, FakeRepo]:
     return NewsFeed(repo), repo  # type: ignore[arg-type]
 
 
-async def test_list_returns_the_page_with_its_total():
+async def test_list_passes_the_query_through_and_returns_every_match():
     service, repo = feed(News(id=NEWS_ID, url="https://example.test/a", title="A", text=""))
-    query = NewsQuery(q="a", visibility=NewsVisibility.ALL, limit=10)
+    query = NewsQuery(q="a", visibility=NewsVisibility.ALL)
 
-    items, total = await service.list(query)
+    items = await service.list(query)
 
     assert [item.id for item in items] == [NEWS_ID]
-    assert total == 1
     assert repo.queries == [query]
 
 
