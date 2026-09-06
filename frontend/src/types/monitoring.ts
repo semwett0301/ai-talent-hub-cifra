@@ -22,6 +22,7 @@ export interface NpaItem {
   url: string;
   billNumber: string | null;
   title: string;
+  plainTitle: string | null;
   stage: string | null;
   stageCode: string | null;
   documentUrl: string | null;

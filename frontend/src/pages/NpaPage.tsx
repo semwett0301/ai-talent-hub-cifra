@@ -192,7 +192,7 @@ function NpaList({ items, selected, onSelect, loading, error, onRetry }: NpaList
           >
             <span className="npa-grid">
               <span>
-                <strong>{entry.title}</strong>
+                <strong>{displayNpaTitle(entry)}</strong>
                 <small>Законопроект № {entry.billNumber ?? "не указан"}</small>
                 {entry.initialSummaryStatus === "pending" && <small className="npa-update-mark">AI-описание готовится</small>}
               </span>
@@ -240,7 +240,7 @@ function NpaDetailPanel({ item, loading, error, onRetry }: NpaDetailPanelProps) 
         </Badge>
         <span>Последняя проверка: {formatDateTime(item.lastCheckedAt)}</span>
       </div>
-      <h2>{item.title}</h2>
+      <h2>{displayNpaTitle(item)}</h2>
       <p className="small muted">Законопроект № {item.billNumber ?? "не указан"} · Государственная Дума</p>
       <div className="npa-primary-links">
         <a className="npa-source-link" href={item.url} target="_blank" rel="noreferrer">
@@ -311,6 +311,10 @@ function NpaOverview({ item }: { item: NpaItem }) {
       </div>
     </>
   )
+}
+
+function displayNpaTitle(item: NpaItem) {
+  return item.plainTitle || item.title
 }
 
 function ArticleChanges({ changes }: { changes: ArticleChange[] }) {

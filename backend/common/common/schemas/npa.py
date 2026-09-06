@@ -30,6 +30,7 @@ class Npa(Base):
     )
     url: Mapped[str] = mapped_column(String(URL_MAX_LENGTH), unique=True)
     title: Mapped[str] = mapped_column(String(TITLE_MAX_LENGTH))
+    plain_title: Mapped[str | None] = mapped_column(String(90), nullable=True)
     text: Mapped[str] = mapped_column(Text, default="", server_default="")
     bill_number: Mapped[str | None] = mapped_column(String(BILL_NUMBER_MAX_LENGTH), nullable=True)
     stage: Mapped[str | None] = mapped_column(String(STAGE_MAX_LENGTH), nullable=True)

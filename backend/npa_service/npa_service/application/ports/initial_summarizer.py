@@ -2,10 +2,10 @@
 
 from typing import Protocol
 
-from npa_service.domain import BillSnapshot
+from npa_service.domain import BillSnapshot, InitialSummary
 
 
 class InitialSummarizer(Protocol):
-    """Builds a detailed, plain-language overview without comparing revisions."""
+    """Builds a short plain-language overview and a readable bill title."""
 
-    async def summarize(self, snapshot: BillSnapshot) -> str: ...
+    async def summarize(self, snapshot: BillSnapshot) -> InitialSummary: ...

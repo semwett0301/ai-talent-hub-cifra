@@ -6,11 +6,11 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openrouter import ChatOpenRouter
 from openrouter.errors import OpenRouterError
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from npa_service.application.errors import ChangeModelError
 from npa_service.application.ports import InitialSummarizer
-from npa_service.domain import BillSnapshot
+from npa_service.domain import BillSnapshot, InitialSummary
 from npa_service.infrastructure.llm.openrouter_change_summarizer import (
     DEFAULT_BASE_URL,
     MAX_RETRIES,
@@ -30,7 +30,8 @@ MODEL_ERRORS = (
 
 
 class _InitialSummaryResponse(BaseModel):
-    summary: str
+    title: str = Field(min_length=4, max_length=90)
+    summary: str = Field(min_length=20, max_length=500)
 
 
 class OpenRouterInitialSummarizer(InitialSummarizer):
@@ -41,7 +42,7 @@ class OpenRouterInitialSummarizer(InitialSummarizer):
         self.__max_chars = config.npa_initial_summary_max_chars
         self.__max_output_tokens = config.npa_initial_summary_max_output_tokens
 
-    async def summarize(self, snapshot: BillSnapshot) -> str:
+    async def summarize(self, snapshot: BillSnapshot) -> InitialSummary:
         if not self.__api_key:
             raise ChangeModelError("OPENROUTER_API_KEY is required for NPA initial analysis")
         try:
@@ -59,9 +60,13 @@ class OpenRouterInitialSummarizer(InitialSummarizer):
             )
         except MODEL_ERRORS as error:
             raise ChangeModelError("OpenRouter NPA initial analysis failed") from error
-        if not isinstance(response, _InitialSummaryResponse) or not response.summary.strip():
+        if (
+            not isinstance(response, _InitialSummaryResponse)
+            or not response.title.strip()
+            or not response.summary.strip()
+        ):
             raise ChangeModelError("OpenRouter returned an empty NPA initial analysis")
-        return response.summary.strip()
+        return InitialSummary(title=response.title.strip(), summary=response.summary.strip())
 
     def __model(self) -> ChatOpenRouter:
         return ChatOpenRouter(
