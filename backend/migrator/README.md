@@ -32,8 +32,10 @@ for all services, so migrations live here (not per service): the migrator runs
   (`--package migrator --no-default-groups` → common + Alembic), copied onto a clean
   `python:3.12-slim` with the Alembic config/migrations; `CMD alembic upgrade head`.
 
-Notes: run locally from this dir — `uv run alembic -c alembic.ini upgrade head`;
-autogenerate — `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`.
+Notes: run locally from this dir with the root `.env` exported (`set -a; source ../../.env;
+set +a`; the dev compose overlay publishes postgres on the host) — `uv run alembic -c
+alembic.ini upgrade head`; autogenerate — `uv run alembic -c alembic.ini revision
+--autogenerate -m "msg"`.
 Both `upgrade` and `--autogenerate` see the full schema because `env.py` imports
 `common.schemas`. **Data migrations must define tables inline (`sa.table(...)`)**,
 never by importing ORM models, so old revisions stay pinned to their historical

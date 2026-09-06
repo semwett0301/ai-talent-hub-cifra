@@ -1,12 +1,13 @@
 # common.core.settings.templates
 
-One settings group per module. A group is a `SettingsTemplate` (a `BaseSettings` bound to
-the repo-root `.env`, `extra="ignore"`); it either sets `env_prefix` when all its
-variables share one, or names its fields exactly like the variables.
+One settings group per module. A group is a `SettingsTemplate` (a `BaseSettings` reading
+the **process environment only**, `extra="ignore"`); it either sets `env_prefix` when all
+its variables share one, or names its fields exactly like the variables. Nothing here opens
+`.env` — Compose injects it into containers, and a host run exports it first.
 
 | Module | Class | Variables |
 |---|---|---|
-| `base.py` | `SettingsTemplate`, `ENV_FILE` | — (the shared config) |
+| `base.py` | `SettingsTemplate` | — (the shared config) |
 | `app.py` | `AppSettings` | `APP_NAME`, `ENVIRONMENT`, `DEBUG` |
 | `postgres.py` | `PostgresSettings` | `POSTGRES_*`, `DATABASE_URL`; computed `async_database_url` / `sync_database_url` |
 | `rabbit.py` | `RabbitSettings` | `RABBITMQ_URL`, `NEWS_EXCHANGE` |

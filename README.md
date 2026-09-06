@@ -38,8 +38,11 @@ cp .env.example .env           # one file for the whole project, see below
 docker compose up --build -d   # everything, reachable at http://localhost/
 ```
 
-Local dev: backend `cd backend && uv run uvicorn source_service.main:app --reload --app-dir source_service`;
-frontend `cd frontend && npm install && npm run dev`.
+Local dev outside containers: backend `set -a; source .env; set +a` then
+`cd backend && uv run uvicorn source_service.main:app --reload --app-dir source_service`
+(code reads the environment only, never `.env` itself); frontend
+`cd frontend && npm install && npm run dev`. The dev overlay below does both with hot
+reload inside Compose.
 
 ### Hot reload inside Compose (dev overlay)
 
@@ -109,8 +112,10 @@ values live as **GitHub Actions Secrets** (mapping table at the end).
 
 How each consumer picks it up:
 
-- **Backend** — `common.core.settings.Settings` loads the repo-root `.env` by absolute
-  path, so `uv run …` works from any directory. Never read `os.environ` directly.
+- **Backend** — `common.core.settings` reads the **process environment only**; it never
+  opens `.env`, so the file's location can change without touching code. In Compose the
+  variables arrive from the `environment:` blocks; on the host export them first:
+  `set -a; source .env; set +a`. Never read `os.environ` directly in a service.
 - **Compose** — loads the root `.env` automatically for `${VAR}` substitution, and
   hands each service only the variables it needs (so infra/deploy secrets never
   enter an application container).

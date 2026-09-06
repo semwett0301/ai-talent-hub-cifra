@@ -22,8 +22,9 @@ directories (no `services/` wrapper).
 - `pyproject.toml` — virtual workspace root: `[tool.uv.workspace] members` (common +
   the services) + shared dev tooling (ruff/mypy/pytest). No package of its own.
 - `uv.lock` — locked versions (committed).
-- Settings come from the **repo-root `.env`** (see `../.env.example`); `common.core.settings`
-  loads it by absolute path, so `uv run` works from any directory.
+- Settings come from the **process environment only** (`common.core.settings`); the
+  repo-root `.env` (see `../.env.example`) is fed in by Docker Compose, or on the host by
+  `set -a; source .env; set +a` before `uv run`. Code never opens the file.
 
 ## Service architecture — onion / clean layers
 
@@ -88,6 +89,6 @@ New service = copy `source_service/`, add it to `members` in `pyproject.toml` an
 block to the root `docker-compose.yml`. ORM models live in the shared `common.schemas`
 (one DB for all); services never import each other (share via `common` + the bus), and
 the `migrator` imports only `common.schemas`. Migrations are centralized in `migrator`
-— `cd migrator && uv run alembic -c alembic.ini upgrade head` (the compose `migrator`
-one-shot does this). A public API gateway is planned (`../plans/api-gateway.md`);
+— `cd migrator && uv run alembic -c alembic.ini upgrade head` with the `.env` exported (the
+compose `migrator` one-shot does this). A public API gateway is planned (`../plans/api-gateway.md`);
 services stay internal until then.

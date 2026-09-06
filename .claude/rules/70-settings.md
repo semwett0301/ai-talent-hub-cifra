@@ -4,6 +4,9 @@ All configuration lives in **one place**: `backend/common/common/core/settings`.
 
 - Read config only through `common.core.settings.settings` — never `os.environ`, never a
   `BaseSettings` / `.env` reader anywhere else (a service, a use case, an adapter).
+- Settings read the **process environment only**. No code opens `.env`: Compose injects it
+  into containers, a host run exports it (`set -a; source .env; set +a`). Never compute a
+  path to `.env` from `__file__`.
 - Settings are **grouped by concern**, one `SettingsTemplate` subclass per module in
   `settings/templates/` (`postgres`, `rabbit`, `web_crawl`, `llm`, …), aggregated by the
   root `Settings` as `settings.<group>.<field>`.
