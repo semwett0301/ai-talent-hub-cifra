@@ -2,9 +2,15 @@
 # Build context = repo root (needs frontend/ and nginx/templates/).
 FROM node:22-alpine AS build
 
-# Baked into the bundle at build time (compose passes it from the root .env).
-ARG VITE_API_BASE_URL=/api
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Baked into the bundle at build time (compose passes them from the root .env).
+# Deliberately without defaults: a missing value fails the build instead of shipping
+# a bundle that calls the wrong path.
+ARG SOURCES_API_PREFIX
+ARG NEWS_API_PREFIX
+ARG NPA_API_PREFIX
+ENV SOURCES_API_PREFIX=$SOURCES_API_PREFIX \
+    NEWS_API_PREFIX=$NEWS_API_PREFIX \
+    NPA_API_PREFIX=$NPA_API_PREFIX
 
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
