@@ -6,10 +6,13 @@ FastAPI's own `HTTPException` (`{"detail": ...}`), so one client parser covers b
 
 from collections.abc import Awaitable, Callable
 
+from common.core.logging import get_logger
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from source_service.application.errors import SourceAlreadyExistsError, SourceNotRelevantError
+
+logger = get_logger(__name__)
 
 STATUS_BY_ERROR: dict[type[Exception], int] = {
     SourceAlreadyExistsError: status.HTTP_409_CONFLICT,
@@ -18,7 +21,14 @@ STATUS_BY_ERROR: dict[type[Exception], int] = {
 
 
 def _responder(http_status: int) -> Callable[[Request, Exception], Awaitable[Response]]:
-    async def respond(_: Request, error: Exception) -> Response:
+    async def respond(request: Request, error: Exception) -> Response:
+        logger.warning(
+            "request refused: status=%d method=%s path=%s reason=%s",
+            http_status,
+            request.method,
+            request.url.path,
+            error,
+        )
         return JSONResponse(status_code=http_status, content={"detail": str(error)})
 
     return respond
