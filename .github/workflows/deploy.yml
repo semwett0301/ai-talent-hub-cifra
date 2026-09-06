@@ -75,6 +75,9 @@ jobs:
       TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
+      SOURCES_API_PREFIX: ${{ vars.SOURCES_API_PREFIX || '/api/sources' }}
+      NEWS_API_PREFIX: ${{ vars.NEWS_API_PREFIX || '/api/news' }}
+      NPA_API_PREFIX: ${{ vars.NPA_API_PREFIX || '/api/npa' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -125,8 +128,10 @@ jobs:
           --exclude='.git/'
           ./ "$DEPLOY_USER@$SSH_HOST:$DEPLOY_PATH/"
 
-      # Server .env: only what must differ from the compose defaults (Telegram + LLM creds).
-      # Built on the runner from secrets, shipped by scp — rsync excludes .env.
+      # Server .env: creds (Telegram + LLM) plus the edge prefixes, which are pinned
+      # here rather than left to the compose defaults — they are baked into the SPA
+      # bundle, so prod must not depend on the two happening to agree.
+      # Built on the runner from secrets and vars, shipped by scp — rsync excludes .env.
       - name: Write server .env
         env:
           SSH_HOST: ${{ steps.host.outputs.host }}
@@ -137,6 +142,9 @@ jobs:
             echo "TELEGRAM_SESSION=$TELEGRAM_SESSION"
             echo "OPENROUTER_API_KEY=$OPENROUTER_API_KEY"
             echo "OPENROUTER_MODEL=$OPENROUTER_MODEL"
+            echo "SOURCES_API_PREFIX=$SOURCES_API_PREFIX"
+            echo "NEWS_API_PREFIX=$NEWS_API_PREFIX"
+            echo "NPA_API_PREFIX=$NPA_API_PREFIX"
           } > server.env
           scp -i ~/.ssh/deploy_key server.env "$DEPLOY_USER@$SSH_HOST:$DEPLOY_PATH/.env"
 

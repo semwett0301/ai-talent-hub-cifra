@@ -135,9 +135,11 @@ Backend (Python):
   it. Line length 100; lint/format with `ruff` (config in `backend/pyproject.toml`).
 
 Frontend (React):
-- Call the backend via **relative `/api/...`** (nginx proxies it), configured via
-  `VITE_API_BASE_URL`. Only `VITE_`-prefixed vars reach the browser — **no
-  secrets**.
+- Call the backend via **relative `/api/...`** (nginx proxies it), using the
+  `__SOURCES_API_PREFIX__` / `__NEWS_API_PREFIX__` / `__NPA_API_PREFIX__` constants that
+  `vite.config.ts` bakes in from the root `.env` — the same variables nginx and the
+  services read, never a second copy. Nothing else from the environment reaches the
+  browser — **no secrets**.
 - Routes are declared in `src/App.tsx`; one component per route under `src/pages/`.
 - Lint with oxlint (`npm run lint`).
 

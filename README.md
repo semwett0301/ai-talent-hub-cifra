@@ -134,9 +134,15 @@ How each consumer picks it up:
 
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
-| `SOURCES_API_PREFIX` | The nginx location `source_service` is mounted under, and the same value as FastAPI's `root_path` (so `/docs` and `openapi.json` resolve behind the proxy). Consumed by **both** containers — change it here only. | `/api/sources` | no |
-| `NEWS_API_PREFIX` | Same for `news_service`. | `/api/news` | no |
-| `NPA_API_PREFIX` | Same for `npa_service`. | `/api/npa` | no |
+| `SOURCES_API_PREFIX` | The nginx location `source_service` is mounted under, the same value as FastAPI's `root_path` (so `/docs` and `openapi.json` resolve behind the proxy), and the path the SPA calls. Consumed by **all three** — nginx, the service, and the frontend build — change it here only. | `/api/sources` | no — **ships to the browser** |
+| `NEWS_API_PREFIX` | Same for `news_service`. | `/api/news` | no — **ships to the browser** |
+| `NPA_API_PREFIX` | Same for `npa_service`. | `/api/npa` | no — **ships to the browser** |
+
+The frontend gets these as build args (`nginx/Dockerfile`), which `vite.config.ts` turns
+into the `__SOURCES_API_PREFIX__` / `__NEWS_API_PREFIX__` / `__NPA_API_PREFIX__` compile-time
+constants. They are baked into the bundle, so `npm run build` **fails** when one is unset
+rather than defaulting; `npm run dev` falls back to the values above. `deploy.yml` pins them
+from GitHub Actions *variables* (not secrets) instead of relying on the compose defaults.
 
 ### Logs (Dozzle)
 
@@ -150,12 +156,6 @@ Every container logs to stdout; Docker keeps them as rotated json-files (`10m` �
 anchor in `docker-compose.yml`). Read them with `docker compose logs -f <service>` or in
 the browser at `http://<host>/logs/` (only this compose project's containers, read-only
 docker socket).
-
-### Frontend (build time)
-
-| Variable | Meaning | Default | Secret |
-|---|---|---|---|
-| `VITE_API_BASE_URL` | Base path for API calls from the SPA. Same-origin by default — nginx proxies `/api`. | `/api` | no — **ships to the browser** |
 
 ### Telegram
 

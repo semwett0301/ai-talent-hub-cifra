@@ -177,7 +177,9 @@ services:
       context: .
       dockerfile: nginx/Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
+        NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
+        NPA_API_PREFIX: ${NPA_API_PREFIX:-/api/npa}
     logging: *default-logging
     environment:
       SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
