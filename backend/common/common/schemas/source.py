@@ -28,7 +28,8 @@ class Source(Base):
     reliability: Mapped[SourceReliability] = mapped_column(
         SOURCE_RELIABILITY, default=SourceReliability.MEDIUM, server_default="medium"
     )
-    # How often to poll a pull source (RSS/Web), seconds. Null for push (Telegram).
+    # How often to poll a pull source (RSS/Web), seconds; null for push (Telegram),
+    # which a CHECK constraint enforces rather than the ORM.
     poll_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     # False once a WEB crawl finds nothing; keeps is_enabled false too, by CHECK constraint.

@@ -10,7 +10,9 @@ class per module (re-exported from `__init__.py`).
   `UNIQUE` — the same address added twice is refused by the DB, which the API maps to a
   409. `rss_link` is
   the discovered feed URL, set only for `type=rss` sources — enforced by a CHECK
-  constraint, not the ORM. `is_relevant` (default true) is set false by
+  constraint, not the ORM. `poll_interval_seconds` is the pull schedule and must be null for `type=telegram`
+  (a push source has none) — a CHECK constraint, not the ORM. `is_relevant` (default
+  true) is set false by
   `WebCrawlCollector` when a WEB crawl finds no candidates at all; a CHECK
   constraint enforces `is_relevant OR NOT is_enabled` — a non-relevant source is
   always also disabled, DB-enforced regardless of who writes the row.

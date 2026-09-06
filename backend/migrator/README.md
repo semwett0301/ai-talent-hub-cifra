@@ -24,7 +24,9 @@ for all services, so migrations live here (not per service): the migrator runs
   `0010_news_source_id` adds the nullable, indexed `news.source_id` FK to `source`
   with `ON DELETE SET NULL`; `0011_source_normalized_link` adds `source.normalized_link`,
   backfills it and makes it UNIQUE — its backfill copies the normalisation rather than
-  importing it, so the revision keeps applying the same way).
+  importing it, so the revision keeps applying the same way);
+  `0012_telegram_has_no_schedule` clears `poll_interval_seconds` on telegram rows and
+  adds the CHECK keeping it null there).
 - `pyproject.toml` — runtime deps `common` + `alembic` + `psycopg2-binary`. Every
   ORM model comes from `common.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.
