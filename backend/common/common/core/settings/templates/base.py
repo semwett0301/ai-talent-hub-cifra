@@ -4,9 +4,22 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# The one .env for the whole repo (see .env.example) — this file lives at
-# <root>/backend/common/common/core/settings/templates/base.py, hence seven levels up.
-ENV_FILE = Path(__file__).resolve().parents[6] / ".env"
+# <root>/backend/common/common/core/settings/templates/base.py: the repo root is six
+# parents up from this file when it runs from a checkout.
+_REPO_ROOT_DEPTH = 6
+
+
+def _repo_env_file() -> Path | None:
+    """The repo-root .env, or None when installed somewhere shallower (e.g. a /src mount)."""
+    parents = Path(__file__).resolve().parents
+    if len(parents) <= _REPO_ROOT_DEPTH:
+        return None
+
+    return parents[_REPO_ROOT_DEPTH] / ".env"
+
+
+# The one .env for the whole repo (see .env.example); outside a checkout the environment alone.
+ENV_FILE = _repo_env_file()
 
 
 class SettingsTemplate(BaseSettings):

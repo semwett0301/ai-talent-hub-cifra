@@ -21,4 +21,7 @@ built, so variable names never get a nested delimiter (`POSTGRES_HOST`, not
 new template + a field on `Settings`), plus a line in the root `.env.example` and
 `README.md`. `settings` is imported by `logging` and `db`, so this package must stay
 dependency-free within `core`. Alembic uses `settings.postgres.sync_database_url`;
-everything else the async one.
+everything else the async one. `ENV_FILE` is resolved from this file's position in the
+checkout and is `None` when the package sits too shallow for that (the dev overlay mounts
+it at `/src/common`) — then only the process environment is read, which is what a
+container wants anyway.
