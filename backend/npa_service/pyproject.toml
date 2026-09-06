@@ -1,12 +1,18 @@
 [project]
 name = "npa-service"
 version = "0.1.0"
-description = "NPA service — store legislative acts (нормативно-правовые акты), serve list / get / create"
+description = "Track State Duma legislative acts, versions, and plain-language changes"
 requires-python = ">=3.12"
 dependencies = [
     "common",
     "fastapi==0.115.6",
     "uvicorn[standard]==0.34.0",
+    "apscheduler==3.11.0",
+    "beautifulsoup4==4.15.0",
+    "httpx==0.28.1",
+    "langchain-core>=1.2.22,<2.0",
+    "langchain-openrouter>=0.2.8,<0.3",
+    "python-docx==1.2.0",
 ]
 
 [build-system]

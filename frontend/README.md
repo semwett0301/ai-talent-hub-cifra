@@ -13,15 +13,17 @@ React 19 + Vite + TypeScript SPA, built to static files and served by the `nginx
   hook every mutation reports failures through; `sourceMutations.ts` / `newsMutations.ts`
   wrap the queries/mutations so every write invalidates the list in one place;
   `sources.ts` / `news.ts` hold the view vocabulary (labels, poll intervals, the feed's
-  periods, moment formatting, the card teaser).
+  periods, moment formatting, the card teaser). `npa.ts` is the typed NPA transport and
+  response mapper.
 - `src/pages/` — one component per route: `SourcesPage` and `NewsPage` (live API),
-  `NpaPage` (still on `src/data/` fixtures).
+  `NpaPage` (live NPA API, Duma URL registration, version history, and plain-language
+  change details).
 - `src/components/sources/` — the Sources screen: row, create/edit dialog, delete dialog.
 - `src/components/monitoring/Shared.tsx` — `SearchField` and `Choice`.
 - `src/components/ui/` — shadcn / Base UI primitives; `toast.tsx` is ours, mounted once
   in `main.tsx`, and the rest is unchanged.
-- `src/data/` — remaining demo fixtures for НПА (`npa.ts`, `news.ts` — the latter only
-  feeds `NpaPage`'s alerts tab) and `newsPlaceholders.ts`: stable made-up AI summary /
+- `src/data/` — remaining demo fixtures for News (`news.ts` and `newsPlaceholders.ts`):
+  stable made-up AI summary /
   impact for live news items, seeded by id, until the LLM
   stage produces the real ones — the screen keeps its full layout meanwhile.
 - `src/globals.d.ts` — the compile-time API-prefix constants.

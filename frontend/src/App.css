@@ -1183,6 +1183,25 @@ html {
   margin-bottom: 8px;
 }
 
+.npa-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: #6eb1ff;
+  font-size: 11px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .article-changes ul {
   list-style: none;
   padding: 0;

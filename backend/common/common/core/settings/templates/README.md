@@ -15,6 +15,7 @@ its variables share one, or names its fields exactly like the variables. Nothing
 | `sources.py` | `SourceSchedulerSettings` | `SOURCE_POLL_INTERVAL_SECONDS`, `SOURCE_RSS_FEEDS_LIMIT` |
 | `rss_discovery.py` | `RssDiscoverySettings` | `RSS_DISCOVERY_MAX_DEPTH`, `RSS_DISCOVERY_TIMEOUT_SECONDS`, `RSS_DISCOVERY_RESPECT_ROBOTS`, `RSS_DISCOVERY_TRY_WELL_KNOWN_PATHS` |
 | `news.py` | `NewsConsumerSettings` | `NEWS_QUEUE`, `NEWS_BATCH_SIZE`, `NEWS_BATCH_INTERVAL_SECONDS`, `NEWS_REQUEUE_ON_STORE_ERROR` |
+| `npa.py` | `NpaSettings` | `NPA_SERVICE_URL`, `NPA_POLL_*`, `NPA_SIMULATION_ENABLED`, `NPA_REQUEST_*`, `NPA_MAX_*`, `NPA_CHANGE_MODEL`, `NPA_*_MAX_OUTPUT_TOKENS`, `NPA_USER_AGENT` |
 | `telegram.py` | `TelegramSettings` | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_SESSION` |
 | `web_crawl.py` | `WebCrawlSettings` | `WEB_CRAWL_DAYS`, `WEB_CRAWL_MAX_ARTICLES`, `WEB_CRAWL_LLM_ENABLED` + every tuning knob of the crawl as `WEB_CRAWL_<FIELD>` |
 | `llm.py` | `LlmSettings` | `NEWS_AGENT_MODEL`, `NEWS_LLM_*`, `OPENROUTER_*`, `OPENAI_*`; `llm_provider()` / `llm_token()` / `llm_base_url()` |

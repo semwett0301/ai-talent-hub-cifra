@@ -29,9 +29,10 @@ class per module (re-exported from `__init__.py`).
   (no index — tags are shown, never filtered on), `excerpt` / `updated_at` are nullable.
   Two service-owned fields: `dismissed_at` (a reader hid the item from the feed) and
   `is_alert` (default false; set when the item is escalated into a legislative act).
-- `npa.py` — `Npa`: ORM model for the `npa` table (legislative acts), written by
-  `npa_service`. `common.entities.npa.NpaDTO` fields plus `id`/`created_at`; `url` is
+- `npa.py` — `Npa`: current State Duma bill snapshot and tracking state; `url` is
   `UNIQUE` (one row per act).
+- `npa_version.py` — `NpaVersion`: immutable stage/text snapshots with the plain-language
+  overall and per-article change summaries for each transition.
 - `types.py` — `SOURCE_TYPE` / `SOURCE_RELIABILITY`: the enum-backed VARCHAR column
   types `Source` and `News` share (a constants-only module, not a class).
 

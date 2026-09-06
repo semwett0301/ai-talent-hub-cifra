@@ -183,6 +183,26 @@ The feedsearch crawl `source_service` runs on a new address to decide RSS vs WEB
 |---|---|---|---|
 | `NPA_SERVICE_URL` | Base URL of `npa_service`'s API that `POST /api/news/{id}/npa` posts the act to (service-to-service, inside the compose network — Compose overrides it to `http://npa_service:8000`). Local dev default assumes `npa_service` on port 8002. | `http://localhost:8002` | no |
 
+### npa_service tracking
+
+`POST /api/npa/` accepts a State Duma bill URL, immediately imports its title, furthest
+populated stage, latest event date, and latest Word bill text, then checks non-terminal
+acts daily. Changed text is explained with the configured OpenRouter model; official
+publication ends tracking while preserving every version.
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `NPA_POLL_INTERVAL_SECONDS` | Interval between full active-registry checks. | `86400` | no |
+| `NPA_SIMULATION_ENABLED` | Local-only deterministic NPA scenario; never enable in a deployed environment. | `false` | no |
+| `NPA_REQUEST_TIMEOUT_SECONDS` | State Duma page/document request timeout. | `30` | no |
+| `NPA_MAX_DOWNLOAD_BYTES` | Maximum bytes accepted for one page or Word document. | `12000000` | no |
+| `NPA_CHANGE_MODEL` | OpenRouter model for structured plain-language version comparison. | `deepseek/deepseek-v4-flash-0731` | no |
+| `NPA_MAX_DIFF_CHARS` | Maximum unified-diff characters sent in one comparison. | `120000` | no |
+| `NPA_ARTICLE_CHANGES_MAX_OUTPUT_TOKENS` | Output-token cap for the concise changed-articles analysis. | `1200` | no |
+| `NPA_OVERALL_SUMMARY_MAX_OUTPUT_TOKENS` | Output-token cap for the detailed overall change summary. | `4000` | no |
+| `NPA_USER_AGENT` | Identifies the monitor on State Duma HTTP requests. | `CifraNpaMonitor/1.0` | no |
+| `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | Credentials/endpoint shared with other OpenRouter work. | empty / OpenRouter v1 | **yes** |
+
 ### Edge routing
 
 | Variable | Meaning | Default | Secret |

@@ -19,18 +19,20 @@ export interface NewsItem {
 }
 export interface NpaItem {
   id: string;
+  url: string;
+  billNumber: string | null;
   title: string;
-  document: string;
-  source: string;
-  stage: string;
-  priority: Priority;
-  deadline: string;
-  owner: string;
-  initials: string;
-  alert: string;
-  updated: boolean;
+  stage: string | null;
+  trackingStatus: "tracking" | "published" | "unsupported";
+  sourceUpdatedAt: string | null;
+  lastCheckedAt: string | null;
+  publishedAt: string | null;
+  summary: string | null;
+  articleChanges: ArticleChange[];
+}
+export interface ArticleChange {
+  article: string;
   summary: string;
-  impact: string;
-  changes: { before: string; after: string }[];
-  versions: { date: string; label: string }[];
+  before: string;
+  after: string;
 }
