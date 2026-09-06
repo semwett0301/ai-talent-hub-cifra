@@ -37,6 +37,14 @@ class DetectedSource:
     rss_link: str | None
 
 
+def _is_new_address(source: Source, changes: dict) -> bool:
+    """The edit form always sends `link`, and detection hits the network — so only an
+    address that is genuinely different from the stored one pays for a re-detect."""
+    link = changes.get("link")
+
+    return link is not None and source_identity(link) != source.normalized_link
+
+
 def _check_relevance(source: Source, changes: dict) -> None:
     """`is_relevant` isn't client-settable; a non-relevant source stays disabled."""
     is_relevant = changes.get("is_relevant", source.is_relevant)
@@ -83,9 +91,11 @@ class SourceService:
 
     async def update(self, source: Source, payload: SourceUpdate) -> Source:
         changes = payload.model_dump(exclude_unset=True)
-        if "link" in changes:
-            detected = await self.__detect_type(changes["link"])
-            changes |= self.__address_fields(detected, source.poll_interval_seconds)
+
+        if _is_new_address(source, changes):
+            derived = await self.__derive_from_link(source, changes["link"])
+            changes = derived | changes
+
         _check_relevance(source, changes)
 
         updated = await self._repo.update(source, changes)
@@ -103,6 +113,15 @@ class SourceService:
         logger.info("source deleted: id=%s link=%s", source_id, link)
 
         await self._registrar.unregister(source)
+
+    async def __derive_from_link(self, source: Source, link: str) -> dict:
+        """A new address is not the one the crawler judged, so the verdict goes. Only a
+        source that verdict had force-disabled comes back on: one the operator switched
+        off stays off."""
+        detected = await self.__detect_type(link)
+        fields = self.__address_fields(detected, source.poll_interval_seconds)
+
+        return fields if source.is_relevant else fields | {"is_enabled": True}
 
     def __address_fields(self, detected: DetectedSource, current_interval: int | None) -> dict:
         """Everything the address implies, so create and update stay in step. `is_relevant`

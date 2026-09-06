@@ -18,7 +18,9 @@ re-exported from `__init__.py`.
   `api/errors.py`), and the DB CHECK constraint backs this up regardless of who
   writes the row. **A changed `link` resets `is_relevant` to true** — the verdict
   belonged to the old address — so editing a source is the way out of that state,
-  and a bare `is_enabled` PATCH still hits the refusal.
+  and a bare `is_enabled` PATCH still hits the refusal. Only a source that verdict
+  had force-disabled is switched back on with it; one the operator disabled stays
+  off, and a PATCH that leaves `link` alone touches neither flag.
 - `source_registry.py` — `SourceRegistry`: what a source's runtime state should be.
   Dispatches by source type — pull → a job through the `JobScheduler` port, push →
   subscription — and applies `is_enabled` in both directions. Takes its collectors and the

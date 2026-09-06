@@ -8,6 +8,7 @@ from source_service.application.dto.source import SourceCreate, SourceUpdate
 from source_service.application.errors import SourceNotRelevantError
 from source_service.application.ports.source import SourceRepository
 from source_service.application.services.source import SourceService
+from source_service.domain.urls import source_identity
 
 TELEGRAM_LINK = "https://t.me/example"
 DEFAULT_INTERVAL = 300
@@ -21,7 +22,7 @@ def source(
         id=uuid.uuid4(),
         name="Example",
         link=link,
-        normalized_link=link,
+        normalized_link=source_identity(link),
         type=SourceType.WEB,
         is_enabled=False,
         is_relevant=relevant,
@@ -157,6 +158,26 @@ async def test_a_new_link_clears_the_crawler_s_irrelevance_verdict():
     )
 
     assert updated.is_relevant
+    assert updated.is_enabled
+
+
+@pytest.mark.asyncio
+async def test_a_new_link_leaves_a_source_the_operator_disabled_off():
+    service, _, _ = build()
+
+    updated = await service.update(source(), SourceUpdate(link="https://another.test"))
+
+    assert not updated.is_enabled
+
+
+@pytest.mark.asyncio
+async def test_editing_anything_but_the_link_leaves_the_flags_alone():
+    service, _, _ = build()
+
+    updated = await service.update(source(relevant=False), SourceUpdate(name="Renamed"))
+
+    assert not updated.is_relevant
+    assert not updated.is_enabled
 
 
 @pytest.mark.asyncio
@@ -179,3 +200,14 @@ async def test_becoming_telegram_drops_the_schedule():
     )
 
     assert updated.poll_interval_seconds is None
+
+
+@pytest.mark.asyncio
+async def test_resending_the_same_address_does_not_re_detect():
+    service, _, fetcher = build()
+    existing = source(link="https://example.test/")
+
+    await service.update(existing, SourceUpdate(name="Renamed", link="https://WWW.Example.test"))
+
+    assert fetcher.calls == []
+    assert existing.name == "Renamed"
