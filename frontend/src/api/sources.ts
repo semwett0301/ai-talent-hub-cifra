@@ -25,19 +25,19 @@ export function isReliability(value: string): value is SourceReliability {
 
 // The nine intervals the UI offers; the DB stores plain seconds, so the list lives here.
 export const FREQUENCIES = [
-  { seconds: 1800, label: "каждые 30 мин" },
-  { seconds: 3600, label: "каждый час" },
-  { seconds: 10800, label: "каждые 3 часа" },
-  { seconds: 28800, label: "каждые 8 часов" },
-  { seconds: 86400, label: "каждые 24 часа" },
-  { seconds: 259200, label: "каждые 3 дня" },
-  { seconds: 604800, label: "каждую неделю" },
-  { seconds: 2592000, label: "каждый месяц" },
-  { seconds: 7776000, label: "каждый квартал" },
+  { seconds: 1800, label: "Каждые 30 мин" },
+  { seconds: 3600, label: "Каждый час" },
+  { seconds: 10800, label: "Каждые 3 часа" },
+  { seconds: 28800, label: "Каждые 8 часов" },
+  { seconds: 86400, label: "Каждые 24 часа" },
+  { seconds: 259200, label: "Каждые 3 дня" },
+  { seconds: 604800, label: "Каждую неделю" },
+  { seconds: 2592000, label: "Каждый месяц" },
+  { seconds: 7776000, label: "Каждый квартал" },
 ] as const
 
 export const DEFAULT_FREQUENCY = FREQUENCIES[0].seconds
-const REALTIME_LABEL = "в реальном времени"
+const REALTIME_LABEL = "В реальном времени"
 const NO_SCHEDULE_LABEL = "—"
 
 /** Telegram is a push source — it has no interval to show, it streams. */
@@ -51,5 +51,5 @@ export function frequencyLabel(source: Source): string {
 
   const match = FREQUENCIES.find((option) => option.seconds === source.poll_interval_seconds)
 
-  return match?.label ?? `каждые ${source.poll_interval_seconds ?? DEFAULT_FREQUENCY} с`
+  return match?.label ?? `Каждые ${source.poll_interval_seconds ?? DEFAULT_FREQUENCY} с`
 }

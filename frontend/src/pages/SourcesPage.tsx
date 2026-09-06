@@ -62,7 +62,7 @@ export function SourcesPage() {
       <div className="section-heading">
         <h2>Активные источники</h2>
         <span className="small muted">
-          {sources ? `${tracked} из ${sources.length} отслеживаются` : "загрузка…"}
+          {sources ? `${tracked} из ${sources.length} отслеживаются` : "Загрузка…"}
         </span>
       </div>
       <p className="small muted">

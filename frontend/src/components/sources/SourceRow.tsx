@@ -6,7 +6,7 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { useUpdateSource } from "@/api/sourceMutations"
 import { TYPE_LABELS, frequencyLabel, type Source, type SourceType } from "@/api/sources"
 
-const NOT_A_NEWS_RESOURCE = "не новостной ресурс"
+const NOT_A_NEWS_RESOURCE = "Не новостной ресурс"
 
 const ICONS = { telegram: Send, rss: Rss, web: Landmark } as const
 
