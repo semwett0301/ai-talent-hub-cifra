@@ -5,10 +5,15 @@
 # plain `docker compose up --build`).
 #
 # http://localhost/ is then the live frontend from ./frontend: an edit reloads in the
-# browser, /api/* still goes to the backend services. nginx stays the only published
-# port — it proxies / (and the HMR websocket) to frontend_dev, and is built from the
-# `edge` stage, so the SPA is not compiled at all in this mode.
+# browser, /api/* still goes to the backend services. nginx proxies / (and the HMR
+# websocket) to frontend_dev and is built from the `edge` stage, so the SPA is not
+# compiled at all in this mode. Postgres is additionally published on the host
+# (${POSTGRES_PORT}) for a DB client or a backend service run outside compose.
 services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
   nginx:
     build:
       target: edge

@@ -55,6 +55,9 @@ compiled at all in this mode.
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
+- Postgres is published on the host as `localhost:${POSTGRES_PORT}` (default 5432) in this
+  mode only — for a DB client, or for a backend service run on the host with `uv run`
+  against the compose DB. The plain stack keeps it internal.
 - Dependencies are baked into the dev image and kept in an anonymous volume over
   `/app/node_modules` (the host's macOS binaries must not leak into the linux container).
   After changing `package.json`, restart with `up --build -V` so that volume is recreated.
