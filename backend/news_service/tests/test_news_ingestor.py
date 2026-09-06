@@ -11,10 +11,13 @@ from news_service.domain.dedup import EventSummary, PreparedNews, StoredNewsStat
 
 def _news(url: str) -> NewsDTO:
     return NewsDTO(
+        source_id=uuid.uuid4(),
         source_link="https://source.test",
+        source_name="Source Test",
         source_type=SourceType.WEB,
         source_reliability=SourceReliability.MEDIUM,
         url=url,
+        title="Acme launched a product",
         text="Acme launched a product.",
         published_at=datetime(2026, 9, 5, tzinfo=UTC),
     )
