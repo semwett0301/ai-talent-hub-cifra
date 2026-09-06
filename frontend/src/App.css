@@ -330,6 +330,11 @@ p {
   font-size: 16px;
   font-weight: 600;
   line-height: 1.35;
+  /* Titles are stored whole (a Telegram post's first sentence can run long); the card clamps. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .excerpt {
   font-size: 12px;
@@ -374,9 +379,34 @@ p {
   background: #103a35;
   color: #69d5b3;
 }
-.details > h2 {
+.details > h2,
+.detail-title h2 {
   font-size: 20px;
   margin-bottom: 10px;
+}
+/* The headline and its "open original" hint are one link to the source page. */
+.detail-title {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+.detail-title h2 {
+  margin-bottom: 4px;
+  transition: color 0.15s ease;
+}
+.detail-title:hover h2,
+.detail-title:focus-visible h2 {
+  color: #6eb1ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.detail-title-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #6eb1ff;
 }
 .summary-box {
   background: #102e52;

@@ -32,7 +32,8 @@ for all services, so migrations live here (not per service): the migrator runs
   `updated_at`, `source_name`, `source_tags`), backfilled from `raw` — a
   Telegram row's first sentence and hashtags by SQL regex, copied from the collector —
   re-links orphans by `source_link`, deletes the rest and makes `source_id` NOT NULL with
-  ON DELETE CASCADE; its downgrade is lossy).
+  ON DELETE CASCADE; its downgrade is lossy; `0015_news_dismissed_at` adds the nullable
+  `dismissed_at` column).
 - `pyproject.toml` — runtime deps `common` + `alembic` + `psycopg2-binary`. Every
   ORM model comes from `common.schemas` (a runtime dep), so no service package is
   pulled in. `package = false` — a runner, not an importable package.

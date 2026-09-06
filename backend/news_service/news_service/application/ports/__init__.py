@@ -3,6 +3,5 @@
 from news_service.application.ports.batch_handler import NewsBatchHandler
 from news_service.application.ports.npa_gateway import NpaGateway
 from news_service.application.ports.repositories import NewsRepository
-from news_service.application.ports.transaction import NewsTransaction
 
-__all__ = ["NewsBatchHandler", "NewsRepository", "NewsTransaction", "NpaGateway"]
+__all__ = ["NewsBatchHandler", "NewsRepository", "NpaGateway"]

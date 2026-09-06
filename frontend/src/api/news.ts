@@ -1,0 +1,57 @@
+import type { components, operations } from "./schema.news"
+
+export type NewsOut = components["schemas"]["NewsOut"]
+export type NewsListParams = NonNullable<operations["list_news__get"]["parameters"]["query"]>
+export type NewsVisibility = components["schemas"]["NewsVisibility"]
+
+// The feed's two periods, as the filter offers them. The server takes an absolute `since`.
+export const PERIODS = [
+  { hours: 24, label: "За 24 часа" },
+  { hours: 72, label: "За 3 дня" },
+] as const
+
+const HOUR_MS = 60 * 60 * 1000
+const MINUTE_MS = 60 * 1000
+export const EXCERPT_LENGTH = 160
+
+/** The period's start, rounded down to the minute so the query key stays stable across renders. */
+export function sinceHoursAgo(hours: number, now = Date.now()): string {
+  const start = now - hours * HOUR_MS
+
+  return new Date(start - (start % MINUTE_MS)).toISOString()
+}
+
+/** When the item happened: its publication, else when we collected it. */
+export function newsMoment(item: Pick<NewsOut, "published_at" | "created_at">): Date {
+  return new Date(item.published_at ?? item.created_at)
+}
+
+const TIME = new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" })
+const DAY = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" })
+
+function isSameDay(left: Date, right: Date): boolean {
+  return left.toDateString() === right.toDateString()
+}
+
+/** "09:40" today, "Вчера, 16:30", otherwise "3 сентября" — as the cards always read. */
+export function formatMoment(moment: Date, now = new Date()): string {
+  if (isSameDay(moment, now)) return TIME.format(moment)
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (isSameDay(moment, yesterday)) return `Вчера, ${TIME.format(moment)}`
+
+  return DAY.format(moment)
+}
+
+export function formatToday(now = new Date()): string {
+  return `Сегодня, ${DAY.format(now)}`
+}
+
+/** The card's teaser: the source's own blurb, else the start of the text. */
+export function excerptOf(item: Pick<NewsOut, "excerpt" | "text">): string {
+  if (item.excerpt) return item.excerpt
+
+  const text = item.text.trim()
+  return text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH).trimEnd()}…` : text
+}

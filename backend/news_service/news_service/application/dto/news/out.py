@@ -1,8 +1,4 @@
-"""Output DTO for a News item (ORM is never exposed directly).
-
-Deliberately unchanged by the flat-row rework except for `raw`, which the row no longer
-has; the new columns (`title`, `excerpt`, …) are exposed when the news API is reworked.
-"""
+"""Output DTO for a News item (ORM is never exposed directly)."""
 
 import uuid
 from datetime import datetime
@@ -17,12 +13,22 @@ class NewsOut(BaseModel):
 
     id: uuid.UUID
     schema_version: int
+
     source_id: uuid.UUID
     source_link: str
+    source_name: str
     source_type: SourceType
     source_reliability: SourceReliability
+    source_tags: list[str]
+
     url: str
+    title: str
     text: str
+    excerpt: str | None
     published_at: datetime | None
+    updated_at: datetime | None
+
+    # Hidden from the feed by a reader (null = visible); escalated into a legislative act.
+    dismissed_at: datetime | None
     is_alert: bool
     created_at: datetime
