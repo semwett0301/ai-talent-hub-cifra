@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from npa_service.application.errors import NpaAlreadyExistsError
 from npa_service.application.ports import NpaRepository
-from npa_service.domain import BillSnapshot, ChangeSummary, TrackedUpdate
+from npa_service.domain import BillSnapshot, ChangeSummary, InitialSummary, TrackedUpdate
 
 
 def _snapshot_fields(snapshot: BillSnapshot) -> dict[str, Any]:
@@ -104,7 +104,7 @@ class NpaRepo(NpaRepository):
             await session.refresh(row)
             return row
 
-    async def set_initial_summary(self, npa_id: uuid.UUID, summary: str) -> None:
+    async def set_initial_summary(self, npa_id: uuid.UUID, overview: InitialSummary) -> None:
         async with async_session_factory() as session:
             row = await session.get(Npa, npa_id)
             if row is None:
@@ -116,11 +116,12 @@ class NpaRepo(NpaRepository):
                 .limit(1)
             )
             if first_version is not None:
-                first_version.summary = summary
+                first_version.summary = overview.summary
                 first_version.summary_kind = "initial"
             if row.summary_kind is None:
-                row.summary = summary
+                row.summary = overview.summary
                 row.summary_kind = "initial"
+            row.plain_title = overview.title
             row.initial_summary_status = "ready"
             await session.commit()
 

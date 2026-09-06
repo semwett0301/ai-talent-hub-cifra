@@ -6,7 +6,13 @@ from datetime import UTC, datetime
 from common.entities.npa import NpaTrackingStatus
 from common.schemas import Npa
 from npa_service.application.services import NpaMonitor, NpaRegistration
-from npa_service.domain import ArticleChange, BillSnapshot, ChangeSummary, TrackedUpdate
+from npa_service.domain import (
+    ArticleChange,
+    BillSnapshot,
+    ChangeSummary,
+    InitialSummary,
+    TrackedUpdate,
+)
 from npa_service.domain.state import build_tracking_state
 from npa_service.infrastructure.simulation.simulation_source import SIMULATION_URL, SimulationSource
 
@@ -32,7 +38,7 @@ async def test_registration_generates_initial_summary_after_persisting_bill() ->
     stored = await registration.register(URL)
     await registration.generate_initial_summary(stored.id)
 
-    assert repo.initial_summary == "Понятный обзор законопроекта."
+    assert repo.initial_summary == InitialSummary("Понятное название", "Суть законопроекта.")
 
 
 async def test_monitor_versions_changes_and_stops_after_publication() -> None:
@@ -100,15 +106,15 @@ class _Model:
 
 
 class _InitialModel:
-    async def summarize(self, snapshot: BillSnapshot) -> str:
-        return "Понятный обзор законопроекта."
+    async def summarize(self, snapshot: BillSnapshot) -> InitialSummary:
+        return InitialSummary("Понятное название", "Суть законопроекта.")
 
 
 class _Repo:
     def __init__(self, row: Npa | None = None) -> None:
         self.row = row
         self.added_status: NpaTrackingStatus | None = None
-        self.initial_summary: str | None = None
+        self.initial_summary: InitialSummary | None = None
         self.initial_summary_failed = False
         self.update_value: TrackedUpdate | None = None
         self.was_checked = False
@@ -130,8 +136,8 @@ class _Repo:
         self.row = _row(snapshot.stage_code, snapshot.text, status)
         return self.row
 
-    async def set_initial_summary(self, npa_id: uuid.UUID, summary: str) -> None:
-        self.initial_summary = summary
+    async def set_initial_summary(self, npa_id: uuid.UUID, overview: InitialSummary) -> None:
+        self.initial_summary = overview
 
     async def mark_initial_summary_failed(self, npa_id: uuid.UUID) -> None:
         self.initial_summary_failed = True

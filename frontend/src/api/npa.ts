@@ -5,6 +5,7 @@ interface NpaResponse {
   url: string;
   bill_number: string | null;
   title: string;
+  plain_title: string | null;
   stage: string | null;
   stage_code: string | null;
   document_url: string | null;
@@ -83,6 +84,7 @@ function mapNpa(entry: NpaResponse): NpaItem {
     url: entry.url,
     billNumber: entry.bill_number,
     title: entry.title,
+    plainTitle: entry.plain_title,
     stage: entry.stage,
     stageCode: entry.stage_code,
     documentUrl: entry.document_url,

@@ -16,6 +16,7 @@ class NpaOut(BaseModel):
     url: str
     bill_number: str | None
     title: str
+    plain_title: str | None
     stage: str | None
     stage_code: str | None
     document_url: str | None

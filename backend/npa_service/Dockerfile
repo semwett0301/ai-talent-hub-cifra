@@ -22,7 +22,7 @@ FROM python:3.12-slim-bookworm
 
 ENV PATH="/app/.venv/bin:$PATH"
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-rus \
+    && apt-get install --yes --no-install-recommends antiword poppler-utils tesseract-ocr tesseract-ocr-rus \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv

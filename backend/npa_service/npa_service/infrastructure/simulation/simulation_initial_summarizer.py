@@ -1,15 +1,17 @@
 """Deterministic first-version overview for the local NPA demonstration."""
 
 from npa_service.application.ports import InitialSummarizer
-from npa_service.domain import BillSnapshot
+from npa_service.domain import BillSnapshot, InitialSummary
 
 
 class SimulationInitialSummarizer(InitialSummarizer):
-    async def summarize(self, snapshot: BillSnapshot) -> str:
-        return (
-            f"Законопроект «{snapshot.title}» задаёт правила в указанной сфере. "
-            "Он важен для граждан и организаций, которых затрагивают предусмотренные в тексте "
-            "права, обязанности и сроки. При оценке последствий стоит в первую очередь проверить "
-            "круг адресатов, условия применения норм, исключения и дату вступления в силу. "
-            "Это обзор первой доступной редакции: перед принятием решения сверяйтесь с официальным документом."
+    async def summarize(self, snapshot: BillSnapshot) -> InitialSummary:
+        return InitialSummary(
+            title="Новые правила для цифровых сервисов",
+            summary=(
+                "Проект вводит единые требования к цифровым сервисам: как они обрабатывают "
+                "данные пользователей и информируют их об условиях работы. Он затрагивает "
+                "операторов сервисов и их клиентов; ключевое требование — закрепить эти правила "
+                "внутренними процедурами."
+            ),
         )
