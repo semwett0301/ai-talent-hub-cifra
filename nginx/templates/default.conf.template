@@ -70,8 +70,9 @@ server {
         proxy_read_timeout 1h;
     }
 
-    # SPA: serve static assets, fall back to index.html for client-side routes.
+    # Frontend: the built SPA (static.conf) or, in docker-compose.dev.yml, a proxy to the
+    # Vite dev server (dev.conf). FRONTEND_MODE is set by compose; the image defaults to static.
     location / {
-        try_files $uri $uri/ /index.html;
+        include /etc/nginx/frontend/${FRONTEND_MODE}.conf;
     }
 }

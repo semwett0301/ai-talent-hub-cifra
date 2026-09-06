@@ -12,6 +12,7 @@ from .templates import (
     NpaSettings,
     PostgresSettings,
     RabbitSettings,
+    RssDiscoverySettings,
     SourceSchedulerSettings,
     TelegramSettings,
     WebCrawlSettings,
@@ -27,6 +28,7 @@ class Settings(BaseModel):
     rabbit: RabbitSettings = Field(default_factory=RabbitSettings)
     edge: EdgeSettings = Field(default_factory=EdgeSettings)
     sources: SourceSchedulerSettings = Field(default_factory=SourceSchedulerSettings)
+    rss_discovery: RssDiscoverySettings = Field(default_factory=RssDiscoverySettings)
     news: NewsConsumerSettings = Field(default_factory=NewsConsumerSettings)
     npa: NpaSettings = Field(default_factory=NpaSettings)
     telegram: TelegramSettings = Field(default_factory=TelegramSettings)

@@ -26,7 +26,7 @@ NOISY_LOGGER_LEVEL = logging.INFO
 
 # Libraries that chatter at INFO on every call (news-please re-initialises its
 # extractor pipeline per article and announces each stage) — capped at WARNING.
-CHATTY_LOGGERS = ("newsplease",)
+CHATTY_LOGGERS = ("newsplease", "feedsearch_crawler")
 CHATTY_LOGGER_LEVEL = logging.WARNING
 
 

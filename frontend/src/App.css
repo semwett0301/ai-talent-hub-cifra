@@ -953,6 +953,84 @@ html {
 .source-disabled {
   opacity: 0.65;
 }
+/* A site the crawler found no news on: it cannot be enabled, so it reads as an error. */
+.source-irrelevant {
+  color: #ff8a93;
+}
+.source-irrelevant .source-identity p,
+.source-irrelevant .source-type {
+  color: #ff8a93;
+}
+.source-irrelevant .source-icon {
+  background: #3a1f28;
+  color: #ff8a93;
+}
+.toast-viewport {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 40px));
+}
+.toast {
+  position: relative;
+  padding: 14px 38px 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #3a1f28;
+  background: #1b1020;
+  color: #ffd8db;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+}
+.toast-title {
+  font-weight: 500;
+}
+.toast-description:empty {
+  display: none;
+}
+.toast-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.toast-close:hover {
+  background: #3a1f28;
+}
+
+/* The name keeps its place; the crawler's verdict rides beside it as a badge. */
+.source-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* The frequency select sits inside a table cell — keep it from stretching the column. */
+.source-frequency {
+  max-width: 190px;
+}
+.source-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.source-skeleton {
+  height: 56px;
+  margin-top: 12px;
+  border-radius: 9px;
+}
 @media (max-width: 1100px) {
   .source-table td {
     padding: 15px 5px;

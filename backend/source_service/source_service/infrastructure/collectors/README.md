@@ -3,13 +3,13 @@
 Collector implementations of the application collector ports — the per-source-type
 "how to get news" (external I/O). Re-exported from `__init__.py`.
 
-- `rss.py` — `RssCollector` (pull). **Implemented.** Polls `source.rss_link` (the
-  detected feed URL, distinct from `source.link`) through the `FeedReader` port, fetches
-  every entry's page through the `PageFetcher` port and extracts its full text with
-  `application.parse.extract_article` (news-please); falls back to the feed summary
-  when extraction comes back empty. Emits one
-  `NewsDTO` per entry with
-  `url` = the entry's canonical link and `raw` = `{title, summary, feed_url}`.
+- `rss.py` — `RssCollector` (pull). **Implemented.** Polls every feed in
+  `source.rss_links` (the detected feed URLs, distinct from `source.link`) through the
+  `FeedReader` port — an entry listed by two feeds is taken once, from the first —
+  fetches every entry's page through the `PageFetcher` port and extracts its full text
+  with `application.parse.extract_article` (news-please); falls back to the feed summary
+  when extraction comes back empty. Emits one `NewsDTO` per entry with `url` = the
+  entry's canonical link and `raw` = `{title, summary, feed_url}` (the feed it came from).
 - `web.py` — `WebCrawlCollector` (pull): hands the `Source` row to
   `application.services.web.WebCrawl` and emits each accepted `Article` via its own
   `to_news_dto(source)` — no business decision of its own. `WebCrawl` builds the `Site`,

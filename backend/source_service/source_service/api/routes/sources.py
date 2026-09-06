@@ -2,6 +2,7 @@
 
 import uuid
 
+from common.core.logging import get_logger
 from common.schemas import Source
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -9,13 +10,17 @@ from source_service.application.dto.source import SourceCreate, SourceOut, Sourc
 from source_service.application.services.source import SourceService
 from source_service.deps import get_source_service
 
+logger = get_logger(__name__)
+
 router = APIRouter(tags=["sources"])
 
 
 async def _get_or_404(service: SourceService, source_id: uuid.UUID) -> Source:
     source = await service.get(source_id)
     if source is None:
+        logger.warning("source not found: id=%s", source_id)
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="source not found")
+
     return source
 
 
@@ -48,10 +53,7 @@ async def update_source(
     service: SourceService = Depends(get_source_service),
 ) -> SourceOut:
     source = await _get_or_404(service, source_id)
-    try:
-        updated = await service.update(source, payload)
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    updated = await service.update(source, payload)
     return SourceOut.model_validate(updated)
 
 

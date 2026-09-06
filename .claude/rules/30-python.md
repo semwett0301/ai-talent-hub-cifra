@@ -14,8 +14,9 @@
 - Constants: `UPPER_SNAKE_CASE` (`MAX_RETRY_COUNT`)
 - **Prefer the narrowest visibility a member can have.** Inside a class:
   - **Private** (internal-only helpers and state not meant to be overridden or touched
-    by subclasses): double-underscore prefix `__build_client`, `__client`. Use this
-    wherever a member is purely internal — which is most of them.
+    by subclasses): double-underscore prefix `__detect_type`, `__client`. Use this
+    wherever a member is purely internal — which is most of them. A helper that never
+    touches `self` is not one of them (see *Private helpers are functions, not methods*).
   - **Protected** (a subclass legitimately relies on it): single-underscore prefix
     `_method`. Use only when subclass access is actually intended.
   - **Public** (the type's API — e.g. a port's methods): no prefix.
@@ -88,6 +89,22 @@ except httpx.TimeoutException as e:
 - Allowed exceptions (do not over-split): a private helper class used by exactly one
   public class (e.g. `_Row`) may share its file; a module holding only related
   enums or constants is fine.
+
+## Private helpers are functions, not methods
+
+- **A helper that does not touch `self` is not a method.** Move it to module level, above
+  the class (`10-core` → File layout: constants → free utilities → the class), and give it
+  a single-underscore name (`_link_fields`).
+- **`@staticmethod` on a private helper is the smell this rule removes.** It is already a
+  free function; keeping it in the class body only hides it from direct import and testing,
+  and makes the class look bigger than the behaviour it actually owns.
+- A method stays a method when it **reads or writes instance state**, or when it is part of
+  the type's public API. `SourceService.__detect_type` uses `self._page_fetcher`, so it
+  stays; `_link_fields` and `_check_relevance` take everything they need as arguments, so
+  they do not.
+- Do not thread an injected collaborator through a free function just to empty the class —
+  that trades one clear dependency for an extra parameter at every call site.
+- Name mangling is a class-attribute feature: outside a class use one underscore, never two.
 
 ## Project Structure
 

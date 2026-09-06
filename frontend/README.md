@@ -1,75 +1,57 @@
-# React + TypeScript + Vite
+# frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + TypeScript SPA, built to static files and served by the `nginx` image
+(there is no frontend container). Routes are declared in `src/App.tsx`.
 
-Currently, two official plugins are available:
+## File map
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `src/api/` — the typed backend client. `schema.sources.d.ts` is **generated** from the
+  service's OpenAPI spec (`npm run api:gen`) and committed; `client.ts` builds the
+  `openapi-fetch` client plus `openapi-react-query` hooks and turns a failed response into
+  a message **by status code** (the server's own prose is English and never reaches the
+  screen); `errorToast.ts` is the hook every mutation reports failures through;
+  `sourceMutations.ts` wraps the
+  queries/mutations so every write invalidates the list in one place; `sources.ts` holds
+  the view vocabulary (type and reliability labels, the poll intervals — the first is
+  the one the server assigns a new source — and the realtime label).
+- `src/pages/` — one component per route: `SourcesPage` (live API), `NewsPage` and
+  `NpaPage` (still on `src/data/` fixtures).
+- `src/components/sources/` — the Sources screen: row, create/edit dialog, delete dialog.
+- `src/components/monitoring/Shared.tsx` — `SearchField` and `Choice`.
+- `src/components/ui/` — shadcn / Base UI primitives; `toast.tsx` is ours, mounted once
+  in `main.tsx`, and the rest is unchanged.
+- `src/data/` — remaining demo fixtures for News and НПА.
+- `src/globals.d.ts` — the compile-time API-prefix constants.
+- `UI_GUIDELINES.md`, `UI_IMPLEMENTATION.md`, `handoff/` — product and design notes.
+- `Dockerfile.dev` — dev-only image for the root `docker-compose.dev.yml`: `npm ci` baked
+  in, source bind-mounted, runs `npm run dev -- --host`. The production bundle is built by
+  `nginx/Dockerfile`.
 
-## React Compiler
+## Commands
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev            # Vite dev server; /api is proxied to the compose stack
+npm run build          # static build → dist/
+npm run lint
+npm run api:gen        # regenerate src/api/schema.*.d.ts from a running backend
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Notes
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+- **API prefixes are compile-time constants**, not env reads. `SOURCES_API_PREFIX` /
+  `NEWS_API_PREFIX` / `NPA_API_PREFIX` come from the repo-root `.env` (via nginx build
+  args) and `vite.config.ts` bakes them in as `__SOURCES_API_PREFIX__` and friends. There
+  is no `.env` file here — a production build **fails** if a prefix is unset, so a
+  misconfigured deploy never ships a bundle pointing at the wrong path.
+- `npm run dev` has no nginx in front of it, so `vite.config.ts` proxies `/api` to
+  `http://localhost` (override with `DEV_API_TARGET`). Bring the compose stack up first.
+  The same dev server can run inside Compose instead (`docker-compose.dev.yml`, root
+  README → "Run"): nginx proxies `/` to it, so `http://localhost/` is live. There
+  `/app/node_modules` is an anonymous volume, so restart with `up --build -V` after a
+  `package.json` change.
+- `api:gen` reads `$SPEC_URL` (default `http://localhost/api/sources/openapi.json`). It
+  runs `openapi-typescript` through `npx` rather than as a devDependency: the tool still
+  declares a peer on TypeScript 5.x while this project is on 6.x. `--default-non-nullable
+  false` keeps fields that have server-side defaults optional in request bodies.
+- The generated file is committed so `npm run build` and CI never need a live backend.

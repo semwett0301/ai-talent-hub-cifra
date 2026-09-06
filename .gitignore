@@ -32,7 +32,7 @@ crawl4ai_cache/
 
 plans/
 
-# Local-only compose overrides (e.g. exposing postgres on the host)
+# Personal compose overrides (the shared dev overlay is docker-compose.dev.yml)
 docker-compose.override.yml
 
 # Dozzle login (bcrypt hashes) — created by hand next to .env, never committed

@@ -1,0 +1,84 @@
+# Dev overlay: the frontend served live by a Vite dev server instead of the built bundle.
+# Not standalone — merge it over docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# (or set COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml in .env and use
+# plain `docker compose up --build`).
+#
+# http://localhost/ is then the live frontend from ./frontend: an edit reloads in the
+# browser, /api/* still goes to the backend services. nginx proxies / (and the HMR
+# websocket) to frontend_dev and is built from the `edge` stage, so the SPA is not
+# compiled at all in this mode. Postgres is additionally published on the host
+# (${POSTGRES_PORT}) for a DB client or a backend service run outside compose.
+#
+# Backend services reload too: their packages (and the shared `common`) are bind-mounted
+# under /src, which PYTHONPATH puts ahead of the copy installed in the image's venv, and
+# uvicorn runs with --reload watching that directory. A new dependency still needs
+# `up --build` — only code is live, not the venv. The migrator gets the same mounts, so
+# `docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrator`
+# applies a freshly generated revision without a rebuild.
+x-backend-dev-env: &backend-dev-env
+  PYTHONPATH: /src
+  PYTHONDONTWRITEBYTECODE: "1"
+
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  migrator:
+    environment: *backend-dev-env
+    volumes:
+      - ./backend/common/common:/src/common:ro
+      - ./backend/migrator/migrations:/app/migrator/migrations:ro
+
+  source_service:
+    environment: *backend-dev-env
+    volumes:
+      - ./backend/common/common:/src/common:ro
+      - ./backend/source_service/source_service:/src/source_service:ro
+    command: ["uvicorn", "source_service.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/src"]
+
+  news_service:
+    environment: *backend-dev-env
+    volumes:
+      - ./backend/common/common:/src/common:ro
+      - ./backend/news_service/news_service:/src/news_service:ro
+    command: ["uvicorn", "news_service.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/src"]
+
+  npa_service:
+    environment: *backend-dev-env
+    volumes:
+      - ./backend/common/common:/src/common:ro
+      - ./backend/npa_service/npa_service:/src/npa_service:ro
+    command: ["uvicorn", "npa_service.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/src"]
+
+  nginx:
+    build:
+      target: edge
+    environment:
+      FRONTEND_MODE: dev
+    depends_on:
+      - frontend_dev
+
+  frontend_dev:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    environment:
+      # Only used if something hits Vite's own /api proxy; the browser goes through nginx.
+      DEV_API_TARGET: http://nginx
+      SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
+      NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
+      NPA_API_PREFIX: ${NPA_API_PREFIX:-/api/npa}
+    volumes:
+      - ./frontend:/app
+      # Anonymous volume: keeps the image's linux node_modules over the host's macOS ones.
+      # After a package.json change run `up --build -V` so it is recreated from the new image.
+      - /app/node_modules
+    expose:
+      - "5173"

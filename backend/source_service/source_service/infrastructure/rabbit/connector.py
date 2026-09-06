@@ -12,6 +12,12 @@ from source_service.application.ports.source import NewsPublisher
 logger = get_logger(__name__)
 
 
+def _to_message(item: NewsDTO) -> aio_pika.Message:
+    return aio_pika.Message(
+        item.model_dump_json().encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+    )
+
+
 class RabbitConnector(NewsPublisher):
     def __init__(self, url: str, exchange_name: str) -> None:
         self._url = url
@@ -38,7 +44,7 @@ class RabbitConnector(NewsPublisher):
 
         for item in items:
             key = routing_key(item.source_type)
-            await exchange.publish(self.__to_message(item), routing_key=key)
+            await exchange.publish(_to_message(item), routing_key=key)
             logger.debug("news item published: key=%s url=%s", key, item.url)
 
         logger.info("news published: exchange=%s items=%d", self._exchange_name, len(items))
@@ -50,9 +56,3 @@ class RabbitConnector(NewsPublisher):
 
         await self._connection.close()
         logger.info("rabbit connection closed")
-
-    @staticmethod
-    def __to_message(item: NewsDTO) -> aio_pika.Message:
-        return aio_pika.Message(
-            item.model_dump_json().encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
-        )

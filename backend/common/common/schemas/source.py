@@ -4,11 +4,12 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Uuid, func, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from common.core.db import Base
 from common.entities.news import SourceType
 from common.entities.source import SourceReliability
+from common.schemas.rss_link import RssLink
 from common.schemas.types import SOURCE_RELIABILITY, SOURCE_TYPE
 
 
@@ -21,12 +22,13 @@ class Source(Base):
     type: Mapped[SourceType] = mapped_column(SOURCE_TYPE)
     name: Mapped[str] = mapped_column(String(255))
     link: Mapped[str] = mapped_column(String(255))
-    # Feed URL for RSS sources only; DB-enforced by a CHECK constraint, not the app.
-    rss_link: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Same address spelled differently is the same source; set from `link`, never by a client.
+    normalized_link: Mapped[str] = mapped_column(String(255), unique=True)
     reliability: Mapped[SourceReliability] = mapped_column(
         SOURCE_RELIABILITY, default=SourceReliability.MEDIUM, server_default="medium"
     )
-    # How often to poll a pull source (RSS/Web), seconds. Null for push (Telegram).
+    # How often to poll a pull source (RSS/Web), seconds; null for push (Telegram),
+    # which a CHECK constraint enforces rather than the ORM.
     poll_interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     # False once a WEB crawl finds nothing; keeps is_enabled false too, by CHECK constraint.
@@ -34,4 +36,9 @@ class Source(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    # Feed URLs, RSS sources only (a DB trigger refuses others). Loaded with the row, since
+    # async sessions cannot lazy-load; replacing the list deletes the rows that left it.
+    rss_links: Mapped[list[RssLink]] = relationship(
+        lazy="selectin", cascade="all, delete-orphan", order_by=RssLink.url
     )

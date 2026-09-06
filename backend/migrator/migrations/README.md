@@ -19,7 +19,11 @@ Alembic — the **shared** schema history for all services on the one database
   writes bus messages into, with `url` UNIQUE as the dedupe key; `0008_npa_table`
   creates the `npa` table `npa_service` stores legislative acts in (`url` UNIQUE);
   `0009_source_is_relevant` adds `is_relevant` (default true) plus a CHECK constraint
-  keeping a non-relevant source always disabled too (`is_relevant OR NOT is_enabled`).
+  keeping a non-relevant source always disabled too (`is_relevant OR NOT is_enabled`);
+  `0013_rss_link_table` moves `source.rss_link` into the one-to-many `rss_link` table
+  (FK `ON DELETE CASCADE`, `(source_id, url)` UNIQUE), carrying existing values over, and
+  replaces the CHECK with the `rss_link_requires_rss_source` trigger — an `rss_link` row
+  is refused unless its source is `type = 'rss'`.
 
 Notes: run from `../` (the migrator dir) — `uv run alembic -c alembic.ini upgrade head`.
 Autogenerate: `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`. Models

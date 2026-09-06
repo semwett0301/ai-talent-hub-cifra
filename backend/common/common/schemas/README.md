@@ -5,12 +5,21 @@ class per module (re-exported from `__init__.py`).
 
 - `source.py` — `Source`: ORM model for the `source` table. `id` is a DB-generated
   UUID (`gen_random_uuid()`), not a serial int. `reliability`
-  (`common.entities.source.SourceReliability`) defaults to `medium`. `rss_link` is
-  the discovered feed URL, set only for `type=rss` sources — enforced by a CHECK
-  constraint, not the ORM. `is_relevant` (default true) is set false by
+  (`common.entities.source.SourceReliability`) defaults to `medium`. `normalized_link`
+  is `link` folded to one spelling (`source_service.domain.urls.source_identity`) and
+  `UNIQUE` — the same address added twice is refused by the DB, which the API maps to a
+  409. `rss_links` is the source's feed URLs (`RssLink` rows, loaded with the row via
+  `selectin`, deleted with it). `poll_interval_seconds` is the pull schedule and must be null for `type=telegram`
+  (a push source has none) — a CHECK constraint, not the ORM. `is_relevant` (default
+  true) is set false by
   `WebCrawlCollector` when a WEB crawl finds no candidates at all; a CHECK
   constraint enforces `is_relevant OR NOT is_enabled` — a non-relevant source is
   always also disabled, DB-enforced regardless of who writes the row.
+- `rss_link.py` — `RssLink`: ORM model for the `rss_link` table — one feed URL of an RSS
+  source (`source_id` FK, `ON DELETE CASCADE`, `(source_id, url)` UNIQUE). Filled by
+  `SourceService` from auto-detection, polled by `RssCollector`. Rows are allowed only
+  for `type=rss` sources: a DB trigger (`rss_link_requires_rss_source`, migration
+  `0013`) refuses the insert otherwise, regardless of who writes the row.
 - `news.py` — `News`: ORM model for the `news` table, written by `news_service` from
   the bus. Same fields as `common.entities.news.NewsDTO` plus `id`/`created_at`;
   `url` is `UNIQUE` (the dedupe key — a story is stored once), `source_id` is a

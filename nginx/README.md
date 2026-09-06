@@ -5,7 +5,13 @@ The edge — the only service exposed to the host (port 80).
 - `Dockerfile` — multi-stage: builds the React SPA (`frontend/`), then serves the
   static `dist/` from `nginx:alpine`. Build context = repo root. Takes the three
   `*_API_PREFIX` values as build args (no defaults, so a missing one fails the build) and
-  exports them to `npm run build`, which bakes them into the bundle.
+  exports them to `npm run build`, which bakes them into the bundle. The `edge` stage is
+  the nginx config without the bundle; `docker-compose.dev.yml` targets it so no SPA is
+  compiled in dev mode.
+- `frontend/` — the two bodies of `location /`, one of which the template `include`s by
+  `FRONTEND_MODE`: `static.conf` (default, `try_files` with the SPA fallback) and
+  `dev.conf` (proxy to `frontend_dev:5173`, the Vite dev server, with the websocket
+  upgrade HMR needs). The image defaults to `static`; the dev overlay sets `dev`.
 - `templates/default.conf.template` — serves static with SPA fallback to
   `index.html`, reverse-proxies each backend under its own `/api/<service>/`
   namespace, and proxies `${LOGS_PREFIX}/` (default `/logs/`) to Dozzle (login is
@@ -45,3 +51,10 @@ WebSocket, hence `proxy_buffering off`, `proxy_read_timeout 1h`, `proxy_http_ver
 $connection_upgrade` block at the top of the template (a `map` must live in the
 `http` context, which `conf.d/*.conf` is included into). `location = ${LOGS_PREFIX}`
 only redirects to the trailing-slash form.
+
+`location /` holds only an `include` of `/etc/nginx/frontend/${FRONTEND_MODE}.conf`, so
+the same image serves either the bundle or the dev server without an nginx `if`. In dev
+mode the regex `/api/...` locations still win over the `/` prefix, so API calls never
+reach Vite. Gotcha: a location with its own `proxy_set_header` (the `Upgrade` /
+`Connection` pair) inherits none of the `server`-level ones, so `dev.conf` repeats
+`Host $host` — without it Vite sees `Host: frontend_dev` and refuses the request.
