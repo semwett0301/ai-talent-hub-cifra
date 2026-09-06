@@ -3,11 +3,10 @@
 import uuid
 
 from common.schemas import Npa, NpaVersion
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
 from npa_service.application.dto.npa import NpaCreate, NpaDetailOut, NpaOut, NpaVersionOut
 from npa_service.application.errors import (
-    ChangeModelError,
     InvalidNpaPageError,
     InvalidNpaUrlError,
     NpaAlreadyExistsError,
@@ -48,6 +47,7 @@ async def get_npa(
 @router.post("/", response_model=NpaDetailOut, status_code=status.HTTP_201_CREATED)
 async def create_npa(
     payload: NpaCreate,
+    background_tasks: BackgroundTasks,
     registration: NpaRegistration = Depends(get_npa_registration),
     catalog: NpaCatalog = Depends(get_npa_catalog),
 ) -> NpaDetailOut:
@@ -59,11 +59,7 @@ async def create_npa(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
     except NpaSourceUnavailableError as error:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(error)) from error
-    except ChangeModelError as error:
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Не удалось подготовить AI-обзор законопроекта. Попробуйте позднее",
-        ) from error
+    background_tasks.add_task(registration.generate_initial_summary, act.id)
 
     versions = await catalog.list_versions(act.id)
     return _details(act, versions)

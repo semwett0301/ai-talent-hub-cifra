@@ -24,6 +24,7 @@ class NpaOut(BaseModel):
     tracking_status: NpaTrackingStatus
     summary: str | None
     summary_kind: str | None
+    initial_summary_status: str | None
     article_changes: list[ArticleChangeOut]
     published_at: datetime | None
     created_at: datetime

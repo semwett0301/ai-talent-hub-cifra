@@ -21,8 +21,18 @@ async def test_registration_stops_when_bill_is_already_published() -> None:
 
     assert stored.tracking_status == NpaTrackingStatus.PUBLISHED
     assert repo.added_status == NpaTrackingStatus.PUBLISHED
-    assert repo.initial_summary == "Понятный обзор законопроекта."
+    assert repo.initial_summary is None
     assert not build_tracking_state(stored.tracking_status).can_check
+
+
+async def test_registration_generates_initial_summary_after_persisting_bill() -> None:
+    repo = _Repo()
+    registration = NpaRegistration(repo, _Source(_snapshot("arrh_d4", "text")), _InitialModel())
+
+    stored = await registration.register(URL)
+    await registration.generate_initial_summary(stored.id)
+
+    assert repo.initial_summary == "Понятный обзор законопроекта."
 
 
 async def test_monitor_versions_changes_and_stops_after_publication() -> None:
@@ -99,6 +109,7 @@ class _Repo:
         self.row = row
         self.added_status: NpaTrackingStatus | None = None
         self.initial_summary: str | None = None
+        self.initial_summary_failed = False
         self.update_value: TrackedUpdate | None = None
         self.was_checked = False
 
@@ -114,13 +125,16 @@ class _Repo:
     async def list_versions(self, npa_id: uuid.UUID) -> list:
         return []
 
-    async def add(
-        self, snapshot: BillSnapshot, status: NpaTrackingStatus, initial_summary: str
-    ) -> Npa:
+    async def add(self, snapshot: BillSnapshot, status: NpaTrackingStatus) -> Npa:
         self.added_status = status
-        self.initial_summary = initial_summary
         self.row = _row(snapshot.stage_code, snapshot.text, status)
         return self.row
+
+    async def set_initial_summary(self, npa_id: uuid.UUID, summary: str) -> None:
+        self.initial_summary = summary
+
+    async def mark_initial_summary_failed(self, npa_id: uuid.UUID) -> None:
+        self.initial_summary_failed = True
 
     async def apply_update(self, npa_id: uuid.UUID, update_value: TrackedUpdate) -> Npa:
         self.update_value = update_value

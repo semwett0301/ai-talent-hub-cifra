@@ -16,6 +16,7 @@ interface NpaResponse {
   updated_at: string;
   summary: string | null;
   summary_kind: "initial" | "change" | null;
+  initial_summary_status: "pending" | "ready" | "failed" | null;
   article_changes: ArticleChange[];
   versions?: NpaVersionResponse[];
 }
@@ -90,6 +91,7 @@ function mapNpa(entry: NpaResponse): NpaItem {
     updatedAt: entry.updated_at,
     summary: entry.summary,
     summaryKind: entry.summary_kind,
+    initialSummaryStatus: entry.initial_summary_status,
     articleChanges: entry.article_changes ?? [],
     versions: (entry.versions ?? [])
       .map(mapVersion)

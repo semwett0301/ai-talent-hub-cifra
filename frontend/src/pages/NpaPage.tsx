@@ -194,6 +194,7 @@ function NpaList({ items, selected, onSelect, loading, error, onRetry }: NpaList
               <span>
                 <strong>{entry.title}</strong>
                 <small>Законопроект № {entry.billNumber ?? "не указан"}</small>
+                {entry.initialSummaryStatus === "pending" && <small className="npa-update-mark">AI-описание готовится</small>}
               </span>
               <span>
                 <Badge className={`status ${statusTone(entry.trackingStatus)}`}>
@@ -292,7 +293,7 @@ function NpaOverview({ item }: { item: NpaItem }) {
       </dl>
       <div className="summary-box">
         <h3><Sparkles />Описание законопроекта</h3>
-        <p>{initialSummary ?? "Описание появится для НПА, добавленных после включения первичного AI-анализа."}</p>
+        <p>{initialSummary ?? initialSummaryMessage(item.initialSummaryStatus)}</p>
         <small>Проверьте вывод по официальному документу перед юридически значимым решением.</small>
       </div>
       {item.summaryKind === "change" && (
@@ -531,6 +532,7 @@ function useNpaDetails(id: string | undefined) {
     queryKey: ["npa", "detail", id],
     queryFn: ({ signal }) => getNpa(id!, signal),
     enabled: Boolean(id),
+    refetchInterval: (query) => query.state.data?.initialSummaryStatus === "pending" ? 2_000 : false,
   })
   const cause = query.error
   const error = cause
@@ -562,7 +564,13 @@ function useAlerts(query: string) {
 }
 
 function hasChanges(item: NpaItem) {
-  return Boolean(item.summary || item.articleChanges.length)
+  return Boolean(item.summaryKind === "change" || item.articleChanges.length)
+}
+
+function initialSummaryMessage(status: NpaItem["initialSummaryStatus"]) {
+  if (status === "pending") return "Пожалуйста, подождите: AI готовит краткое описание законопроекта."
+  if (status === "failed") return "Описание пока не удалось подготовить. Сервис повторит обработку при следующем добавлении документа."
+  return "Описание появится для НПА, добавленных после включения первичного AI-анализа."
 }
 
 function statusLabel(status: NpaItem["trackingStatus"]) {

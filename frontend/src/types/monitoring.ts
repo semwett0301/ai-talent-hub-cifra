@@ -33,6 +33,7 @@ export interface NpaItem {
   updatedAt: string;
   summary: string | null;
   summaryKind: "initial" | "change" | null;
+  initialSummaryStatus: "pending" | "ready" | "failed" | null;
   articleChanges: ArticleChange[];
   versions: NpaVersion[];
 }

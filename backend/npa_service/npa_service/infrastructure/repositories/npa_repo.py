@@ -30,6 +30,7 @@ def _snapshot_fields(snapshot: BillSnapshot) -> dict[str, Any]:
         "published_at": snapshot.published_at,
         "summary": None,
         "summary_kind": None,
+        "initial_summary_status": "pending",
         "article_changes": [],
     }
 
@@ -89,26 +90,44 @@ class NpaRepo(NpaRepository):
             rows = await session.execute(stmt)
             return list(rows.scalars().all())
 
-    async def add(
-        self, snapshot: BillSnapshot, status: NpaTrackingStatus, initial_summary: str
-    ) -> Npa:
-        fields = _snapshot_fields(snapshot)
-        fields["summary"] = initial_summary
-        fields["summary_kind"] = "initial"
-        row = Npa(**fields, tracking_status=status)
+    async def add(self, snapshot: BillSnapshot, status: NpaTrackingStatus) -> Npa:
+        row = Npa(**_snapshot_fields(snapshot), tracking_status=status)
         async with async_session_factory() as session:
             session.add(row)
             try:
                 await session.flush()
-                version_fields = _version_fields(row.id, snapshot, None)
-                version_fields["summary"] = initial_summary
-                version_fields["summary_kind"] = "initial"
-                session.add(NpaVersion(**version_fields))
+                session.add(NpaVersion(**_version_fields(row.id, snapshot, None)))
                 await session.commit()
             except IntegrityError as error:
                 raise NpaAlreadyExistsError(row.url) from error
             await session.refresh(row)
             return row
+
+    async def set_initial_summary(self, npa_id: uuid.UUID, summary: str) -> None:
+        async with async_session_factory() as session:
+            row = await session.get(Npa, npa_id)
+            if row is None:
+                return
+            first_version = await session.scalar(
+                select(NpaVersion)
+                .where(NpaVersion.npa_id == npa_id)
+                .order_by(NpaVersion.created_at, NpaVersion.id)
+                .limit(1)
+            )
+            if first_version is not None:
+                first_version.summary = summary
+                first_version.summary_kind = "initial"
+            if row.summary_kind is None:
+                row.summary = summary
+                row.summary_kind = "initial"
+            row.initial_summary_status = "ready"
+            await session.commit()
+
+    async def mark_initial_summary_failed(self, npa_id: uuid.UUID) -> None:
+        stmt = update(Npa).where(Npa.id == npa_id).values(initial_summary_status="failed")
+        async with async_session_factory() as session:
+            await session.execute(stmt)
+            await session.commit()
 
     async def apply_update(self, npa_id: uuid.UUID, update_value: TrackedUpdate) -> Npa:
         async with async_session_factory() as session:
