@@ -3,7 +3,9 @@
 The edge — the only service exposed to the host (port 80).
 
 - `Dockerfile` — multi-stage: builds the React SPA (`frontend/`), then serves the
-  static `dist/` from `nginx:alpine`. Build context = repo root.
+  static `dist/` from `nginx:alpine`. Build context = repo root. Takes the three
+  `*_API_PREFIX` values as build args (no defaults, so a missing one fails the build) and
+  exports them to `npm run build`, which bakes them into the bundle.
 - `templates/default.conf.template` — serves static with SPA fallback to
   `index.html`, reverse-proxies each backend under its own `/api/<service>/`
   namespace, and proxies `${LOGS_PREFIX}/` (default `/logs/`) to Dozzle (login is
@@ -20,7 +22,8 @@ docker-entrypoint envsubst step at container start (`*.template` under
 alone since they aren't set as env vars. `SOURCES_API_PREFIX` is defined **once**,
 in the repo-root `.env` (see `../.env.example`), and shared with
 `source_service` (which reads it back as FastAPI's `root_path` via
-`common.core.settings.settings.sources_api_prefix`) — change the prefix there, not here.
+`common.core.settings.settings.edge.sources_api_prefix`) and with the SPA bundle (via the
+build arg above) — change the prefix there, not here.
 
 The API location is a regex (`~ ^${SOURCES_API_PREFIX}(?:/(.*))?$` + `rewrite …
 break`) so it matches the bare collection and sub-paths without a trailing-slash
