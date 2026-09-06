@@ -53,6 +53,7 @@ def _version_fields(
 
 def _apply_fields(row: Npa, update_value: TrackedUpdate) -> None:
     fields = _snapshot_fields(update_value.snapshot)
+    fields.pop("initial_summary_status")
     fields["tracking_status"] = update_value.status
     fields["summary"] = update_value.change.overall if update_value.change else None
     fields["summary_kind"] = "change" if update_value.change else None
