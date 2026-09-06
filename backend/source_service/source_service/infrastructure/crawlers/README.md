@@ -5,12 +5,14 @@ imports `crawl4ai`, `feedparser` and `litellm`.
 
 - `crawl4ai_fetcher.py` — `Crawl4AiPageFetcher` → `PageFetcher`: wraps `AsyncWebCrawler`
   with `AsyncHTTPCrawlerStrategy` (lightweight HTTP fetch, no browser) to fetch a URL's
-  raw body — page HTML, or feed XML. Owns a `start`/`close` lifecycle driven from
+  raw body — feed XML, or an article's HTML. Owns a `start`/`close` lifecycle driven from
   `main.py`'s lifespan.
 - `feedparser_reader.py` — `FeedparserFeedReader(page_fetcher)` → `FeedReader`: fetches
   the feed body through `PageFetcher`, parses it with feedparser and maps each item to a
-  `FeedEntry`. `read` never raises — a failed fetch returns `[]`, a feed with XML errors
-  still yields whatever parsed.
+  `FeedEntry`: `title`/`summary` with markup stripped, `published_at` (`published`, else
+  `updated`), `updated_at` (`updated` only when it differs from `published`), `tags` (category
+  terms, deduped in feed order). `read` never raises — a failed fetch returns
+  `[]`, a feed with XML errors still yields whatever parsed.
 - `crawl4ai_pages.py` — `Crawl4AiPageCrawler` → `PageCrawler`: one
   headless Chromium (`BrowserConfig(headless, text_mode)`) for the whole service, started
   and closed from the lifespan. `crawl_pages` / `crawl_articles` run `arun_many` (the

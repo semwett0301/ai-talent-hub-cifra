@@ -31,11 +31,6 @@ function App() {
             <p className="eyebrow">AI-ЦЕНТР · GS LABS</p>
             <h1>Мониторинг без шума</h1>
           </div>
-          <div className="brand">
-            <span className="demo-label">Демо · mock data</span>
-            <span className="avatar purple">ВБ</span>
-            <span>GS LABS</span>
-          </div>
         </header>
         <div className="workspace">
           <aside className="sidebar panel">

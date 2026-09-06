@@ -1,12 +1,14 @@
-"""Input DTO for creating a Source. `type` is not accepted — SourceService detects it."""
+"""Input DTO for creating a Source. Neither `type` nor `poll_interval_seconds` is
+accepted — SourceService derives both from the detected type."""
 
 from common.entities.source import SourceReliability
 from pydantic import BaseModel
 
+from .link import SourceLink
+
 
 class SourceCreate(BaseModel):
     name: str
-    link: str
-    poll_interval_seconds: int | None = None
+    link: SourceLink
     is_enabled: bool = True
     reliability: SourceReliability = SourceReliability.MEDIUM

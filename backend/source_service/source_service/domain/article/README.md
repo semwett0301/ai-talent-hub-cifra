@@ -8,8 +8,9 @@ everything that judges it is in `rules/`.
   stage further: `with_content(...)` → `with_publication(...)` → `accept()`, or
   `reject(reason)`. `title` falls back from the page title to the card's link text;
   `identity` is the canonical URL, else the final URL, else the link — the dedupe key.
-  `to_news_dto(source)` builds the shared `NewsDTO` (compact fields, the full record
-  under `raw["article"]`) and refuses anything but an `ACCEPTED` article.
+  `to_news_dto(source)` builds the shared `NewsDTO` — flat: `title`, `text`, the page's
+  `description` as `excerpt`, `modified_at` as `updated_at`, `section` as the
+  one `source_tags` entry — and refuses anything but an `ACCEPTED` article.
 - `model/` — the sub-models: `ArticleContent`, `PublicationDate`, `ArticleStatus`,
   `RejectReason`, `ArticleOrigin`. See `model/README.md`.
 - `rules/` — the rules: `ARTICLE_SCORER` (how article-like a link is), `FreshnessWindow`

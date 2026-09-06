@@ -5,13 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from common.entities.news import NewsDTO, SourceType
+from common.entities.news import NewsDTO
 from common.schemas import Source
 from pydantic import BaseModel, Field
 
 from .model import ArticleContent, ArticleOrigin, ArticleStatus, PublicationDate, RejectReason
-
-COLLECTOR_NAME = "crawl4ai"
 
 
 class Article(BaseModel, frozen=True):
@@ -61,39 +59,22 @@ class Article(BaseModel, frozen=True):
         return self.model_copy(update={"status": ArticleStatus.ACCEPTED})
 
     def to_news_dto(self, source: Source) -> NewsDTO:
-        """The cross-service message: compact fields plus the full record under `raw`."""
+        """The cross-service message: what the page said about itself, flat."""
+        title = self.title
+
         if self.status is not ArticleStatus.ACCEPTED or not self.content or not self.publication:
             raise ValueError(f"only an accepted article becomes news: {self.url}")
 
-        return NewsDTO.for_source(
-            source.link,
-            SourceType.WEB,
-            source.reliability,
-            source_id=source.id,
-            url=self.content.final_url,
-            text=self.content.text,
-            published_at=self.publication.value,
-            raw=self.__raw(source),
-        )
+        if title is None:
+            raise ValueError(f"only a titled article becomes news: {self.url}")
 
-    def __raw(self, source: Source) -> dict[str, Any]:
-        assert self.content is not None and self.publication is not None
-        payload = self.model_dump(mode="json")
-        content = payload["content"]
-        return {
-            "title": self.title,
-            "canonical_url": self.content.canonical_url,
-            "author": self.content.author,
-            "section": self.content.section,
-            "language": self.content.language,
-            "description": self.content.description,
-            "image_url": self.content.image_url,
-            "modified_at": content["modified_at"],
-            "fetched_at": content["fetched_at"],
-            "word_count": self.content.word_count,
-            "date_source": self.publication.source,
-            "date_confidence": self.publication.confidence,
-            "date_evidence": self.publication.evidence,
-            "article": payload,
-            "collector": {"name": COLLECTOR_NAME, "source_id": str(source.id)},
-        }
+        return NewsDTO.for_source(
+            source,
+            url=self.content.final_url,
+            title=title,
+            text=self.content.text,
+            excerpt=self.content.description,
+            published_at=self.publication.value,
+            updated_at=self.content.modified_at,
+            source_tags=[self.content.section] if self.content.section else [],
+        )

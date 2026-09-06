@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -23,7 +24,8 @@ def accepted_article() -> Article:
         title="Important release",
         text="The complete article text.",
         word_count=4,
-        author="Editorial team",
+        description="A short blurb.",
+        section="Releases",
         fetched_at=datetime(2026, 9, 4, 12, tzinfo=MOSCOW),
         metadata={"crawler_metadata": {"og:type": "article"}},
     )
@@ -51,6 +53,7 @@ class FakeWebCrawl:
 
 def source() -> Source:
     return Source(
+        id=uuid.uuid4(),
         name="Example",
         link="https://example.test",
         type=SourceType.WEB,
@@ -72,6 +75,8 @@ async def test_web_collector_forwards_the_source_and_turns_accepted_articles_int
     assert item.source_type is SourceType.WEB
     assert item.url == "https://example.test/news/release"
     assert item.published_at == datetime(2026, 9, 4, 10, tzinfo=MOSCOW)
-    assert item.raw["title"] == "Important release"
-    assert item.raw["date_source"] == "json_ld"
-    assert item.raw["article"]["status"] == "accepted"
+    assert item.source_id == src.id
+    assert item.source_name == "Example"
+    assert item.title == "Important release"
+    assert item.excerpt == "A short blurb."
+    assert item.source_tags == ["Releases"]

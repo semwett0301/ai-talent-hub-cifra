@@ -9,7 +9,6 @@ from news_service.application.ports.ranking_models import RankingModels
 from news_service.application.ports.ranking_repository import RankingRepository
 from news_service.application.ports.repositories import NewsRepository
 from news_service.application.ports.summary_embedder import SummaryEmbedder
-from news_service.application.ports.transaction import NewsTransaction
 
 __all__ = [
     "DedupRepository",
@@ -17,7 +16,6 @@ __all__ = [
     "NewsBatchHandler",
     "NewsRepository",
     "NewsPipelineStage",
-    "NewsTransaction",
     "NpaGateway",
     "RankingModels",
     "RankingRepository",

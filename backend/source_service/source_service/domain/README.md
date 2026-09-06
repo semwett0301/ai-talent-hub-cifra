@@ -16,8 +16,10 @@ boundaries; this holds what only this service reasons about.
 - `scoring/` — the generic mechanism only: `model/` (`ScoreRule[T]`, `Score`),
   `scorer.py` (`RuleScorer[T]`) and `terms.py` — the URL vocabulary that belongs to
   neither entity. Entity-specific vocabulary lives with the entity.
-- `urls.py` — `normalize_url` (tracking params, slashes, case), `host_matches`,
-  `listing_identity` (pagination variants are one hub), `is_pagination_url`, `path_depth`.
+- `urls.py` — `normalize_url` (tracking params, slashes, case), `source_identity` (a
+  source's address folded to one spelling — also strips `www.` — so `normalized_link` can
+  be unique), `host_matches`, `listing_identity` (pagination variants are one hub),
+  `is_pagination_url`, `path_depth`.
 - `__init__.py` — re-exports the entities, enums and scorers; import from
   `source_service.domain`, reach into `domain.urls` for the URL helpers.
 

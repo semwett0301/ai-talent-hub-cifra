@@ -43,6 +43,18 @@ def normalize_url(url: str, base: str | None = None) -> str:
     )
 
 
+def source_identity(link: str) -> str:
+    """Identity of a source's address: two links differing only by case, `www.`, a
+    trailing slash or tracking params name the same source. Non-http links (`tg://`)
+    keep their own spelling, lowercased."""
+    normalized = normalize_url(link)
+    if not normalized:
+        return link.strip().lower()
+
+    parsed = urlparse(normalized)
+    return urlunparse(parsed._replace(netloc=_bare_domain(parsed.netloc)))
+
+
 def host_matches(url: str, allowed_domains: list[str], seed_url: str) -> bool:
     """Same site: the host equals one of the allowed domains (default: the seed's host)
     or is one of its subdomains."""

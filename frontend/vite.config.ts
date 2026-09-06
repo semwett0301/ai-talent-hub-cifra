@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 // Each service's nginx location, defined once in the repo-root .env and passed in as a
-// build arg; the dev fallback is what the compose stack serves locally.
+// build arg; the fallback is what the compose stack serves locally.
 const API_PREFIXES = {
   __SOURCES_API_PREFIX__: ["SOURCES_API_PREFIX", "/api/sources"],
   __NEWS_API_PREFIX__: ["NEWS_API_PREFIX", "/api/news"],
@@ -19,7 +19,7 @@ function apiPrefixDefines(isBuild: boolean): Record<string, string> {
       if (isBuild && !value) throw new Error(`${name} is required for a production build`)
 
       return [token, JSON.stringify(value ?? devFallback)]
-    }),
+    })
   )
 }
 
@@ -31,4 +31,10 @@ export default defineConfig(({ command }) => ({
     },
   },
   define: apiPrefixDefines(command === "build"),
+  // No nginx in front of the dev server, so /api has to be forwarded to the compose stack.
+  server: {
+    proxy: {
+      "/api": process.env.DEV_API_TARGET ?? "http://localhost",
+    },
+  },
 }))

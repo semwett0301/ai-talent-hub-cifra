@@ -5,8 +5,12 @@ infrastructure implements); depends on the shared `common` package (schemas +
 entities), never on concrete infra. Collaborators are injected by the composition
 root (`deps.py`).
 
-- `ports/` — repository, event-model, embedding, batch-handler, transaction, and NPA
-  gateway protocols.
+- `ports/` — the interfaces (Protocols): `NewsRepository` (data access over one unit of
+  work: writes stage, `commit()` persists), `NewsBatchHandler` (the shared
+  `common.core.rabbit.BatchHandler` narrowed to `NewsDTO` — what the bus consumer hands
+  a batch to), `NpaGateway` (the outbound call to `npa_service`), and the consumer
+  pipeline's own ports: `DedupRepository`, `RankingRepository`, `EventModels`,
+  `RankingModels`, `SummaryEmbedder`, `NewsPipelineStage`.
 - `dto/` — the response DTO (Pydantic) for the read API.
 - `services/` — `NewsFeed` (list / dismiss), `NewsIngestor` (staged batch ingest),
   `NewsDeduplicator` (same-event clustering), `NewsRanker` (one result per cluster), and

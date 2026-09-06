@@ -1,10 +1,13 @@
 """Repository ports — data access contracts, implemented in infrastructure."""
 
 import uuid
+from datetime import datetime
 from typing import Protocol
 
-from common.entities.npa import NpaDTO
-from common.schemas import Npa
+from common.entities.npa import NpaTrackingStatus
+from common.schemas import Npa, NpaVersion
+
+from npa_service.domain import BillSnapshot, TrackedUpdate
 
 
 class NpaRepository(Protocol):
@@ -14,7 +17,18 @@ class NpaRepository(Protocol):
 
     async def get(self, npa_id: uuid.UUID) -> Npa | None: ...
 
-    async def add(self, act: NpaDTO) -> Npa:
-        """Insert one act and return the stored row. Raises `NpaAlreadyExistsError`
-        when an act with the same `url` is already stored."""
-        ...
+    async def list_tracking(self) -> list[Npa]: ...
+
+    async def list_versions(self, npa_id: uuid.UUID) -> list[NpaVersion]: ...
+
+    async def add(self, snapshot: BillSnapshot, status: NpaTrackingStatus) -> Npa: ...
+
+    async def set_initial_summary(self, npa_id: uuid.UUID, summary: str) -> None: ...
+
+    async def mark_initial_summary_failed(self, npa_id: uuid.UUID) -> None: ...
+
+    async def apply_update(self, npa_id: uuid.UUID, update: TrackedUpdate) -> Npa: ...
+
+    async def mark_checked(
+        self, npa_id: uuid.UUID, snapshot: BillSnapshot, checked_at: datetime
+    ) -> None: ...

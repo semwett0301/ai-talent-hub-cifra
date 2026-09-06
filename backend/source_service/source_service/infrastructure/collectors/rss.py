@@ -1,17 +1,18 @@
 """RSS collector (pull) — implements the PullCollector port.
 
-Polls `source.rss_link` through the `FeedReader` port, fetches every entry's page
-through the `PageFetcher` port and extracts its full text with `parse.extract_article`
-before mapping it to a `NewsDTO`. Stateless by design: each pull emits the feed's
-current entries and forgets them — downstream dedupes on `NewsDTO.url` (the entry's
-canonical link), which is why that field is the key.
+Polls every feed in `source.rss_links` through the `FeedReader` port, fetches each
+entry's page through the `PageFetcher` port and extracts its full text with
+`parse.extract_article` before mapping it to a `NewsDTO`. A site's feeds overlap, so an
+entry seen in two feeds is collected once (first feed wins). Stateless by design: each
+pull emits the feeds' current entries and forgets them — downstream dedupes on
+`NewsDTO.url` (the entry's canonical link), which is why that field is the key.
 """
 
 import asyncio
 
 from common.core.logging import get_logger
 from common.entities.news import NewsDTO
-from common.schemas import Source
+from common.schemas import RssLink, Source
 
 from source_service.application.parse import ExtractedArticle, extract_article
 from source_service.application.ports.scraping import FeedEntry, FeedReader, PageFetcher
@@ -25,18 +26,19 @@ logger = get_logger(__name__)
 def _to_news_dto(source: Source, entry: FeedEntry, article: ExtractedArticle | None) -> NewsDTO:
     # Full article text when extraction worked; the feed's own summary otherwise.
     text = article.text if article is not None else entry.summary
-    title = article.title if article is not None and article.title else entry.title
+    # A titleless entry falls back to its text, the same last resort the Telegram collector uses.
+    title = (article.title if article is not None and article.title else entry.title) or text
     published_at = entry.published_at or (article.published_at if article is not None else None)
 
     return NewsDTO.for_source(
-        source.link,
-        source.type,
-        source.reliability,
-        source_id=source.id,
+        source,
         url=entry.url,
+        title=title,
         text=text,
+        excerpt=entry.summary or None,
         published_at=published_at,
-        raw={"title": title, "summary": entry.summary, "feed_url": source.rss_link},
+        updated_at=entry.updated_at,
+        source_tags=entry.tags,
     )
 
 
@@ -46,16 +48,32 @@ class RssCollector(PullCollector):
         self.__page_fetcher = page_fetcher
 
     async def fetch(self, source: Source) -> list[NewsDTO]:
-        feed_url = source.rss_link
-        if feed_url is None:
-            logger.warning("rss fetch skipped: id=%s link=%s (no rss_link)", source.id, source.link)
+        if not source.rss_links:
+            logger.warning("rss fetch skipped: id=%s link=%s (no feeds)", source.id, source.link)
             return []
 
-        entries = await self.__feed_reader.read(feed_url)
+        entries = await self.__read_feeds(source.rss_links)
         if not entries:
             return []
 
         return await self.__collect(source, entries)
+
+    async def __read_feeds(self, feeds: list[RssLink]) -> list[FeedEntry]:
+        """Every feed's entries, an entry URL kept once — the feed that listed it first."""
+        seen_urls: set[str] = set()
+        entries: list[FeedEntry] = []
+
+        for feed in feeds:
+            fresh = [
+                entry
+                for entry in await self.__feed_reader.read(feed.url)
+                if entry.url not in seen_urls
+            ]
+
+            seen_urls.update(entry.url for entry in fresh)
+            entries.extend(fresh)
+
+        return entries
 
     async def __collect(self, source: Source, entries: list[FeedEntry]) -> list[NewsDTO]:
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_EXTRACTIONS)

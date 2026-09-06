@@ -3,6 +3,7 @@
 from sqlalchemy import Enum
 
 from common.entities.news import SourceType
+from common.entities.npa import NpaTrackingStatus
 from common.entities.source import SourceReliability
 
 SOURCE_TYPE = Enum(
@@ -19,4 +20,12 @@ SOURCE_RELIABILITY = Enum(
     native_enum=False,
     length=8,
     name="source_reliability",
+)
+
+NPA_TRACKING_STATUS = Enum(
+    NpaTrackingStatus,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+    native_enum=False,
+    length=16,
+    name="npa_tracking_status",
 )

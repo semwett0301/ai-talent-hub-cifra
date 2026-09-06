@@ -7,7 +7,6 @@ from typing import cast
 
 from common.core.db import async_session_factory
 from common.core.logging import get_logger
-from common.entities.news import NewsDTO
 from common.schemas import News, Source
 from sqlalchemy import Table, bindparam, desc, func, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
@@ -49,7 +48,10 @@ class SqlDedupRepository(DedupRepository):
         try:
             async with async_session_factory() as session:
                 known_sources = await _known_source_ids(session, items)
-                await session.execute(_summary_upsert(items, known_sources))
+                survivors = _drop_orphans(items, known_sources)
+                if not survivors:
+                    return
+                await session.execute(_summary_upsert(survivors))
                 await session.commit()
         except STORE_ERRORS as error:
             raise NewsStoreError(f"summarized news write failed: items={len(items)}") from error
@@ -154,15 +156,26 @@ class SqlDedupRepository(DedupRepository):
 
 
 async def _known_source_ids(session: AsyncSession, items: list[PreparedNews]) -> set[uuid.UUID]:
-    wanted = {item.news.source_id for item in items if item.news.source_id is not None}
-    if not wanted:
-        return set()
+    wanted = {item.news.source_id for item in items}
     rows = await session.execute(select(Source.id).where(Source.id.in_(wanted)))
     return set(rows.scalars().all())
 
 
-def _summary_upsert(items: list[PreparedNews], known_sources: set[uuid.UUID]):
-    rows = [_prepared_row(item, known_sources) for item in items]
+def _drop_orphans(items: list[PreparedNews], known_sources: set[uuid.UUID]) -> list[PreparedNews]:
+    """Skip items whose source is gone: `source_id` is NOT NULL, so a row needs its source
+    to exist — a delete between the source check and this insert only costs one nack + requeue."""
+    orphans = {item.news.source_id for item in items if item.news.source_id not in known_sources}
+    if orphans:
+        logger.warning(
+            "news sources gone, items skipped: ids=%s items=%d",
+            sorted(map(str, orphans)),
+            sum(item.news.source_id in orphans for item in items),
+        )
+    return [item for item in items if item.news.source_id not in orphans]
+
+
+def _summary_upsert(items: list[PreparedNews]):
+    rows = [_prepared_row(item) for item in items]
     statement = postgres_insert(News).values(rows)
     incomplete = or_(
         News.summary.is_(None),
@@ -180,9 +193,8 @@ def _summary_upsert(items: list[PreparedNews], known_sources: set[uuid.UUID]):
     )
 
 
-def _prepared_row(item: PreparedNews, known_sources: set[uuid.UUID]) -> dict[str, object]:
-    news = _detach_orphan(item.news, known_sources)
-    row = news.model_dump()
+def _prepared_row(item: PreparedNews) -> dict[str, object]:
+    row = item.news.model_dump()
     row.update(
         {
             "id": item.summary.news_id,
@@ -193,13 +205,6 @@ def _prepared_row(item: PreparedNews, known_sources: set[uuid.UUID]) -> dict[str
         }
     )
     return row
-
-
-def _detach_orphan(news: NewsDTO, known_sources: set[uuid.UUID]) -> NewsDTO:
-    if news.source_id is None or news.source_id in known_sources:
-        return news
-    logger.warning("news source gone, detached: id=%s url=%s", news.source_id, news.url)
-    return news.model_copy(update={"source_id": None})
 
 
 def _summary_select():

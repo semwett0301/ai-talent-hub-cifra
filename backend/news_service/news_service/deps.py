@@ -1,13 +1,17 @@
 """Composition root — wire infrastructure implementations into application.
 
-The one place that knows every layer: it builds the concrete repository and the
-shared RabbitMQ batch consumer, and hands the application use cases to them.
-Everything else depends only on ports.
+The one place that knows every layer: it scopes the unit of work (a DB session per HTTP
+request), builds the read-side repository on it, and assembles the consumer's own
+dedup/ranking pipeline once at process start. Everything else depends only on ports.
 """
 
+from collections.abc import AsyncIterator
+
+from common.core.db import async_session_factory
 from common.core.rabbit import BatchConsumerConfig, RabbitBatchConsumer
 from common.core.settings import settings
 from common.entities.news import ROUTING_PREFIX, NewsDTO
+from fastapi import Depends
 
 from news_service.application.services import (
     NewsDeduplicator,
@@ -32,14 +36,19 @@ from news_service.infrastructure.repositories import (
 NEWS_BINDING_KEY = f"{ROUTING_PREFIX}.#"
 
 
-def get_news_feed() -> NewsFeed:
-    """FastAPI use case. NewsRepo opens a session per call, so no request binding."""
-    return NewsFeed(NewsRepo())
+async def get_news_repo() -> AsyncIterator[NewsRepo]:
+    """One session per request: closed (rolled back, unless committed) when the response is out."""
+    async with async_session_factory() as session:
+        yield NewsRepo(session)
 
 
-def get_npa_escalation() -> NpaEscalation:
-    """FastAPI use case: dismiss + register in npa_service (over HTTP) as one unit."""
-    return NpaEscalation(NewsRepo(), HttpNpaGateway(settings.npa.npa_service_url))
+def get_news_feed(repo: NewsRepo = Depends(get_news_repo)) -> NewsFeed:
+    return NewsFeed(repo)
+
+
+def get_npa_escalation(repo: NewsRepo = Depends(get_news_repo)) -> NpaEscalation:
+    """Flag + register in npa_service (over HTTP) as one unit — the repo's session spans both."""
+    return NpaEscalation(repo, HttpNpaGateway(settings.npa.npa_service_url))
 
 
 def build_consumer() -> RabbitBatchConsumer[NewsDTO]:

@@ -1,251 +1,256 @@
-import { useSessionState } from "@/hooks/useSessionState";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react"
+import { EyeOff, ExternalLink, RotateCcw, Sparkles } from "lucide-react"
+
+import { errorMessage } from "@/api/client"
+import { useErrorToast } from "@/api/errorToast"
 import {
-  EyeOff,
-  Pencil,
-  Sparkles,
-  RotateCcw,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { news } from "@/data/news";
-import type { NewsItem } from "@/types/monitoring";
-import {
-  Choice,
-  SearchField,
-} from "@/components/monitoring/Shared";
+  DEFAULT_PERIOD_HOURS,
+  PERIODS,
+  excerptOf,
+  formatMoment,
+  formatToday,
+  newsMoment,
+  sinceHoursAgo,
+} from "@/api/news"
+import type { NewsOut, NewsVisibility } from "@/api/news"
+import { useDismissNews, useNews, useRestoreNews } from "@/api/newsMutations"
+import { RELIABILITY_LABELS } from "@/api/sources"
+import { Choice, SearchField } from "@/components/monitoring/Shared"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { withPlaceholders, type NewsItemView } from "@/data/newsPlaceholders"
+
+// The feed's two tabs: the current items, and what the reader hid (`visibility=dismissed`).
+const TABS = ["Актуальные", "Скрытые"] as const
+type Tab = (typeof TABS)[number]
+
+const SEARCH_DEBOUNCE_MS = 300
+const SKELETON_CARDS = [0, 1, 2, 3]
+// The `@keyframes` name in App.css a hidden / restored card plays before it leaves the list.
+const LEAVE_ANIMATION = "news-card-leave"
+
+function useDebounced(value: string, delayMs: number): string {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs)
+    return () => clearTimeout(timer)
+  }, [value, delayMs])
+  return debounced
+}
+
+function visibilityOf(tab: Tab): NewsVisibility {
+  return tab === "Скрытые" ? "dismissed" : "visible"
+}
 
 export function NewsPage() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("Все");
-  const [period, setPeriod] = useState("24");
-  const [selected, setSelected] = useState(news[0].id);
-  const [hidden, setHidden] = useSessionState<string[]>("news-hidden", []);
-  const [edits, setEdits] = useSessionState<Record<string, string>>(
-    "news-edits",
-    {},
-  );
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [notice, setNotice] = useState("");
-  const visible = news.filter(
-    (item) =>
-      !hidden.includes(item.id) &&
-      item.ageHours <= Number(period) &&
-      (filter === "Все" ||
-        (filter === "Требует внимания" && item.priority === "critical") ||
-        item.kind === filter) &&
-      `${item.title} ${item.source} ${item.tags.join(" ")}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-  ).sort((left, right) => right.relevance - left.relevance);
-  const item = visible.find((item) => item.id === selected) ?? visible[0];
+  const [query, setQuery] = useState("")
+  const [tab, setTab] = useState<Tab>("Актуальные")
+  const [period, setPeriod] = useState(String(DEFAULT_PERIOD_HOURS))
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [leavingId, setLeavingId] = useState<string | null>(null)
+
+  const search = useDebounced(query.trim(), SEARCH_DEBOUNCE_MS)
+  const since = useMemo(() => sinceHoursAgo(Number(period)), [period])
+  const feed = useNews({
+    since,
+    visibility: visibilityOf(tab),
+    ...(search ? { q: search } : {}),
+  })
+  const dismiss = useDismissNews()
+  const restore = useRestoreNews()
+  const reportError = useErrorToast()
+
+  const items = useMemo(() => (feed.data ?? []).map(withPlaceholders), [feed.data])
+  const item = items.find((entry) => entry.id === selectedId) ?? items[0]
+
+  // Runs when the leave animation ends: the swipe is done, now the server does its part. The
+  // card stays played-out until the mutation settles — that is, until the refetched list landed.
+  function toggleHidden(selected: NewsItemView) {
+    const mutation = selected.dismissed_at !== null ? restore : dismiss
+    mutation.mutate(
+      { params: { path: { news_id: selected.id } } },
+      { onError: reportError, onSettled: () => setLeavingId(null) },
+    )
+  }
+
+  return (
+    <div className="content-columns">
+      <section className="panel feed">
+        <div className="section-heading">
+          <h2>
+            {tab} <span>{feed.data ? items.length : "…"}</span>
+          </h2>
+          <span className="small muted">{formatToday()}</span>
+        </div>
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Поиск по заголовку и тексту"
+        />
+        <div className="filters">
+          {TABS.map((label) => (
+            <Button
+              key={label}
+              size="sm"
+              variant="outline"
+              aria-pressed={tab === label}
+              className={tab === label ? "active-filter" : ""}
+              onClick={() => setTab(label)}
+            >
+              {label}
+            </Button>
+          ))}
+          <Choice
+            label="Период новостей"
+            value={period}
+            onChange={setPeriod}
+            options={PERIODS.map(({ hours, label }) => ({ value: String(hours), label }))}
+          />
+        </div>
+        <div className="news-list">
+          {feed.isPending &&
+            SKELETON_CARDS.map((card) => <Skeleton key={card} className="source-skeleton" />)}
+          {feed.error && (
+            <p role="alert" className="form-error">
+              {errorMessage(feed.error)}
+            </p>
+          )}
+          {items.map((entry) => (
+            <NewsCard
+              key={entry.id}
+              item={entry}
+              selected={entry.id === item?.id}
+              isLeaving={entry.id === leavingId}
+              onSelect={() => setSelectedId(entry.id)}
+              onLeft={() => toggleHidden(entry)}
+            />
+          ))}
+          {feed.data && !items.length && (
+            <div className="empty-state">
+              {tab === "Скрытые"
+                ? "Скрытых материалов нет."
+                : "Материалы не найдены. Измените запрос или период."}
+            </div>
+          )}
+        </div>
+      </section>
+      <section className="panel details" aria-label="Подробности новости">
+        {item ? (
+          <NewsDetails
+            item={item}
+            isBusy={leavingId !== null}
+            onToggleHidden={() => setLeavingId(item.id)}
+          />
+        ) : (
+          <div className="empty-state">Выберите материал из ленты</div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function NewsDetails({
+  item,
+  isBusy,
+  onToggleHidden,
+}: {
+  item: NewsItemView
+  isBusy: boolean
+  onToggleHidden: () => void
+}) {
+  const isHidden = item.dismissed_at !== null
+
   return (
     <>
-      <div className="content-columns">
-        <section className="panel feed">
-          <div className="section-heading">
-            <h2>
-              Входящие <span>{visible.length}</span>
-            </h2>
-            <span className="small muted">Сегодня, 5 сентября</span>
-          </div>
-          <SearchField
-            value={query}
-            onChange={setQuery}
-            placeholder="Поиск по тексту, тегам и организациям"
-          />
-          <div className="filters">
-            {["Все", "Требует внимания", "Новости"].map((label) => (
-              <Button
-                key={label}
-                size="sm"
-                variant="outline"
-                aria-pressed={filter === label}
-                className={filter === label ? "active-filter" : ""}
-                onClick={() => setFilter(label)}
-              >
-                {label}
-              </Button>
-            ))}
-            <Choice
-              label="Период новостей"
-              value={period}
-              onChange={setPeriod}
-              options={[
-                { value: "24", label: "За 24 часа" },
-                { value: "72", label: "За 3 дня" },
-              ]}
-            />
-          </div>
-          <div className="news-list">
-            {visible.map((entry) => (
-              <NewsCard
-                key={entry.id}
-                item={entry}
-                selected={entry.id === item?.id}
-                onSelect={() => setSelected(entry.id)}
-              />
-            ))}
-            {!visible.length && (
-              <div className="empty-state">
-                Материалы не найдены. Измените запрос или фильтры.
-              </div>
-            )}
-          </div>
-          {hidden.length > 0 && (
-            <Button
-              variant="ghost"
-              className="restore"
-              onClick={() => {
-                setHidden([]);
-                setNotice("Скрытые материалы восстановлены");
-              }}
-            >
-              <RotateCcw />
-              Вернуть скрытые ({hidden.length})
-            </Button>
-          )}
-        </section>
-        <section className="panel details" aria-label="Подробности новости">
-          {item ? (
-            <>
-              <div className="detail-meta">
-                <Badge className={`status ${item.priority}`}>
-                  {item.priority === "critical"
-                    ? "• Требует внимания"
-                    : item.priority === "warning"
-                      ? "• Важно"
-                      : "• Информация"}
-                </Badge>
-                <span>{item.time}</span>
-              </div>
-              <h2>{item.title}</h2>
-              <p className="muted small">
-                {item.source} · {item.kind} ·{" "}
-                <span className="mock-note">демонстрационный материал</span>
-              </p>
-              <div className="summary-box">
-                <h3>
-                  <Sparkles />
-                  AI-САММАРИ
-                </h3>
-                <p>{edits[item.id] ?? item.summary}</p>
-                {edits[item.id] && <small>Отредактировано вручную</small>}
-              </div>
-              <div className="impact-box">
-                <h3>Почему это важно для GS Labs</h3>
-                <p>{item.impact}</p>
-              </div>
-              <div className="actions">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setDraft(edits[item.id] ?? item.summary);
-                    setEditing(true);
-                  }}
-                >
-                  <Pencil />
-                  Редактировать
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setHidden([...hidden, item.id]);
-                    setNotice("Материал скрыт. Его можно вернуть под списком.");
-                  }}
-                >
-                  <EyeOff />
-                  Скрыть
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="empty-state">Выберите материал из ленты</div>
-          )}
-          <p role="status" className="notice">
-            {notice}
-          </p>
-        </section>
+      <div className="detail-meta">
+        <span>{formatMoment(newsMoment(item))}</span>
       </div>
-      <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent>
-          <DialogTitle>Редактировать AI-саммари</DialogTitle>
-          <DialogDescription>
-            Правки сохраняются в текущей демонстрационной сессии.
-          </DialogDescription>
-          <Textarea
-            aria-label="Текст саммари"
-            rows={7}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(false)}>
-              Отмена
-            </Button>
-            <Button
-              disabled={!draft.trim()}
-              onClick={() => {
-                if (item) setEdits({ ...edits, [item.id]: draft.trim() });
-                setEditing(false);
-                setNotice("Саммари обновлено");
-              }}
-            >
-              Сохранить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <a className="detail-title" href={item.url} target="_blank" rel="noopener noreferrer">
+        <h2>{item.title}</h2>
+        <span className="detail-title-hint">
+          <ExternalLink size={13} />
+          Открыть оригинал
+        </span>
+      </a>
+      <div className="detail-source">
+        <span className="detail-source-name">{item.source_name}</span>
+        <Badge className={`reliability ${item.source_reliability}`} title="Приоритет источника">
+          {RELIABILITY_LABELS[item.source_reliability]}
+        </Badge>
+      </div>
+      <div className="summary-box">
+        <h3>
+          <Sparkles />
+          AI-САММАРИ
+        </h3>
+        <p>{item.summary}</p>
+        {item.isPlaceholder && <small>Заглушка: анализ ещё не подключён</small>}
+      </div>
+      <div className="impact-box">
+        <h3>Почему это важно для GS Labs</h3>
+        <p>{item.impact}</p>
+      </div>
+      <div className="actions">
+        {isHidden ? (
+          <Button variant="default" disabled={isBusy} onClick={onToggleHidden}>
+            <RotateCcw />
+            Вернуть
+          </Button>
+        ) : (
+          <Button variant="destructive" disabled={isBusy} onClick={onToggleHidden}>
+            <EyeOff />
+            Скрыть
+          </Button>
+        )}
+      </div>
     </>
-  );
+  )
 }
+
 function NewsCard({
   item,
   selected,
+  isLeaving,
   onSelect,
+  onLeft,
 }: {
-  item: NewsItem;
-  selected: boolean;
-  onSelect: () => void;
+  item: NewsItemView
+  selected: boolean
+  isLeaving: boolean
+  onSelect: () => void
+  onLeft: () => void
 }) {
   return (
-    <Button
-      variant="ghost"
-      className={`news-card ${item.priority} ${selected ? "selected" : ""}`}
-      aria-pressed={selected}
-      onClick={onSelect}
+    <div
+      className={isLeaving ? "news-slot leaving" : "news-slot"}
+      onAnimationEnd={(event) => {
+        if (event.animationName === LEAVE_ANIMATION) onLeft()
+      }}
     >
-      <span className="card-meta">
-        <span>
-          {item.source} · {item.time}
+      <Button
+        variant="ghost"
+        className={selected ? "news-card selected" : "news-card"}
+        aria-pressed={selected}
+        onClick={onSelect}
+      >
+        <span className="card-meta">
+          <span>
+            {item.source_name} · {formatMoment(newsMoment(item))}
+          </span>
         </span>
-        <span>{getNoiseLabel(item.relevance)}</span>
-      </span>
-      <strong>{item.title}</strong>
-      <span className="excerpt">{item.excerpt}</span>
-      <span className="tags">
-        {item.tags.map((tag) => (
-          <Badge variant="secondary" key={tag}>
-            {tag}
-          </Badge>
-        ))}
-      </span>
-    </Button>
-  );
-}
-
-function getNoiseLabel(score: number) {
-  if (score < 50) return "Шум";
-  if (score < 65) return "Релевантно";
-  if (score < 80) return "Важно";
-  return "Горячая новость";
+        <strong>{item.title}</strong>
+        <span className="excerpt">{excerptOf(item satisfies NewsOut)}</span>
+        {item.source_tags.length > 0 && (
+          <span className="tags">
+            {item.source_tags.map((tag) => (
+              <Badge variant="secondary" key={tag}>
+                {tag}
+              </Badge>
+            ))}
+          </span>
+        )}
+      </Button>
+    </div>
+  )
 }

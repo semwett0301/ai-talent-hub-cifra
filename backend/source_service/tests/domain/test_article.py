@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -86,6 +87,7 @@ def test_accept_requires_content_date_and_title():
 
 def test_only_an_accepted_article_becomes_news():
     source = Source(
+        id=uuid.uuid4(),
         name="Example",
         link="https://example.test",
         type=SourceType.WEB,
@@ -101,5 +103,6 @@ def test_only_an_accepted_article_becomes_news():
     assert news.source_type is SourceType.WEB
     assert news.source_reliability is SourceReliability.MEDIUM
     assert news.published_at == publication().value
-    assert news.raw["date_source"] == "open_graph"
-    assert news.raw["article"]["url"] == URL
+    assert news.source_id == source.id
+    assert news.title == content().title
+    assert news.text == content().text

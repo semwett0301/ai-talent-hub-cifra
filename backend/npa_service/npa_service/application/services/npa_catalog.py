@@ -1,29 +1,21 @@
-"""NpaCatalog — the acts catalog: list everything, get one, create one."""
+"""Read-only NPA catalog."""
 
 import uuid
 
-from common.core.logging import get_logger
-from common.entities.npa import NpaDTO
-from common.schemas import Npa
+from common.schemas import Npa, NpaVersion
 
 from npa_service.application.ports import NpaRepository
-
-logger = get_logger(__name__)
 
 
 class NpaCatalog:
     def __init__(self, repo: NpaRepository) -> None:
         self.__repo = repo
 
-    async def list(self, limit: int, offset: int) -> list[Npa]:
+    async def list_all(self, limit: int, offset: int) -> list[Npa]:
         return await self.__repo.list_all(limit, offset)
 
     async def get(self, npa_id: uuid.UUID) -> Npa | None:
         return await self.__repo.get(npa_id)
 
-    async def create(self, act: NpaDTO) -> Npa:
-        """Store the act; `NpaAlreadyExistsError` propagates for a repeated `url`."""
-        stored = await self.__repo.add(act)
-
-        logger.info("npa created: id=%s url=%s", stored.id, stored.url)
-        return stored
+    async def list_versions(self, npa_id: uuid.UUID) -> list[NpaVersion]:
+        return await self.__repo.list_versions(npa_id)

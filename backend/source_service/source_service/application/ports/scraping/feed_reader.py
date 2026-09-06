@@ -5,7 +5,7 @@ itself is fetched. `url` is the entry's canonical link and becomes `NewsDTO.url`
 key downstream dedupes on.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
 
@@ -16,6 +16,8 @@ class FeedEntry:
     title: str
     summary: str
     published_at: datetime | None
+    updated_at: datetime | None = None
+    tags: list[str] = field(default_factory=list)
 
 
 class FeedReader(Protocol):

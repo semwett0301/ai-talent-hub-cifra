@@ -18,7 +18,14 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM nginx:1.27-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
+# Edge without the bundle: config only. docker-compose.dev.yml targets this stage and
+# points location / at the Vite dev server, so the node build above is skipped there.
+FROM nginx:1.27-alpine AS edge
+ENV FRONTEND_MODE=static
 COPY nginx/templates/default.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx/frontend/ /etc/nginx/frontend/
 EXPOSE 80
+
+# Default target: the edge plus the built SPA.
+FROM edge
+COPY --from=build /app/dist /usr/share/nginx/html

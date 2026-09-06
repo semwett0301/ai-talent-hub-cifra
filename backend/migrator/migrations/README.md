@@ -20,9 +20,18 @@ Alembic — the **shared** schema history for all services on the one database
   creates the `npa` table `npa_service` stores legislative acts in (`url` UNIQUE);
   `0009_source_is_relevant` adds `is_relevant` (default true) plus a CHECK constraint
   keeping a non-relevant source always disabled too (`is_relevant OR NOT is_enabled`);
-  `0010_news_source_id` links news back to sources; `0011_news_event_dedup` enables
-  pgvector and adds the per-news summary, extraction, embedding, cluster id, and indexes;
-  `0012_news_cluster_ranking` creates one explainable relevance result per event cluster.
+  `0010_news_source_id` links news back to sources;
+  `0013_rss_link_table` moves `source.rss_link` into the one-to-many `rss_link` table
+  (FK `ON DELETE CASCADE`, `(source_id, url)` UNIQUE), carrying existing values over, and
+  replaces the CHECK with the `rss_link_requires_rss_source` trigger — an `rss_link` row
+  is refused unless its source is `type = 'rss'`.
+  `0013_npa_tracking_versions` adds current tracking state and immutable text/version
+  history with overall and per-article summaries. `7199923ff81c` merges the npa and
+  news heads that diverged from `0010`. `0018_news_event_dedup` (on top of that merge)
+  enables pgvector and adds the per-news summary, extraction, embedding, cluster id, and
+  indexes; `0019_news_cluster_ranking` creates one explainable relevance result per event
+  cluster. (Several intermediate revisions between `0010` and `0018` — `0011`, `0012`,
+  `0014`-`0017` — are not yet described here; this gap predates the merge.)
 
 Notes: run from `../` (the migrator dir) — `uv run alembic -c alembic.ini upgrade head`.
 Autogenerate: `uv run alembic -c alembic.ini revision --autogenerate -m "msg"`. Models

@@ -6,15 +6,16 @@ All settings live here, split into groups (`templates/`) and aggregated by `Sett
 
 from common.core.settings.settings import Settings, get_settings, settings
 from common.core.settings.templates import (
-    ENV_FILE,
     AppSettings,
     EdgeSettings,
     LlmSettings,
     NewsConsumerSettings,
     NewsDedupSettings,
     NewsRankingSettings,
+    NpaSettings,
     PostgresSettings,
     RabbitSettings,
+    RssDiscoverySettings,
     SettingsTemplate,
     SourceSchedulerSettings,
     TelegramSettings,
@@ -22,15 +23,16 @@ from common.core.settings.templates import (
 )
 
 __all__ = [
-    "ENV_FILE",
     "AppSettings",
     "EdgeSettings",
     "LlmSettings",
     "NewsConsumerSettings",
     "NewsDedupSettings",
     "NewsRankingSettings",
+    "NpaSettings",
     "PostgresSettings",
     "RabbitSettings",
+    "RssDiscoverySettings",
     "Settings",
     "SettingsTemplate",
     "SourceSchedulerSettings",
