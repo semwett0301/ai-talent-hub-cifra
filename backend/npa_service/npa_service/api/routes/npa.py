@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from npa_service.application.dto.npa import NpaCreate, NpaDetailOut, NpaOut, NpaVersionOut
 from npa_service.application.errors import (
+    ChangeModelError,
     InvalidNpaPageError,
     InvalidNpaUrlError,
     NpaAlreadyExistsError,
@@ -58,6 +59,11 @@ async def create_npa(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
     except NpaSourceUnavailableError as error:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(error)) from error
+    except ChangeModelError as error:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Не удалось подготовить AI-обзор законопроекта. Попробуйте позднее",
+        ) from error
 
     versions = await catalog.list_versions(act.id)
     return _details(act, versions)

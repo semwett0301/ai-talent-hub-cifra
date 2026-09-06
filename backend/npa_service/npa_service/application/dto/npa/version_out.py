@@ -17,5 +17,6 @@ class NpaVersionOut(BaseModel):
     document_url: str
     source_updated_at: datetime
     summary: str | None
+    summary_kind: str | None
     article_changes: list[ArticleChangeOut]
     created_at: datetime

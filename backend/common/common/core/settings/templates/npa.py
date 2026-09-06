@@ -17,4 +17,6 @@ class NpaSettings(SettingsTemplate):
     npa_max_diff_chars: int = Field(default=120_000, ge=10_000)
     npa_article_changes_max_output_tokens: int = Field(default=1_200, ge=200, le=8_000)
     npa_overall_summary_max_output_tokens: int = Field(default=4_000, ge=500, le=16_000)
+    npa_initial_summary_max_chars: int = Field(default=240_000, ge=10_000)
+    npa_initial_summary_max_output_tokens: int = Field(default=3_000, ge=500, le=16_000)
     npa_user_agent: str = "CifraNpaMonitor/1.0 (+https://sozd.duma.gov.ru/)"

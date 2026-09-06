@@ -4,22 +4,26 @@ from common.core.logging import get_logger
 from common.entities.npa import NpaTrackingStatus
 from common.schemas import Npa
 
-from npa_service.application.ports import NpaRepository, NpaSource
+from npa_service.application.ports import InitialSummarizer, NpaRepository, NpaSource
 from npa_service.domain.state import build_tracking_state
 
 logger = get_logger(__name__)
 
 
 class NpaRegistration:
-    def __init__(self, repo: NpaRepository, source: NpaSource) -> None:
+    def __init__(
+        self, repo: NpaRepository, source: NpaSource, initial_summarizer: InitialSummarizer
+    ) -> None:
         self.__repo = repo
         self.__source = source
+        self.__initial_summarizer = initial_summarizer
 
     async def register(self, url: str) -> Npa:
         snapshot = await self.__source.fetch(url)
         initial = build_tracking_state(NpaTrackingStatus.TRACKING)
         status = initial.transition(snapshot.is_published).status
-        stored = await self.__repo.add(snapshot, status)
+        summary = await self.__initial_summarizer.summarize(snapshot)
+        stored = await self.__repo.add(snapshot, status, summary)
 
         logger.info(
             "npa registered: id=%s url=%s stage=%s status=%s",

@@ -287,8 +287,8 @@ function NpaOverview({ item }: { item: NpaItem }) {
         <div><dt>Версий сохранено</dt><dd>{item.versions.length}</dd></div>
       </dl>
       <div className="summary-box">
-        <h3><Sparkles />AI-резюме последнего изменения</h3>
-        <p>{item.summary ?? "Это первая сохранённая версия. Изменений относительно предыдущей редакции пока нет."}</p>
+        <h3><Sparkles />{item.summaryKind === "initial" ? "AI-обзор законопроекта" : "AI-резюме последнего изменения"}</h3>
+        <p>{item.summary ?? "AI-резюме пока не сформировано."}</p>
         <small>Проверьте вывод по официальному документу перед юридически значимым решением.</small>
       </div>
       <div className="npa-monitor-note">
@@ -352,7 +352,7 @@ function VersionHistory({ versions, onSelect }: { versions: NpaVersion[]; onSele
             <span>
               <strong>{index === 0 ? "Текущая версия" : `Версия ${versions.length - index}`}</strong>
               <small>{version.stage} · {formatDateTime(version.sourceUpdatedAt)}</small>
-              <span>{version.summary ?? "Первая сохранённая редакция"}</span>
+              <span>{version.summary ?? "AI-резюме пока не сформировано"}</span>
             </span>
             <ArrowRight />
           </Button>
@@ -377,8 +377,8 @@ function VersionDialog({ version, onClose }: { version: NpaVersion | null; onClo
             </a>
           </div>
           <div className="summary-box compact-summary">
-            <h3><Sparkles />Что изменилось</h3>
-            <p>{version.summary ?? "Это первая сохранённая редакция документа."}</p>
+            <h3><Sparkles />{version.summaryKind === "initial" ? "AI-обзор законопроекта" : "Что изменилось"}</h3>
+            <p>{version.summary ?? "AI-резюме пока не сформировано."}</p>
           </div>
           <div className="version-dialog-changes">
             <h3>Изменения по статьям</h3>

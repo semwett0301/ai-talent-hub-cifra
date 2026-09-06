@@ -29,6 +29,7 @@ class NpaVersion(Base):
     document_url: Mapped[str] = mapped_column(String(URL_MAX_LENGTH))
     source_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
     article_changes: Mapped[list[dict[str, str]]] = mapped_column(
         JSONB, default=list, server_default="[]"
     )

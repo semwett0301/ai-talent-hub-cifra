@@ -15,10 +15,13 @@ URL = "https://sozd.duma.gov.ru/bill/1-8"
 
 async def test_registration_stops_when_bill_is_already_published() -> None:
     repo = _Repo()
-    stored = await NpaRegistration(repo, _Source(_snapshot("arrh_d11", "text", True))).register(URL)
+    stored = await NpaRegistration(
+        repo, _Source(_snapshot("arrh_d11", "text", True)), _InitialModel()
+    ).register(URL)
 
     assert stored.tracking_status == NpaTrackingStatus.PUBLISHED
     assert repo.added_status == NpaTrackingStatus.PUBLISHED
+    assert repo.initial_summary == "Понятный обзор законопроекта."
     assert not build_tracking_state(stored.tracking_status).can_check
 
 
@@ -86,10 +89,16 @@ class _Model:
         return self.summary
 
 
+class _InitialModel:
+    async def summarize(self, snapshot: BillSnapshot) -> str:
+        return "Понятный обзор законопроекта."
+
+
 class _Repo:
     def __init__(self, row: Npa | None = None) -> None:
         self.row = row
         self.added_status: NpaTrackingStatus | None = None
+        self.initial_summary: str | None = None
         self.update_value: TrackedUpdate | None = None
         self.was_checked = False
 
@@ -105,8 +114,11 @@ class _Repo:
     async def list_versions(self, npa_id: uuid.UUID) -> list:
         return []
 
-    async def add(self, snapshot: BillSnapshot, status: NpaTrackingStatus) -> Npa:
+    async def add(
+        self, snapshot: BillSnapshot, status: NpaTrackingStatus, initial_summary: str
+    ) -> Npa:
         self.added_status = status
+        self.initial_summary = initial_summary
         self.row = _row(snapshot.stage_code, snapshot.text, status)
         return self.row
 

@@ -45,6 +45,7 @@ class Npa(Base):
         server_default=NpaTrackingStatus.UNSUPPORTED.value,
     )
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
     article_changes: Mapped[list[dict[str, str]]] = mapped_column(
         JSONB, default=list, server_default="[]"
     )

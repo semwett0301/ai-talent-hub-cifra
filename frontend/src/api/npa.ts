@@ -15,6 +15,7 @@ interface NpaResponse {
   created_at: string;
   updated_at: string;
   summary: string | null;
+  summary_kind: "initial" | "change" | null;
   article_changes: ArticleChange[];
   versions?: NpaVersionResponse[];
 }
@@ -26,6 +27,7 @@ interface NpaVersionResponse {
   document_url: string;
   source_updated_at: string;
   summary: string | null;
+  summary_kind: "initial" | "change" | null;
   article_changes: ArticleChange[];
   created_at: string;
 }
@@ -62,6 +64,7 @@ function errorMessage(status: number) {
   if (status === 409) return "Этот законопроект уже добавлен в реестр";
   if (status === 422) return "Не удалось прочитать карточку или документ законопроекта";
   if (status === 502) return "Сайт Госдумы временно недоступен. Попробуйте позднее";
+  if (status === 503) return "Не удалось подготовить AI-обзор законопроекта. Попробуйте позднее";
   return `Сервис НПА ответил с кодом ${status}`;
 }
 
@@ -86,6 +89,7 @@ function mapNpa(entry: NpaResponse): NpaItem {
     createdAt: entry.created_at,
     updatedAt: entry.updated_at,
     summary: entry.summary,
+    summaryKind: entry.summary_kind,
     articleChanges: entry.article_changes ?? [],
     versions: (entry.versions ?? [])
       .map(mapVersion)
@@ -101,6 +105,7 @@ function mapVersion(entry: NpaVersionResponse): NpaVersion {
     documentUrl: entry.document_url,
     sourceUpdatedAt: entry.source_updated_at,
     summary: entry.summary,
+    summaryKind: entry.summary_kind,
     articleChanges: entry.article_changes ?? [],
     createdAt: entry.created_at,
   };

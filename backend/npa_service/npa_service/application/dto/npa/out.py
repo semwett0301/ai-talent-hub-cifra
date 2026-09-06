@@ -23,6 +23,7 @@ class NpaOut(BaseModel):
     last_checked_at: datetime | None
     tracking_status: NpaTrackingStatus
     summary: str | None
+    summary_kind: str | None
     article_changes: list[ArticleChangeOut]
     published_at: datetime | None
     created_at: datetime

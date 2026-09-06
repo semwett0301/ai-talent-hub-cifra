@@ -32,6 +32,7 @@ export interface NpaItem {
   createdAt: string;
   updatedAt: string;
   summary: string | null;
+  summaryKind: "initial" | "change" | null;
   articleChanges: ArticleChange[];
   versions: NpaVersion[];
 }
@@ -48,6 +49,7 @@ export interface NpaVersion {
   documentUrl: string;
   sourceUpdatedAt: string;
   summary: string | null;
+  summaryKind: "initial" | "change" | null;
   articleChanges: ArticleChange[];
   createdAt: string;
 }

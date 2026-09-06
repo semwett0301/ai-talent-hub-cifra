@@ -29,6 +29,7 @@ def _snapshot_fields(snapshot: BillSnapshot) -> dict[str, Any]:
         "last_checked_at": datetime.now(UTC),
         "published_at": snapshot.published_at,
         "summary": None,
+        "summary_kind": None,
         "article_changes": [],
     }
 
@@ -44,6 +45,7 @@ def _version_fields(
         "document_url": snapshot.document_url,
         "source_updated_at": snapshot.updated_at,
         "summary": change.overall if change else None,
+        "summary_kind": "change" if change else None,
         "article_changes": [asdict(article) for article in change.articles] if change else [],
     }
 
@@ -52,6 +54,7 @@ def _apply_fields(row: Npa, update_value: TrackedUpdate) -> None:
     fields = _snapshot_fields(update_value.snapshot)
     fields["tracking_status"] = update_value.status
     fields["summary"] = update_value.change.overall if update_value.change else None
+    fields["summary_kind"] = "change" if update_value.change else None
     fields["article_changes"] = (
         [asdict(article) for article in update_value.change.articles] if update_value.change else []
     )
@@ -86,13 +89,21 @@ class NpaRepo(NpaRepository):
             rows = await session.execute(stmt)
             return list(rows.scalars().all())
 
-    async def add(self, snapshot: BillSnapshot, status: NpaTrackingStatus) -> Npa:
-        row = Npa(**_snapshot_fields(snapshot), tracking_status=status)
+    async def add(
+        self, snapshot: BillSnapshot, status: NpaTrackingStatus, initial_summary: str
+    ) -> Npa:
+        fields = _snapshot_fields(snapshot)
+        fields["summary"] = initial_summary
+        fields["summary_kind"] = "initial"
+        row = Npa(**fields, tracking_status=status)
         async with async_session_factory() as session:
             session.add(row)
             try:
                 await session.flush()
-                session.add(NpaVersion(**_version_fields(row.id, snapshot, None)))
+                version_fields = _version_fields(row.id, snapshot, None)
+                version_fields["summary"] = initial_summary
+                version_fields["summary_kind"] = "initial"
+                session.add(NpaVersion(**version_fields))
                 await session.commit()
             except IntegrityError as error:
                 raise NpaAlreadyExistsError(row.url) from error
