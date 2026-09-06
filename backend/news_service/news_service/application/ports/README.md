@@ -4,9 +4,8 @@ The interfaces application depends on and infrastructure implements (`Protocol`)
 Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py`.
 
 - `repositories.py` — `NewsRepository`: data access over **one unit of work** (a request,
-  a batch — scoped by `deps.py`, never by the use case). Reads: `list_page(query)` /
-  `count(query)` (the page a `NewsQuery` asks for and how many rows match its filters),
-  `get(id)`. Writes *stage* and return the row (None when the id is unknown):
+  a batch — scoped by `deps.py`, never by the use case). Reads: `list_matching(query)`
+  (every row a `NewsQuery`'s filters admit, newest publication first), `get(id)`. Writes *stage* and return the row (None when the id is unknown):
   `add_many(items)` (the batch insert — duplicates by `url` and items whose source is gone
   are skipped, returns the inserted count), `mark_alert(id)`, `mark_dismissed(id)`,
   `mark_restored(id)`. `commit()` persists everything staged; a unit of work that ends

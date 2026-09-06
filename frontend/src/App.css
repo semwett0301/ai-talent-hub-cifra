@@ -255,9 +255,10 @@ p {
   border: 1px solid var(--border);
 }
 .news-list {
+  --news-gap: 9px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--news-gap);
   max-height: 575px;
   overflow-y: auto;
   padding: 2px;
@@ -298,6 +299,31 @@ p {
   border-color: #418fe7 !important;
   box-shadow: 0 0 0 1px #245689;
   background: #0e2036;
+}
+/* Each card sits in a one-row grid so its height can animate to zero (rows 1fr → 0fr). */
+.news-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+.news-slot > .news-card {
+  min-height: 0;
+}
+@keyframes news-card-leave {
+  to {
+    grid-template-rows: 0fr;
+    margin-bottom: calc(-1 * var(--news-gap));
+    opacity: 0;
+  }
+}
+.news-slot.leaving {
+  overflow: hidden;
+  animation: news-card-leave 300ms ease-in-out forwards;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .news-slot.leaving {
+    animation-duration: 1ms;
+  }
 }
 .card-meta {
   display: flex;
@@ -478,14 +504,12 @@ p {
   margin-bottom: 7px;
 }
 .actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px;
   margin-top: 22px;
 }
 .actions [data-slot="button"] {
-  height: 43px;
-  font-size: 12px;
+  width: 100%;
+  height: 52px;
+  font-size: 14px;
 }
 .notice {
   font-size: 11px;

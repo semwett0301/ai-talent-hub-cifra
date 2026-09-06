@@ -61,9 +61,15 @@ npm run api:gen        # regenerate src/api/schema.*.d.ts from a running backend
   false` keeps fields that have server-side defaults optional in request bodies.
 - The generated file is committed so `npm run build` and CI never need a live backend.
 - `NewsPage` talks to `/api/news` only: `q`, `since` (the period, rounded to the minute
-  so the query key is stable) and `visibility` go to the server — the «Архив» tab is the
-  same list with `visibility=dismissed`; the details panel archives (`POST /{id}/dismiss`,
-  destructive button) or brings back (`POST /{id}/restore`, primary button) the open item. The fields
-  the backend cannot supply yet (relevance, priority, kind, AI summary, impact) come from
-  `src/data/newsPlaceholders.ts`; the summary edit dialog still saves to `sessionStorage`
-  because the summary itself is a placeholder.
+  so the query key is stable) and `visibility` go to the server — the «Скрытые» tab is the
+  same list with `visibility=dismissed` («Актуальные» is the default); the details panel hides
+  («Скрыть», `POST /{id}/dismiss`, destructive button) or brings back («Вернуть»,
+  `POST /{id}/restore`, primary button) the open item — the
+  only action on an item. The click first plays the card's leave animation
+  (`news-card-leave` in `App.css`: each card sits in a `.news-slot` one-row grid whose row
+  animates `1fr → 0fr`, so the card collapses bottom-up and the list closes the gap); the
+  request goes out on `animationend`,
+  and the card stays played-out until the mutation settles — `useListInvalidation` returns
+  the invalidation promise, so "settled" means the refetched list has landed. No status text. The list is not paged: the server returns every match for the
+  period in one response, newest publication first. The fields the backend cannot supply
+  yet (AI summary, impact) come from `src/data/newsPlaceholders.ts`, read-only.

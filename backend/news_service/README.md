@@ -1,7 +1,7 @@
 # news_service
 
 Consumer service: **RabbitMQ `news` exchange → batch → `news` table**, plus a read API:
-page the feed (search, period, hidden items), open one item, **dismiss** / **restore** it
+list the feed (search, period, hidden items), open one item, **dismiss** / **restore** it
 (`dismissed_at`), or **escalate** it into a legislative act — flag `is_alert` + a
 synchronous create in `npa_service`, committed only when that service confirmed. Every `NewsDTO` published by `source_service` is stored as-is —
 one flat row, no JSON blob — once per `url` (the DB's unique key — a story arriving twice,
@@ -25,7 +25,7 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     the `NewsRepo` from it, so one request = one session. `BatchScope` does the same per
     consumed batch for the shared `common.core.rabbit.RabbitBatchConsumer[NewsDTO]` (bound
     with `NEWS_BINDING_KEY` = `news.raw.#`), wrapping `NewsIngestor`.
-  - `application/` — `ports/` (`NewsRepository`, `NewsBatchHandler`, `NpaGateway`) + `dto/news/` (`NewsQuery` in, `NewsOut` / `NewsPage` out) + `services/`
+  - `application/` — `ports/` (`NewsRepository`, `NewsBatchHandler`, `NpaGateway`) + `dto/news/` (`NewsQuery` in, `NewsOut` out) + `services/`
     (`NewsFeed` list/get/dismiss/restore, `NewsIngestor` batch store, `NpaEscalation` flag
     + register act) + `errors.py`.
   - `infrastructure/` — port implementations: `repositories/` (`NewsRepo` over the one

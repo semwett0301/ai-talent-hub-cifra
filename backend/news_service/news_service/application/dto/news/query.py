@@ -1,12 +1,10 @@
-"""What the feed is asked for — search, period, hidden items, page. Read off the query string."""
+"""What the feed is asked for — search, period, hidden items. Read off the query string."""
 
 from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
-DEFAULT_PAGE_SIZE = 50
-MAX_PAGE_SIZE = 500
 MAX_SEARCH_LENGTH = 200
 
 
@@ -24,5 +22,3 @@ class NewsQuery(BaseModel):
     # Items published (or, undated, collected) at or after this moment.
     since: datetime | None = None
     visibility: NewsVisibility = NewsVisibility.VISIBLE
-    limit: int = Field(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
-    offset: int = Field(0, ge=0)

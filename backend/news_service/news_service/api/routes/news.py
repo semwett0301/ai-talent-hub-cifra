@@ -1,4 +1,4 @@
-"""Endpoints for stored news: page the feed, open one, hide / unhide, escalate into an act."""
+"""Endpoints for stored news: list the feed, open one, hide / unhide, escalate into an act."""
 
 import uuid
 from typing import Annotated
@@ -7,7 +7,7 @@ from common.entities.npa import NpaDTO
 from common.schemas import News
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from news_service.application.dto.news import NewsOut, NewsPage, NewsQuery
+from news_service.application.dto.news import NewsOut, NewsQuery
 from news_service.application.errors import NpaConflictError, NpaGatewayError
 from news_service.application.services import NewsFeed, NpaEscalation
 from news_service.deps import get_news_feed, get_npa_escalation
@@ -22,13 +22,12 @@ def _to_out_or_404(news: News | None) -> NewsOut:
     return NewsOut.model_validate(news)
 
 
-@router.get("/", response_model=NewsPage)
+@router.get("/", response_model=list[NewsOut])
 async def list_news(
     query: Annotated[NewsQuery, Query()], feed: NewsFeed = Depends(get_news_feed)
-) -> NewsPage:
+) -> list[NewsOut]:
     """Visible items by default (`visibility`); `q` searches title and text, `since` bounds the period."""
-    items, total = await feed.list(query)
-    return NewsPage(items=[NewsOut.model_validate(news) for news in items], total=total)
+    return [NewsOut.model_validate(news) for news in await feed.list(query)]
 
 
 @router.get("/{news_id}", response_model=NewsOut)
