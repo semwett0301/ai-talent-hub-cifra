@@ -55,4 +55,6 @@ only redirects to the trailing-slash form.
 `location /` holds only an `include` of `/etc/nginx/frontend/${FRONTEND_MODE}.conf`, so
 the same image serves either the bundle or the dev server without an nginx `if`. In dev
 mode the regex `/api/...` locations still win over the `/` prefix, so API calls never
-reach Vite; the proxied `Host` is `$host` (`localhost`), which Vite's host check allows.
+reach Vite. Gotcha: a location with its own `proxy_set_header` (the `Upgrade` /
+`Connection` pair) inherits none of the `server`-level ones, so `dev.conf` repeats
+`Host $host` — without it Vite sees `Host: frontend_dev` and refuses the request.
