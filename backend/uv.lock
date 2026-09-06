@@ -2437,6 +2437,7 @@ dependencies = [
     { name = "httpx" },
     { name = "langchain-core" },
     { name = "langchain-openrouter" },
+    { name = "pypdf" },
     { name = "python-docx" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -2450,6 +2451,7 @@ requires-dist = [
     { name = "httpx", specifier = "==0.28.1" },
     { name = "langchain-core", specifier = ">=1.2.22,<2.0" },
     { name = "langchain-openrouter", specifier = ">=0.2.8,<0.3" },
+    { name = "pypdf", specifier = "==5.2.0" },
     { name = "python-docx", specifier = "==1.2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.34.0" },
 ]
@@ -3196,6 +3198,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3f/e8/7325d258199b159eb2c03fe32107533e2832e70e63f4fb88a6aa00023201/pyopenssl-26.4.0.tar.gz", hash = "sha256:28dfcce0162b9211413e26dfbfdf1d24317fbeba18fc93c12400a1856b2a0bc7", size = 182046, upload-time = "2026-08-01T19:50:50.512Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/ad/2cf6d3fa2fae5c79e1ed9960c0d42badd0f94d81dd12b50604cdc839e648/pyopenssl-26.4.0-py3-none-any.whl", hash = "sha256:f0eb0cb2d581d3ad2b9c489468485e7f2ab6727d08401bcf9d824c3caddf3c1c", size = 56026, upload-time = "2026-08-01T19:50:48.94Z" },
+]
+
+[[package]]
+name = "pypdf"
+version = "5.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/8b/14ab0db77d1287922e1d3e69cf3dbeee718133e109913b92c6cffe7b1f2e/pypdf-5.2.0.tar.gz", hash = "sha256:7c38e68420f038f2c4998fd9d6717b6db4f6cef1642e9cf384d519c9cf094663", size = 5020162, upload-time = "2025-01-26T11:48:42.606Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/6e/9aa158121eb5a6af5537af0bde9e38092a97c40a5a0ecaec7cc9688b2c2e/pypdf-5.2.0-py3-none-any.whl", hash = "sha256:d107962ec45e65e3bd10c1d9242bdbbedaa38193c9e3a6617bd6d996e5747b19", size = 298686, upload-time = "2025-01-26T11:48:40.113Z" },
 ]
 
 [[package]]

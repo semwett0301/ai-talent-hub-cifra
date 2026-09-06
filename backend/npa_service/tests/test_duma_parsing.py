@@ -37,6 +37,12 @@ def test_parses_furthest_stage_latest_date_and_latest_word_text() -> None:
     assert page.document_url.endswith("/download/new-text")
 
 
+def test_accepts_pdf_when_word_text_is_not_published() -> None:
+    page = DumaPageParser().parse(_pdf_bill_html(), BILL_URL)
+
+    assert page.document_url.endswith("/download/text-pdf")
+
+
 def test_extracts_paragraphs_and_tables_from_docx() -> None:
     document = Document()
     document.add_paragraph("Статья 1. Новое правило")
@@ -68,5 +74,18 @@ def _bill_html() -> str:
             <span>Текст законопроекта ко второму чтению</span></a></div></div>
       <div class="root-stage" id="arrh_d11"><div class="ttl"><a class="lnk">Опубликование закона</a></div>
         <div class="oz_event" data-eventdate="2026-08-04T23:59:59">закон опубликован</div></div>
+    </div></div>
+    """
+
+
+def _pdf_bill_html() -> str:
+    return """
+    <span id="number_oz_id">№ 1286425-8</span>
+    <span id="oz_name">О тестовом законе</span>
+    <div id="bh_histras"><div id="oz_stages">
+      <div class="root-stage" id="arrh_d4"><div class="ttl"><a class="lnk">Первое чтение</a></div>
+        <div class="oz_event" data-eventdate="2026-07-22T20:00:00">
+          <a class="a_event_files" href="/download/text-pdf"><span class="format-pdf"></span>
+            <span>Текст внесенного законопроекта</span></a></div></div>
     </div></div>
     """

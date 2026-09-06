@@ -13,6 +13,7 @@ dependencies = [
     "langchain-core>=1.2.22,<2.0",
     "langchain-openrouter>=0.2.8,<0.3",
     "python-docx==1.2.0",
+    "pypdf==5.2.0",
 ]
 
 [build-system]

@@ -8,6 +8,7 @@ from npa_service.application.ports import NpaSource
 from npa_service.domain import BillSnapshot
 from npa_service.infrastructure.duma.docx_parser import DocxParser
 from npa_service.infrastructure.duma.page_parser import DumaPageParser
+from npa_service.infrastructure.duma.pdf_parser import PdfParser
 from npa_service.infrastructure.duma.url import (
     normalize_duma_bill_url,
     validate_duma_download_url,
@@ -50,6 +51,7 @@ class DumaClient(NpaSource):
         self.__max_document_bytes = max_document_bytes
         self.__page_parser = DumaPageParser()
         self.__docx_parser = DocxParser()
+        self.__pdf_parser = PdfParser()
 
     async def fetch(self, url: str) -> BillSnapshot:
         canonical_url = normalize_duma_bill_url(url)
@@ -57,7 +59,7 @@ class DumaClient(NpaSource):
         page_content = await self.__download(canonical_url, self.__max_document_bytes)
         page = self.__page_parser.parse(_decode_page(page_content), canonical_url)
         document_content = await self.__download(page.document_url, self.__max_document_bytes)
-        text = self.__docx_parser.parse(document_content)
+        text = self.__parse_document(document_content)
         logger.info("duma bill fetch completed: url=%s stage=%s", canonical_url, page.stage_code)
         return BillSnapshot(
             page.url,
@@ -82,3 +84,10 @@ class DumaClient(NpaSource):
                 return await _read_limited(response, max_bytes)
         except (httpx.HTTPError, ValueError) as error:
             raise NpaSourceUnavailableError(f"State Duma fetch failed: url={url}") from error
+
+    def __parse_document(self, content: bytes) -> str:
+        return (
+            self.__pdf_parser.parse(content)
+            if content.startswith(b"%PDF")
+            else self.__docx_parser.parse(content)
+        )

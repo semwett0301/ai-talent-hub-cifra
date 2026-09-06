@@ -57,7 +57,10 @@ export async function createNpa(url: string): Promise<NpaItem> {
 async function parseResponse(response: Response): Promise<unknown> {
   const payload = await response.json().catch(() => null);
   if (response.ok) return payload;
-  throw new NpaApiError(errorMessage(response.status));
+  const detail = typeof payload === "object" && payload !== null && "detail" in payload
+    ? String(payload.detail)
+    : "";
+  throw new NpaApiError(detail || errorMessage(response.status));
 }
 
 function errorMessage(status: number) {

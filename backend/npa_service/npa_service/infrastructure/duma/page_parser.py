@@ -1,4 +1,4 @@
-"""Parse bill metadata, progress, dates, and the latest Word text link."""
+"""Parse bill metadata, progress, dates, and the latest text document link."""
 
 import re
 from datetime import datetime
@@ -67,12 +67,12 @@ def _stage_name(stage: Tag) -> str:
     return node.get_text(" ", strip=True)
 
 
-def _latest_word_text(stages: list[Tag], page_url: str) -> str:
+def _latest_text_document(stages: list[Tag], page_url: str) -> str:
     candidates: list[tuple[int, datetime, str]] = []
     for index, stage in enumerate(stages):
         candidates.extend(_stage_documents(stage, index))
     if not candidates:
-        raise InvalidNpaPageError("bill has no supported Word text document")
+        raise InvalidNpaPageError("bill has no supported text document")
     _, _, path = max(candidates, key=lambda value: (value[0], value[1]))
     return urljoin(page_url, path)
 
@@ -81,7 +81,7 @@ def _stage_documents(stage: Tag, index: int) -> list[tuple[int, datetime, str]]:
     documents: list[tuple[int, datetime, str]] = []
     for link in stage.select("a.a_event_files"):
         label = link.get_text(" ", strip=True).lower()
-        icon = link.select_one(".format-msword")
+        icon = link.select_one(".format-msword, .format-pdf")
         event = link.find_parent(class_="oz_event")
         date = _parse_date(str(event.get("data-eventdate"))) if isinstance(event, Tag) else None
         if icon and date and any(marker in label for marker in TEXT_MARKERS):
@@ -108,7 +108,7 @@ class DumaPageParser:
         stage = _current_stage(stages)
         dates = _event_dates(history)
         number = _bill_number(soup)
-        document_url = _latest_word_text(stages, url)
+        document_url = _latest_text_document(stages, url)
         published_at = _published_at(stage)
         return BillPage(
             url=url,
