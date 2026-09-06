@@ -1,4 +1,5 @@
 # api
 
-- `npa.ts` — typed current-registry reads and URL registration through the nginx NPA
-  prefix, including snake-case DTO to UI-model mapping and useful HTTP errors.
+- `npa.ts` — typed registry, detail/version-history reads and URL registration through
+  the nginx NPA prefix. It maps snake-case DTOs into UI models and turns HTTP status
+  codes into Russian user-facing errors.

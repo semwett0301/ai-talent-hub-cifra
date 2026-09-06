@@ -1,4 +1,4 @@
-import type { ArticleChange, NpaItem } from "@/types/monitoring";
+import type { ArticleChange, NpaItem, NpaVersion } from "@/types/monitoring";
 
 interface NpaResponse {
   id: string;
@@ -6,19 +6,40 @@ interface NpaResponse {
   bill_number: string | null;
   title: string;
   stage: string | null;
+  stage_code: string | null;
+  document_url: string | null;
   tracking_status: NpaItem["trackingStatus"];
   source_updated_at: string | null;
   last_checked_at: string | null;
   published_at: string | null;
+  created_at: string;
+  updated_at: string;
   summary: string | null;
   article_changes: ArticleChange[];
+  versions?: NpaVersionResponse[];
+}
+
+interface NpaVersionResponse {
+  id: string;
+  stage: string;
+  stage_code: string;
+  document_url: string;
+  source_updated_at: string;
+  summary: string | null;
+  article_changes: ArticleChange[];
+  created_at: string;
 }
 
 export class NpaApiError extends Error {}
 
-export async function listNpa(): Promise<NpaItem[]> {
-  const response = await fetch(`${__NPA_API_PREFIX__}/`);
+export async function listNpa(signal?: AbortSignal): Promise<NpaItem[]> {
+  const response = await fetch(`${__NPA_API_PREFIX__}/?limit=500`, { signal });
   return mapList(await parseResponse(response));
+}
+
+export async function getNpa(id: string, signal?: AbortSignal): Promise<NpaItem> {
+  const response = await fetch(`${__NPA_API_PREFIX__}/${encodeURIComponent(id)}`, { signal });
+  return mapNpa(await parseResponse(response) as NpaResponse);
 }
 
 export async function createNpa(url: string): Promise<NpaItem> {
@@ -33,13 +54,15 @@ export async function createNpa(url: string): Promise<NpaItem> {
 async function parseResponse(response: Response): Promise<unknown> {
   const payload = await response.json().catch(() => null);
   if (response.ok) return payload;
-  const detail = getDetail(payload);
-  throw new NpaApiError(detail ?? `Сервис НПА ответил с кодом ${response.status}`);
+  throw new NpaApiError(errorMessage(response.status));
 }
 
-function getDetail(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object" || !("detail" in payload)) return null;
-  return typeof payload.detail === "string" ? payload.detail : null;
+function errorMessage(status: number) {
+  if (status === 404) return "НПА больше не найден в реестре";
+  if (status === 409) return "Этот законопроект уже добавлен в реестр";
+  if (status === 422) return "Не удалось прочитать карточку или документ законопроекта";
+  if (status === 502) return "Сайт Госдумы временно недоступен. Попробуйте позднее";
+  return `Сервис НПА ответил с кодом ${status}`;
 }
 
 function mapList(payload: unknown): NpaItem[] {
@@ -54,11 +77,31 @@ function mapNpa(entry: NpaResponse): NpaItem {
     billNumber: entry.bill_number,
     title: entry.title,
     stage: entry.stage,
+    stageCode: entry.stage_code,
+    documentUrl: entry.document_url,
     trackingStatus: entry.tracking_status,
     sourceUpdatedAt: entry.source_updated_at,
     lastCheckedAt: entry.last_checked_at,
     publishedAt: entry.published_at,
+    createdAt: entry.created_at,
+    updatedAt: entry.updated_at,
     summary: entry.summary,
-    articleChanges: entry.article_changes,
+    articleChanges: entry.article_changes ?? [],
+    versions: (entry.versions ?? [])
+      .map(mapVersion)
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt)),
+  };
+}
+
+function mapVersion(entry: NpaVersionResponse): NpaVersion {
+  return {
+    id: entry.id,
+    stage: entry.stage,
+    stageCode: entry.stage_code,
+    documentUrl: entry.document_url,
+    sourceUpdatedAt: entry.source_updated_at,
+    summary: entry.summary,
+    articleChanges: entry.article_changes ?? [],
+    createdAt: entry.created_at,
   };
 }
