@@ -38,6 +38,19 @@ def _message_url(chat: Chat, message: Message) -> str:
     return f"{TELEGRAM_BASE_URL}/c/{chat.id}/{message.id}"
 
 
+def _build_client(api_id: int | None, api_hash: str | None, session: str) -> Client | None:
+    if not api_id or not api_hash or not session:
+        return None
+
+    return Client(
+        CLIENT_SESSION_NAME,
+        api_id=api_id,
+        api_hash=api_hash,
+        session_string=session,
+        in_memory=True,
+    )
+
+
 def _to_news_dto(source: Source, chat: Chat, message: Message) -> NewsDTO:
     return NewsDTO.for_source(
         source.link,
@@ -60,23 +73,10 @@ class TelegramCollector(PushCollector):
         session: str,
     ) -> None:
         self.__publisher = publisher
-        self.__client = self.__build_client(api_id, api_hash, session)
+        self.__client = _build_client(api_id, api_hash, session)
 
         # Marked chat id (matches `message.chat.id`) → the Source it belongs to.
         self.__sources: dict[int, Source] = {}
-
-    @staticmethod
-    def __build_client(api_id: int | None, api_hash: str | None, session: str) -> Client | None:
-        if not api_id or not api_hash or not session:
-            return None
-
-        return Client(
-            CLIENT_SESSION_NAME,
-            api_id=api_id,
-            api_hash=api_hash,
-            session_string=session,
-            in_memory=True,
-        )
 
     async def start(self) -> None:
         """Connect the user session and register the single new-post handler."""

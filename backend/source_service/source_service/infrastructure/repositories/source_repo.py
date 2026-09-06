@@ -13,6 +13,14 @@ from source_service.application.errors import SourceAlreadyExistsError
 from source_service.application.ports.source import SourceRepository
 
 
+async def _commit(session: AsyncSession, link: str) -> None:
+    """`normalized_link` is unique, so a repeated address surfaces here."""
+    try:
+        await session.commit()
+    except IntegrityError as error:
+        raise SourceAlreadyExistsError(link) from error
+
+
 class SourceRepo(SourceRepository):
     """Each call runs in its own session (unit of work).
 
@@ -43,7 +51,7 @@ class SourceRepo(SourceRepository):
             source = Source(**data)
             session.add(source)
 
-            await self.__commit(session, source.link)
+            await _commit(session, source.link)
             await session.refresh(source)
             return source
 
@@ -53,7 +61,7 @@ class SourceRepo(SourceRepository):
             for key, value in data.items():
                 setattr(merged, key, value)
 
-            await self.__commit(session, merged.link)
+            await _commit(session, merged.link)
             await session.refresh(merged)
             return merged
 
@@ -61,11 +69,3 @@ class SourceRepo(SourceRepository):
         async with async_session_factory() as session:
             await session.delete(await session.merge(source))
             await session.commit()
-
-    @staticmethod
-    async def __commit(session: AsyncSession, link: str) -> None:
-        """`normalized_link` is unique, so a repeated address surfaces here."""
-        try:
-            await session.commit()
-        except IntegrityError as error:
-            raise SourceAlreadyExistsError(link) from error

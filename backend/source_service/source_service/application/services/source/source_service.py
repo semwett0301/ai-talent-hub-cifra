@@ -24,6 +24,22 @@ from .source_registry import SourceRegistry
 logger = get_logger(__name__)
 
 
+def _link_fields(source_type: SourceType, link: str, rss_link: str | None) -> dict:
+    """Everything derived from an address, so create and update stay in step."""
+    return {
+        "type": source_type,
+        "link": link,
+        "rss_link": rss_link,
+        "normalized_link": source_identity(link),
+    }
+
+
+def _check_relevance(source: Source, changes: dict) -> None:
+    """`is_relevant` isn't client-settable; a non-relevant source stays disabled."""
+    if changes.get("is_enabled", source.is_enabled) and not source.is_relevant:
+        raise SourceNotRelevantError(source.link)
+
+
 class SourceService:
     def __init__(
         self, repo: SourceRepository, registrar: SourceRegistry, page_fetcher: PageFetcher
@@ -40,7 +56,7 @@ class SourceService:
 
     async def create(self, payload: SourceCreate) -> Source:
         source_type, link, rss_link = await self.__detect_type(payload.link)
-        data = payload.model_dump() | self.__link_fields(source_type, link, rss_link)
+        data = payload.model_dump() | _link_fields(source_type, link, rss_link)
 
         source = await self._repo.create(data)
         logger.info(
@@ -57,8 +73,9 @@ class SourceService:
     async def update(self, source: Source, payload: SourceUpdate) -> Source:
         changes = payload.model_dump(exclude_unset=True)
         if "link" in changes:
-            changes |= self.__link_fields(*await self.__detect_type(changes["link"]))
-        self.__check_relevance(source, changes)
+            changes |= _link_fields(*await self.__detect_type(changes["link"]))
+
+        _check_relevance(source, changes)
 
         updated = await self._repo.update(source, changes)
         logger.info(
@@ -75,22 +92,6 @@ class SourceService:
         logger.info("source deleted: id=%s link=%s", source_id, link)
 
         await self._registrar.unregister(source)
-
-    @staticmethod
-    def __link_fields(source_type: SourceType, link: str, rss_link: str | None) -> dict:
-        """Everything derived from an address, so create and update stay in step."""
-        return {
-            "type": source_type,
-            "link": link,
-            "rss_link": rss_link,
-            "normalized_link": source_identity(link),
-        }
-
-    @staticmethod
-    def __check_relevance(source: Source, changes: dict) -> None:
-        """`is_relevant` isn't client-settable; a non-relevant source stays disabled."""
-        if changes.get("is_enabled", source.is_enabled) and not source.is_relevant:
-            raise SourceNotRelevantError(source.link)
 
     async def __detect_type(self, link: str) -> tuple[SourceType, str, str | None]:
         """Telegram link -> TELEGRAM, `link` unchanged. Else crawl the page: an RSS
