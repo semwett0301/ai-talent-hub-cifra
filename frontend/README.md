@@ -43,8 +43,9 @@ npm run api:gen        # regenerate src/api/schema.*.d.ts from a running backend
 - `npm run dev` has no nginx in front of it, so `vite.config.ts` proxies `/api` to
   `http://localhost` (override with `DEV_API_TARGET`). Bring the compose stack up first.
   The same dev server can run inside Compose instead (`docker-compose.dev.yml`, root
-  README → "Run"); there `DEV_API_TARGET=http://nginx` and `/app/node_modules` is an
-  anonymous volume, so restart with `up --build -V` after a `package.json` change.
+  README → "Run"): nginx proxies `/` to it, so `http://localhost/` is live. There
+  `/app/node_modules` is an anonymous volume, so restart with `up --build -V` after a
+  `package.json` change.
 - `api:gen` reads `$SPEC_URL` (default `http://localhost/api/sources/openapi.json`). It
   runs `openapi-typescript` through `npx` rather than as a devDependency: the tool still
   declares a peer on TypeScript 5.x while this project is on 6.x. `--default-non-nullable

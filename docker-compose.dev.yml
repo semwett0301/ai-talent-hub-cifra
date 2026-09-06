@@ -1,16 +1,22 @@
-# Dev overlay: a Vite dev server with hot module reload on top of the full stack.
+# Dev overlay: the frontend served live by a Vite dev server instead of the built bundle.
 # Not standalone — merge it over docker-compose.yml:
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 # (or set COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml in .env and use
 # plain `docker compose up --build`).
 #
-# http://localhost:5173  live frontend from ./frontend (edits reload in the browser)
-# http://localhost/      the built bundle from the nginx image, as in production
-#
-# Vite proxies /api/* to nginx over the compose network, so the API, DB and broker are
-# the same ones the built bundle talks to. The 5173 host port is the one deliberate
-# exception to "only nginx publishes a port" — a dev server never runs on the server.
+# http://localhost/ is then the live frontend from ./frontend: an edit reloads in the
+# browser, /api/* still goes to the backend services. nginx stays the only published
+# port — it proxies / (and the HMR websocket) to frontend_dev, and is built from the
+# `edge` stage, so the SPA is not compiled at all in this mode.
 services:
+  nginx:
+    build:
+      target: edge
+    environment:
+      FRONTEND_MODE: dev
+    depends_on:
+      - frontend_dev
+
   frontend_dev:
     build:
       context: .
@@ -21,6 +27,7 @@ services:
         max-size: "10m"
         max-file: "5"
     environment:
+      # Only used if something hits Vite's own /api proxy; the browser goes through nginx.
       DEV_API_TARGET: http://nginx
       SOURCES_API_PREFIX: ${SOURCES_API_PREFIX:-/api/sources}
       NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
@@ -30,7 +37,5 @@ services:
       # Anonymous volume: keeps the image's linux node_modules over the host's macOS ones.
       # After a package.json change run `up --build -V` so it is recreated from the new image.
       - /app/node_modules
-    ports:
-      - "5173:5173"
-    depends_on:
-      - nginx
+    expose:
+      - "5173"
