@@ -83,23 +83,6 @@ p {
   color: var(--muted-foreground);
   margin-top: 6px;
 }
-.brand {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  color: #579df0;
-  letter-spacing: 1px;
-  font-size: 21px;
-  white-space: nowrap;
-}
-.demo-label {
-  color: #8fa1b8;
-  border: 1px solid var(--border);
-  padding: 5px 8px;
-  border-radius: 5px;
-  font-size: 10px;
-  letter-spacing: 0;
-}
 .avatar {
   width: 29px;
   height: 29px;
@@ -112,9 +95,6 @@ p {
   font-size: 10px;
   font-weight: 700;
   flex-shrink: 0;
-}
-.avatar.purple {
-  background: #b08af0;
 }
 .workspace {
   display: grid;
@@ -330,6 +310,11 @@ p {
   font-size: 16px;
   font-weight: 600;
   line-height: 1.35;
+  /* Titles are stored whole (a Telegram post's first sentence can run long); the card clamps. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .excerpt {
   font-size: 12px;
@@ -346,6 +331,38 @@ p {
   border-radius: 4px;
   padding: 4px 7px;
   font-weight: 400;
+}
+/* The source, shown as the item's provenance: its name large, its kind as a chip. */
+.detail-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 16px;
+}
+.detail-source-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #cfe0f5;
+  letter-spacing: 0.2px;
+}
+/* Source reliability as a traffic light: high green, medium yellow, low red. */
+.reliability[data-slot="badge"] {
+  border: 0;
+  border-radius: 15px;
+  padding: 5px 10px;
+  font-size: 10px;
+}
+.reliability.high {
+  background: #103a35;
+  color: #69d5b3;
+}
+.reliability.medium {
+  background: #3a2c15;
+  color: #e6b24f;
+}
+.reliability.low {
+  background: #3a1f2a;
+  color: #fa7b83;
 }
 .detail-meta {
   display: flex;
@@ -374,9 +391,34 @@ p {
   background: #103a35;
   color: #69d5b3;
 }
-.details > h2 {
+.details > h2,
+.detail-title h2 {
   font-size: 20px;
   margin-bottom: 10px;
+}
+/* The headline and its "open original" hint are one link to the source page. */
+.detail-title {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+.detail-title h2 {
+  margin-bottom: 4px;
+  transition: color 0.15s ease;
+}
+.detail-title:hover h2,
+.detail-title:focus-visible h2 {
+  color: #6eb1ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.detail-title-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #6eb1ff;
 }
 .summary-box {
   background: #102e52;
@@ -538,9 +580,6 @@ p {
   .details {
     padding: 16px 12px;
   }
-  .brand .demo-label {
-    display: none;
-  }
   .feature-strip {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -568,12 +607,6 @@ p {
   .sidebar {
     min-height: 600px;
   }
-  .brand {
-    font-size: 16px;
-  }
-  .brand .avatar {
-    display: none;
-  }
   h1 {
     font-size: 26px;
   }
@@ -593,9 +626,6 @@ p {
   }
   .masthead {
     align-items: flex-start;
-  }
-  .brand {
-    display: none;
   }
   .workspace,
   .is-collapsed .workspace {

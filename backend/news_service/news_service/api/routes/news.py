@@ -1,18 +1,16 @@
-"""Endpoints for stored news: list all, dismiss one, escalate one into a legislative act."""
+"""Endpoints for stored news: page the feed, open one, hide / unhide, escalate into an act."""
 
 import uuid
+from typing import Annotated
 
 from common.entities.npa import NpaDTO
 from common.schemas import News
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from news_service.application.dto.news import NewsOut
+from news_service.application.dto.news import NewsOut, NewsPage, NewsQuery
 from news_service.application.errors import NpaConflictError, NpaGatewayError
 from news_service.application.services import NewsFeed, NpaEscalation
 from news_service.deps import get_news_feed, get_npa_escalation
-
-DEFAULT_PAGE_SIZE = 50
-MAX_PAGE_SIZE = 500
 
 router = APIRouter(tags=["news"])
 
@@ -24,30 +22,41 @@ def _to_out_or_404(news: News | None) -> NewsOut:
     return NewsOut.model_validate(news)
 
 
-@router.get("/", response_model=list[NewsOut])
+@router.get("/", response_model=NewsPage)
 async def list_news(
-    limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
-    offset: int = Query(0, ge=0),
-    feed: NewsFeed = Depends(get_news_feed),
-) -> list[NewsOut]:
-    items = await feed.list(limit, offset)
-    return [NewsOut.model_validate(news) for news in items]
+    query: Annotated[NewsQuery, Query()], feed: NewsFeed = Depends(get_news_feed)
+) -> NewsPage:
+    """Visible items by default (`visibility`); `q` searches title and text, `since` bounds the period."""
+    items, total = await feed.list(query)
+    return NewsPage(items=[NewsOut.model_validate(news) for news in items], total=total)
+
+
+@router.get("/{news_id}", response_model=NewsOut)
+async def get_news(news_id: uuid.UUID, feed: NewsFeed = Depends(get_news_feed)) -> NewsOut:
+    return _to_out_or_404(await feed.get(news_id))
 
 
 @router.post("/{news_id}/dismiss", response_model=NewsOut)
 async def dismiss_news(news_id: uuid.UUID, feed: NewsFeed = Depends(get_news_feed)) -> NewsOut:
-    news = await feed.dismiss(news_id)
-    return _to_out_or_404(news)
+    """Hide the item from the feed (`dismissed_at`); a repeat keeps the first moment."""
+    return _to_out_or_404(await feed.dismiss(news_id))
+
+
+@router.post("/{news_id}/restore", response_model=NewsOut)
+async def restore_news(news_id: uuid.UUID, feed: NewsFeed = Depends(get_news_feed)) -> NewsOut:
+    """Bring a hidden item back into the feed."""
+    return _to_out_or_404(await feed.restore(news_id))
 
 
 @router.post("/{news_id}/npa", response_model=NewsOut)
 async def escalate_news(
     news_id: uuid.UUID,
-    payload: NpaDTO,
+    payload: NpaDTO | None = None,
     escalation: NpaEscalation = Depends(get_npa_escalation),
 ) -> NewsOut:
-    """Dismiss the alert and register `payload` as an act in npa_service — atomically:
-    if npa_service does not confirm, the alert stays undismissed."""
+    """Flag the item as an alert and register it as an act in npa_service — atomically:
+    if npa_service does not confirm, the flag is rolled back. Without a body the act is
+    built from the news item itself."""
     try:
         news = await escalation.escalate(news_id, payload)
     except NpaConflictError as error:

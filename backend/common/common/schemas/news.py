@@ -3,8 +3,8 @@
 Mirrors `common.entities.news.NewsDTO` field for field: the consumer stores the bus
 message as-is, one flat row. `url` is unique — the same story is never stored twice.
 `source_id` points at the `source` row and the news goes with it when that source is
-deleted. `is_alert` is the one service-owned flag: false on insert, set true when a reader
-dismisses the item.
+deleted. Two service-owned fields: `dismissed_at` (a reader hid the item from the feed) and
+`is_alert` (the item was escalated into a legislative act).
 """
 
 import uuid
@@ -55,5 +55,6 @@ class News(Base):
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_alert: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

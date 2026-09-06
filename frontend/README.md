@@ -5,22 +5,25 @@ React 19 + Vite + TypeScript SPA, built to static files and served by the `nginx
 
 ## File map
 
-- `src/api/` — the typed backend client. `schema.sources.d.ts` is **generated** from the
-  service's OpenAPI spec (`npm run api:gen`) and committed; `client.ts` builds the
-  `openapi-fetch` client plus `openapi-react-query` hooks and turns a failed response into
-  a message **by status code** (the server's own prose is English and never reaches the
-  screen); `errorToast.ts` is the hook every mutation reports failures through;
-  `sourceMutations.ts` wraps the
-  queries/mutations so every write invalidates the list in one place; `sources.ts` holds
-  the view vocabulary (type and reliability labels, the poll intervals — the first is
-  the one the server assigns a new source — and the realtime label).
-- `src/pages/` — one component per route: `SourcesPage` (live API), `NewsPage` and
+- `src/api/` — the typed backend client. `schema.sources.d.ts` and `schema.news.d.ts` are
+  **generated** from each service's OpenAPI spec (`npm run api:gen`) and committed;
+  `client.ts` builds one `openapi-fetch` client per service (`sourcesApi`, `newsApi`) with
+  the shared middleware that turns a failed response into a message **by status code**
+  (the server's own prose is English and never reaches the screen); `errorToast.ts` is the
+  hook every mutation reports failures through; `sourceMutations.ts` / `newsMutations.ts`
+  wrap the queries/mutations so every write invalidates the list in one place;
+  `sources.ts` / `news.ts` hold the view vocabulary (labels, poll intervals, the feed's
+  periods, moment formatting, the card teaser).
+- `src/pages/` — one component per route: `SourcesPage` and `NewsPage` (live API),
   `NpaPage` (still on `src/data/` fixtures).
 - `src/components/sources/` — the Sources screen: row, create/edit dialog, delete dialog.
 - `src/components/monitoring/Shared.tsx` — `SearchField` and `Choice`.
 - `src/components/ui/` — shadcn / Base UI primitives; `toast.tsx` is ours, mounted once
   in `main.tsx`, and the rest is unchanged.
-- `src/data/` — remaining demo fixtures for News and НПА.
+- `src/data/` — remaining demo fixtures for НПА (`npa.ts`, `news.ts` — the latter only
+  feeds `NpaPage`'s alerts tab) and `newsPlaceholders.ts`: stable made-up AI summary /
+  impact for live news items, seeded by id, until the LLM
+  stage produces the real ones — the screen keeps its full layout meanwhile.
 - `src/globals.d.ts` — the compile-time API-prefix constants.
 - `UI_GUIDELINES.md`, `UI_IMPLEMENTATION.md`, `handoff/` — product and design notes.
 - `Dockerfile.dev` — dev-only image for the root `docker-compose.dev.yml`: `npm ci` baked
@@ -34,7 +37,7 @@ npm install
 npm run dev            # Vite dev server; /api is proxied to the compose stack
 npm run build          # static build → dist/
 npm run lint
-npm run api:gen        # regenerate src/api/schema.*.d.ts from a running backend
+npm run api:gen        # regenerate src/api/schema.*.d.ts from a running backend (per service: api:gen:sources, api:gen:news)
 ```
 
 ## Notes
@@ -50,8 +53,17 @@ npm run api:gen        # regenerate src/api/schema.*.d.ts from a running backend
   README → "Run"): nginx proxies `/` to it, so `http://localhost/` is live. There
   `/app/node_modules` is an anonymous volume, so restart with `up --build -V` after a
   `package.json` change.
-- `api:gen` reads `$SPEC_URL` (default `http://localhost/api/sources/openapi.json`). It
-  runs `openapi-typescript` through `npx` rather than as a devDependency: the tool still
+- `api:gen` runs one generator per service — `api:gen:sources` reads `$SOURCES_SPEC_URL`
+  (default `http://localhost/api/sources/openapi.json`), `api:gen:news` reads
+  `$NEWS_SPEC_URL` (`…/api/news/openapi.json`). They run `openapi-typescript` through
+  `npx` rather than as a devDependency: the tool still
   declares a peer on TypeScript 5.x while this project is on 6.x. `--default-non-nullable
   false` keeps fields that have server-side defaults optional in request bodies.
 - The generated file is committed so `npm run build` and CI never need a live backend.
+- `NewsPage` talks to `/api/news` only: `q`, `since` (the period, rounded to the minute
+  so the query key is stable) and `visibility` go to the server — the «Архив» tab is the
+  same list with `visibility=dismissed`; the details panel archives (`POST /{id}/dismiss`,
+  destructive button) or brings back (`POST /{id}/restore`, primary button) the open item. The fields
+  the backend cannot supply yet (relevance, priority, kind, AI summary, impact) come from
+  `src/data/newsPlaceholders.ts`; the summary edit dialog still saves to `sessionStorage`
+  because the summary itself is a placeholder.

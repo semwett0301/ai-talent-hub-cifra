@@ -1,6 +1,8 @@
 import createFetchClient from "openapi-fetch"
+import type { Middleware } from "openapi-fetch"
 import createQueryClient from "openapi-react-query"
 
+import type { paths as NewsPaths } from "./schema.news"
 import type { paths as SourcesPaths } from "./schema.sources"
 
 export const CONFLICT = 409
@@ -10,12 +12,9 @@ const MESSAGE_BY_STATUS: Record<number, string> = {
   [CONFLICT]: "Источник с таким адресом уже добавлен.",
 }
 
-// Each service's nginx location, baked in by vite.config.ts from the repo-root .env.
-const sourcesFetch = createFetchClient<SourcesPaths>({ baseUrl: __SOURCES_API_PREFIX__ })
-
 // openapi-react-query throws the parsed body and nothing else, so the status — the only
 // thing the UI branches on — has to travel inside it.
-sourcesFetch.use({
+const statusInBody: Middleware = {
   async onResponse({ response }) {
     if (response.ok) return response
 
@@ -24,9 +23,16 @@ sourcesFetch.use({
       headers: { "content-type": "application/json" },
     })
   },
-})
+}
+
+// Each service's nginx location, baked in by vite.config.ts from the repo-root .env.
+const sourcesFetch = createFetchClient<SourcesPaths>({ baseUrl: __SOURCES_API_PREFIX__ })
+const newsFetch = createFetchClient<NewsPaths>({ baseUrl: __NEWS_API_PREFIX__ })
+sourcesFetch.use(statusInBody)
+newsFetch.use(statusInBody)
 
 export const sourcesApi = createQueryClient(sourcesFetch)
+export const newsApi = createQueryClient(newsFetch)
 
 export function errorStatus(error: unknown): number | undefined {
   const status = (error as { status?: unknown } | undefined)?.status

@@ -26,7 +26,9 @@ class per module (re-exported from `__init__.py`).
   once), `title` is `TEXT NOT NULL` with no length cap (the UI truncates), `source_id` is
   a required, indexed FK to `source` with `ON DELETE CASCADE` (a source's news goes with
   it), `source_name` is the name at collection time, `source_tags` is a `TEXT[]` column
-  (no index — tags are shown, never filtered on), `excerpt` / `updated_at` are nullable, `is_alert` (default false) is the flag the dismiss endpoint sets.
+  (no index — tags are shown, never filtered on), `excerpt` / `updated_at` are nullable.
+  Two service-owned fields: `dismissed_at` (a reader hid the item from the feed) and
+  `is_alert` (default false; set when the item is escalated into a legislative act).
 - `npa.py` — `Npa`: ORM model for the `npa` table (legislative acts), written by
   `npa_service`. `common.entities.npa.NpaDTO` fields plus `id`/`created_at`; `url` is
   `UNIQUE` (one row per act).

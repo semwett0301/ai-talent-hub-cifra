@@ -4,7 +4,7 @@ from common.core.errors import BatchStoreError
 
 
 class NewsStoreError(BatchStoreError):
-    """A news batch could not be written; the shared consumer nacks it (requeue by default)."""
+    """A news write or its commit failed; on the consumer path the batch is nacked (requeue by default)."""
 
 
 class NpaGatewayError(RuntimeError):

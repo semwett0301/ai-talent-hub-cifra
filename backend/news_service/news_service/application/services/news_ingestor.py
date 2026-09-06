@@ -1,10 +1,10 @@
 """Batch ingest use case — stores one batch of consumed news through the repository port.
 
-Implements `NewsBatchHandler`: the shared bus consumer hands over a batch, this writes
-it in one transaction. Duplicates by `url` — repeats inside the batch as much as urls
-already stored — are skipped by the DB (`ON CONFLICT DO NOTHING`), so no dedupe happens
-here. Storage failures propagate as `NewsStoreError` (a `BatchStoreError`) so the
-consumer nacks the batch (requeue or drop, per its config).
+Implements `NewsBatchHandler`: the shared bus consumer hands over a batch, this stages the
+insert and commits it — one transaction per batch. Duplicates by `url` — repeats inside
+the batch as much as urls already stored — are skipped by the DB (`ON CONFLICT DO
+NOTHING`), so no dedupe happens here. Storage failures propagate as `NewsStoreError` (a
+`BatchStoreError`) so the consumer nacks the batch (requeue or drop, per its config).
 """
 
 from common.core.logging import get_logger
@@ -21,6 +21,7 @@ class NewsIngestor(NewsBatchHandler):
 
     async def handle_batch(self, items: list[NewsDTO]) -> int:
         inserted = await self.__repo.add_many(items)
+        await self.__repo.commit()
 
         logger.info(
             "news batch stored: received=%d inserted=%d skipped=%d",
