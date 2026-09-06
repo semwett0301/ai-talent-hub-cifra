@@ -37,6 +37,7 @@ from source_service.infrastructure.crawlers.crawl4ai_fetcher import Crawl4AiPage
 from source_service.infrastructure.crawlers.crawl4ai_pages import Crawl4AiPageCrawler
 from source_service.infrastructure.crawlers.feedparser_reader import FeedparserFeedReader
 from source_service.infrastructure.crawlers.litellm_client import LiteLlmClient
+from source_service.infrastructure.parsing import FeedsearchRssFeedFinder
 from source_service.infrastructure.rabbit.connector import RabbitConnector
 from source_service.infrastructure.repositories import SourceRepo
 from source_service.infrastructure.scheduling import ApSchedulerJobs
@@ -47,8 +48,8 @@ logger = get_logger(__name__)
 def build_pull_collectors(
     page_fetcher: PageFetcher, page_crawler: Crawl4AiPageCrawler
 ) -> dict[SourceType, PullCollector]:
-    """Pull registry: SourceType → collector. RSS reads feeds over the HTTP `PageFetcher`
-    that also backs type auto-detection; WEB drives the browser crawler."""
+    """Pull registry: SourceType → collector. RSS reads feeds and articles over the HTTP
+    `PageFetcher`; WEB drives the browser crawler."""
     rss = RssCollector(FeedparserFeedReader(page_fetcher), page_fetcher)
     return {SourceType.RSS: rss, SourceType.WEB: build_web_collector(page_crawler)}
 
@@ -83,11 +84,11 @@ def build_web_collector(page_crawler: Crawl4AiPageCrawler) -> WebCrawlCollector:
 
 
 def get_source_service(request: Request) -> SourceService:
-    """FastAPI use case. SourceRepo opens a session per call, so no request binding.
-    The runtime registry and page fetcher are app-lifetime singletons on `app.state`."""
+    """FastAPI use case. SourceRepo opens a session per call and the feed finder holds no
+    state, so neither is bound; the runtime registry is an app-lifetime singleton on
+    `app.state`."""
     registrar: SourceRegistry = request.app.state.registrar
-    page_fetcher: PageFetcher = request.app.state.page_fetcher
-    return SourceService(SourceRepo(), registrar, page_fetcher, settings.sources)
+    return SourceService(SourceRepo(), registrar, FeedsearchRssFeedFinder(), settings.sources)
 
 
 def build_rabbit() -> RabbitConnector:
@@ -95,9 +96,8 @@ def build_rabbit() -> RabbitConnector:
 
 
 def build_page_fetcher() -> Crawl4AiPageFetcher:
-    """One HTTP fetcher for the whole service: type auto-detection in `SourceService`
-    and every RSS feed/article fetch. Owns a `start`/`stop` lifecycle the caller must
-    drive around serving."""
+    """One HTTP fetcher for the whole service: every RSS feed/article fetch. Owns a
+    `start`/`stop` lifecycle the caller must drive around serving."""
     return Crawl4AiPageFetcher()
 
 

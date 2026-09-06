@@ -26,10 +26,9 @@ async def lifespan(app: FastAPI):
     telegram = deps.build_telegram_collector(rabbit)
     await telegram.start()
 
-    # CRUD reaches this via app.state to auto-detect a source's type; RSS pulls share it.
+    # One HTTP fetcher for every RSS feed and article pull.
     page_fetcher = deps.build_page_fetcher()
     await page_fetcher.start()
-    app.state.page_fetcher = page_fetcher
 
     # One headless browser for every WEB source pull.
     page_crawler = deps.build_page_crawler()

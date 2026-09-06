@@ -9,7 +9,8 @@ Grouped into three subpackages by who calls them; each has its own `README.md` a
 its own public API, and the top-level `__init__.py` re-exports all three so callers keep
 importing from `source_service.application.parse`:
 
-- `detection/` — source-type recognition, used by `SourceService.__detect_type`.
+- `detection/` — link-kind recognition (Telegram), used by `SourceService.__detect_type`;
+  feed discovery is the `RssFeedFinder` port, not parsing.
 - `extraction/` — full article-text extraction, used by `RssCollector`.
 - `reading/` — date/listing/article-page parsing, used by the WEB crawl services.
 

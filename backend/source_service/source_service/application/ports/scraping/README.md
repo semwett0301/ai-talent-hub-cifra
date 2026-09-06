@@ -3,8 +3,11 @@
 Reaching pages, feeds and sites, and the crawl's language model.
 
 - `page_fetcher.py` — `PageFetcher` (`fetch`): a URL's raw body (page HTML, feed XML) over
-  plain HTTP, for `SourceService`'s type auto-detection and `RssCollector`'s article pages.
-  Implemented by `Crawl4AiPageFetcher`.
+  plain HTTP, for `RssCollector`'s feeds and article pages. Implemented by
+  `Crawl4AiPageFetcher`.
+- `rss_feed_finder.py` — `RssFeedFinder` (`find`): every RSS feed URL a site address leads
+  to — advertised in its pages or served at well-known paths — for `SourceService`'s type
+  auto-detection. Implemented by `FeedsearchRssFeedFinder`.
 - `feed_reader.py` — `FeedReader` (`read`) + its return shape `FeedEntry`: one RSS/Atom feed
   downloaded and parsed for `RssCollector`. Implemented by `FeedparserFeedReader`.
 - `page_crawler.py` — `PageCrawler`: the browser. `crawl_page` / `crawl_pages` /

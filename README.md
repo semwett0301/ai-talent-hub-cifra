@@ -155,6 +155,7 @@ How each consumer picks it up:
 | Variable | Meaning | Default | Secret |
 |---|---|---|---|
 | `SOURCE_POLL_INTERVAL_SECONDS` | How often a pull source (RSS/Web) is fetched when its row has no `poll_interval_seconds` of its own. | `300` | no |
+| `SOURCE_RSS_FEEDS_LIMIT` | How many feeds an RSS source keeps out of what feed discovery finds, best-ranked first; every kept feed is read on each pull. | `10` | no |
 
 ### news_service consumer
 

@@ -8,7 +8,7 @@ adapter share one interface.
 
 - `source/` — `SourceRepository`, `JobScheduler`, `PullCollector` / `PushCollector`,
   `NewsPublisher`: sources as records, as a running schedule, and the news they produce.
-- `scraping/` — `PageFetcher`, `FeedReader` (+ `FeedEntry`), `PageCrawler` (+ `FetchedPage`,
+- `scraping/` — `PageFetcher`, `RssFeedFinder`, `FeedReader` (+ `FeedEntry`), `PageCrawler` (+ `FetchedPage`,
   `PageLink`) and `CrawlLlm` (+ `ListingVerdict`, `DateGuess`): reaching pages, feeds and
   sites, and the two questions the crawl asks a language model.
 

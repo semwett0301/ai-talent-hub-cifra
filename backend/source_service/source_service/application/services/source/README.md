@@ -5,10 +5,12 @@ re-exported from `__init__.py`.
 
 - `source_service.py` — `SourceService`: CRUD use-cases over `SourceRepository`; each
   mutation reconciles the runtime through the injected `SourceRegistry`. `create`
-  and (when `link` changes) `update` auto-detect `type` via the injected
-  `PageFetcher` + `application.parse` — clients never send `type`. When the
-  detected feed is RSS, the feed URL is stored in `rss_link` (also server-only,
-  never accepted from a client); `link` itself is never rewritten. The detected type
+  and (when `link` changes) `update` auto-detect `type` — a Telegram link by
+  `application.parse`, anything else by asking the injected `RssFeedFinder` for the
+  site's feeds — clients never send `type`. Every RSS feed found is stored as an
+  `RssLink` row (server-only, never accepted from a client), written by the repository
+  in the same transaction as the source; a changed `link` replaces the whole list.
+  `link` itself is never rewritten. The detected type
   also decides the **schedule**: a push source (Telegram) gets `poll_interval_seconds
   = null`, a pull source keeps the interval it already had and otherwise starts on
   `SourceSchedulerSettings.source_poll_interval_seconds` — clients pick an interval

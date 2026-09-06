@@ -33,9 +33,9 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     `services/` grouped by domain — `source/` and `web/` (the WEB crawl:
     `WebCrawl` over `hubs/`, `listings/` and `articles/`):
     `SourceService` (CRUD over the repo port; auto-detects a source's
-    `type` from its `link` via `parse/` + the `PageFetcher` port — clients never
-    send `type`; an RSS feed's URL is stored in `rss_link`, scraping-only and also
-    never client-supplied; `normalized_link` is derived from `link` on every write so the
+    `type` from its `link` via `parse/` + the `RssFeedFinder` port — clients never
+    send `type`; every RSS feed found is stored as an `rss_link` row, scraping-only and
+    also never client-supplied; `normalized_link` is derived from `link` on every write so the
     same address can't be added twice; the schedule follows the type — null for Telegram,
     the configured default for a new pull source — and a changed link clears a stale
     `is_relevant=false`) and `SourceRegistry` (the runtime registrar — pull
@@ -44,7 +44,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
   - `infrastructure/` — port implementations: `repositories/` (`SourceRepo`, a
     session per call), `rabbit/` (`RabbitConnector`), `collectors/`
     (`Rss`/`WebCrawl`/`Telegram`), `crawlers/` (`Crawl4AiPageCrawler` — one browser for
-    the service, `LiteLlmClient`, the HTTP fetcher and feedparser).
+    the service, `LiteLlmClient`, the HTTP fetcher and feedparser), `parsing/`
+    (`FeedsearchRssFeedFinder`, feed discovery).
   - `api/` — `routes/` (FastAPI routers only: `sources.py` CRUD, `health.py`) and
     `errors.py`, which maps application errors to status codes once for the whole app:
     duplicate address → **409**, enabling a non-relevant source → **422**. A malformed
