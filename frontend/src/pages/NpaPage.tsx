@@ -278,6 +278,10 @@ function NpaDetailPanel({ item, loading, error, onRetry }: NpaDetailPanelProps) 
 }
 
 function NpaOverview({ item }: { item: NpaItem }) {
+  const initialSummary = item.summaryKind === "initial"
+    ? item.summary
+    : item.versions.find((version) => version.summaryKind === "initial")?.summary
+
   return (
     <>
       <dl className="npa-metadata">
@@ -287,10 +291,16 @@ function NpaOverview({ item }: { item: NpaItem }) {
         <div><dt>Версий сохранено</dt><dd>{item.versions.length}</dd></div>
       </dl>
       <div className="summary-box">
-        <h3><Sparkles />{item.summaryKind === "initial" ? "AI-обзор законопроекта" : "AI-резюме последнего изменения"}</h3>
-        <p>{item.summary ?? "AI-резюме пока не сформировано."}</p>
+        <h3><Sparkles />Описание законопроекта</h3>
+        <p>{initialSummary ?? "Описание появится для НПА, добавленных после включения первичного AI-анализа."}</p>
         <small>Проверьте вывод по официальному документу перед юридически значимым решением.</small>
       </div>
+      {item.summaryKind === "change" && (
+        <div className="summary-box compact-summary">
+          <h3><Sparkles />AI-резюме последнего изменения</h3>
+          <p>{item.summary}</p>
+        </div>
+      )}
       <div className="npa-monitor-note">
         <ShieldCheck />
         <div>
