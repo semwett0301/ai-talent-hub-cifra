@@ -8,6 +8,7 @@ from .news import NewsConsumerSettings
 from .npa import NpaSettings
 from .postgres import PostgresSettings
 from .rabbit import RabbitSettings
+from .rss_discovery import RssDiscoverySettings
 from .sources import SourceSchedulerSettings
 from .telegram import TelegramSettings
 from .web_crawl import WebCrawlSettings
@@ -20,6 +21,7 @@ __all__ = [
     "NpaSettings",
     "PostgresSettings",
     "RabbitSettings",
+    "RssDiscoverySettings",
     "SettingsTemplate",
     "SourceSchedulerSettings",
     "TelegramSettings",

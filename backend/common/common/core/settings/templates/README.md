@@ -13,6 +13,7 @@ its variables share one, or names its fields exactly like the variables. Nothing
 | `rabbit.py` | `RabbitSettings` | `RABBITMQ_URL`, `NEWS_EXCHANGE` |
 | `edge.py` | `EdgeSettings` | `SOURCES_API_PREFIX`, `NEWS_API_PREFIX` (shared with nginx) |
 | `sources.py` | `SourceSchedulerSettings` | `SOURCE_POLL_INTERVAL_SECONDS`, `SOURCE_RSS_FEEDS_LIMIT` |
+| `rss_discovery.py` | `RssDiscoverySettings` | `RSS_DISCOVERY_MAX_DEPTH`, `RSS_DISCOVERY_TIMEOUT_SECONDS`, `RSS_DISCOVERY_RESPECT_ROBOTS`, `RSS_DISCOVERY_TRY_WELL_KNOWN_PATHS` |
 | `news.py` | `NewsConsumerSettings` | `NEWS_QUEUE`, `NEWS_BATCH_SIZE`, `NEWS_BATCH_INTERVAL_SECONDS`, `NEWS_REQUEUE_ON_STORE_ERROR` |
 | `telegram.py` | `TelegramSettings` | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_SESSION` |
 | `web_crawl.py` | `WebCrawlSettings` | `WEB_CRAWL_DAYS`, `WEB_CRAWL_MAX_ARTICLES`, `WEB_CRAWL_LLM_ENABLED` + every tuning knob of the crawl as `WEB_CRAWL_<FIELD>` |

@@ -5,15 +5,11 @@ from typing import Protocol
 
 import aiohttp
 from common.core.logging import get_logger
+from common.core.settings import RssDiscoverySettings
 from feedsearch_crawler import search_async
 
 from source_service.application.ports.scraping import RssFeedFinder
 
-# Also probe the usual feed paths (/feed, /rss.xml, ...) when the pages advertise none.
-TRY_WELL_KNOWN_PATHS = True
-MAX_CRAWL_DEPTH = 5
-TOTAL_TIMEOUT_SECONDS = 30.0
-RESPECT_ROBOTS = False
 RSS_VERSION_PREFIX = "rss"
 
 logger = get_logger(__name__)
@@ -45,18 +41,22 @@ def _rss_feed_urls(feeds: Iterable[_DiscoveredFeed]) -> list[str]:
 
 
 class FeedsearchRssFeedFinder(RssFeedFinder):
-    """Crawls the site a few pages deep and returns its RSS feed URLs. Stateless: every
-    call opens and closes its own HTTP session, so one instance serves the service."""
+    """Crawls the site as deep as `settings` allow and returns its RSS feed URLs.
+    Stateless: every call opens and closes its own HTTP session, so one instance serves
+    the service."""
+
+    def __init__(self, settings: RssDiscoverySettings) -> None:
+        self.__settings = settings
 
     async def find(self, url: str) -> list[str]:
         logger.info("rss feed search started: url=%s", url)
         try:
             feeds = await search_async(
                 url,
-                try_urls=TRY_WELL_KNOWN_PATHS,
-                max_depth=MAX_CRAWL_DEPTH,
-                total_timeout=TOTAL_TIMEOUT_SECONDS,
-                respect_robots=RESPECT_ROBOTS,
+                try_urls=self.__settings.try_well_known_paths,
+                max_depth=self.__settings.max_depth,
+                total_timeout=self.__settings.timeout_seconds,
+                respect_robots=self.__settings.respect_robots,
             )
         except (aiohttp.ClientError, TimeoutError) as exc:
             logger.warning("rss feed search failed: url=%s (%s)", url, exc)

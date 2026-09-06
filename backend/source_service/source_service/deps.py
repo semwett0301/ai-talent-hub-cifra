@@ -88,7 +88,8 @@ def get_source_service(request: Request) -> SourceService:
     state, so neither is bound; the runtime registry is an app-lifetime singleton on
     `app.state`."""
     registrar: SourceRegistry = request.app.state.registrar
-    return SourceService(SourceRepo(), registrar, FeedsearchRssFeedFinder(), settings.sources)
+    feed_finder = FeedsearchRssFeedFinder(settings.rss_discovery)
+    return SourceService(SourceRepo(), registrar, feed_finder, settings.sources)
 
 
 def build_rabbit() -> RabbitConnector:

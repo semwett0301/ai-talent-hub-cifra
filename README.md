@@ -157,6 +157,17 @@ How each consumer picks it up:
 | `SOURCE_POLL_INTERVAL_SECONDS` | How often a pull source (RSS/Web) is fetched when its row has no `poll_interval_seconds` of its own. | `300` | no |
 | `SOURCE_RSS_FEEDS_LIMIT` | How many feeds an RSS source keeps out of what feed discovery finds, best-ranked first; every kept feed is read on each pull. | `10` | no |
 
+### RSS feed discovery
+
+The feedsearch crawl `source_service` runs on a new address to decide RSS vs WEB and to collect the site's feeds.
+
+| Variable | Meaning | Default | Secret |
+|---|---|---|---|
+| `RSS_DISCOVERY_MAX_DEPTH` | How many link hops from the given address the crawl follows looking for feeds. | `3` | no |
+| `RSS_DISCOVERY_TIMEOUT_SECONDS` | Wall-clock budget for one discovery run; past it the site is treated as having no feeds. | `30` | no |
+| `RSS_DISCOVERY_RESPECT_ROBOTS` | Obey the site's `robots.txt`. Off by default: news sites often fence feeds off behind it, and the operator named the site explicitly. | `false` | no |
+| `RSS_DISCOVERY_TRY_WELL_KNOWN_PATHS` | Also probe the usual feed paths (`/feed`, `/rss.xml`, …) when the pages advertise none. | `true` | no |
+
 ### news_service consumer
 
 | Variable | Meaning | Default | Secret |
