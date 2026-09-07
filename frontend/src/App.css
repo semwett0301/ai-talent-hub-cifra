@@ -295,6 +295,11 @@ p {
 .news-card.warning:before {
   background: #efb443;
 }
+/* Low relevance and not-yet-ranked items keep a quiet stripe. */
+.news-card.low:before,
+.news-card.pending:before {
+  background: #3b4c63;
+}
 .news-card.selected {
   border-color: #418fe7 !important;
   box-shadow: 0 0 0 1px #245689;
@@ -417,6 +422,10 @@ p {
   background: #103a35;
   color: #69d5b3;
 }
+.status.low {
+  background: #1b2a3d;
+  color: #8fa1b8;
+}
 .details > h2,
 .detail-title h2 {
   font-size: 20px;
@@ -502,6 +511,39 @@ p {
 .impact-box h3 {
   color: #efbd45;
   margin-bottom: 7px;
+}
+/* The ranker's grounding under the heading: urgency + reach line, then one row per dimension. */
+.relevance-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #c9a45a;
+  margin-bottom: 6px;
+}
+.impact-reasons {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.impact-reasons li {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d0dbea;
+}
+.impact-dimension {
+  color: #efbd45;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.impact-dimension small {
+  color: #c9a45a;
+  font-size: 10px;
 }
 .actions {
   margin-top: 22px;

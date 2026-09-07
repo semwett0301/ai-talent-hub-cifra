@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from common.schemas import News, NewsEventState
+from common.schemas import News, NewsClusterRanking, NewsEventState
 from news_service.application.dto.news import NewsOut, NewsQuery, NewsVisibility
 from news_service.application.services import NewsFeed
 from news_service.infrastructure.repositories.news_repo import _feed_statement, _like_pattern
@@ -11,7 +11,23 @@ NEWS_ID = uuid.uuid4()
 CLUSTER_ID = uuid.uuid4()
 
 
-def stored_news(state: NewsEventState | None = None) -> News:
+IMPACT = {
+    "finance_score": 2,
+    "finance_reason": "Procurement terms change.",
+    "reputation_score": 0,
+    "reputation_reason": "Not mentioned.",
+    "technology_score": 1,
+    "technology_reason": "A new standard is drafted.",
+    "competition_score": 0,
+    "competition_reason": "No competitor named.",
+    "urgency_basis": "within_4_30_days",
+    "urgency_reason": "Comments close in two weeks.",
+}
+
+
+def stored_news(
+    state: NewsEventState | None = None, ranking: NewsClusterRanking | None = None
+) -> News:
     return News(
         id=NEWS_ID,
         schema_version=1,
@@ -31,6 +47,7 @@ def stored_news(state: NewsEventState | None = None) -> News:
         is_alert=False,
         created_at=datetime(2026, 9, 6, tzinfo=UTC),
         event_state=state,
+        cluster_ranking=ranking,
     )
 
 
@@ -113,3 +130,30 @@ def test_news_out_reads_dedup_state_through_the_row():
 
     assert (with_state.summary, with_state.event_cluster_id) == ("Short", CLUSTER_ID)
     assert (without_state.summary, without_state.event_cluster_id) == (None, None)
+    assert without_state.relevance is None
+
+
+def test_news_out_flattens_the_cluster_ranking_into_relevance():
+    ranking = NewsClusterRanking(
+        cluster_id=NEWS_ID,
+        relevance_score=67.5,
+        category="важно",
+        member_count=3,
+        details={"components": {}, "impact": IMPACT, "bm25_score": 1.0},
+    )
+
+    relevance = NewsOut.model_validate(stored_news(ranking=ranking)).relevance
+
+    assert relevance is not None
+    assert (relevance.score, relevance.category, relevance.member_count) == (67.5, "важно", 3)
+    assert (relevance.urgency_basis, relevance.urgency_reason) == (
+        "within_4_30_days",
+        "Comments close in two weeks.",
+    )
+    assert [(reason.dimension, reason.score) for reason in relevance.impact] == [
+        ("finance", 2),
+        ("reputation", 0),
+        ("technology", 1),
+        ("competition", 0),
+    ]
+    assert relevance.impact[0].reason == "Procurement terms change."

@@ -30,7 +30,8 @@ export interface paths {
         };
         /**
          * List News
-         * @description Visible items by default (`visibility`); `q` searches title and text, `since` bounds the period.
+         * @description One item per event (duplicates of an already listed story are left out). Visible items
+         *     by default (`visibility`); `q` searches title and text, `since` bounds the period.
          */
         get: operations["list_news__get"];
         put?: never;
@@ -129,6 +130,18 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** ImpactReasonOut */
+        ImpactReasonOut: {
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "finance" | "reputation" | "technology" | "competition";
+            /** Score */
+            score: number;
+            /** Reason */
+            reason: string;
+        };
         /** NewsOut */
         NewsOut: {
             /**
@@ -163,6 +176,11 @@ export interface components {
             published_at: string | null;
             /** Updated At */
             updated_at: string | null;
+            /** Summary */
+            summary: string | null;
+            /** Event Cluster Id */
+            event_cluster_id: string | null;
+            relevance: components["schemas"]["NewsRelevanceOut"] | null;
             /** Dismissed At */
             dismissed_at: string | null;
             /** Is Alert */
@@ -173,6 +191,20 @@ export interface components {
              */
             created_at: string;
         };
+        /** NewsRelevanceOut */
+        NewsRelevanceOut: {
+            /** Score */
+            score: number;
+            category: components["schemas"]["RelevanceCategory"];
+            /** Member Count */
+            member_count: number;
+            /** Urgency Basis */
+            urgency_basis: string;
+            /** Urgency Reason */
+            urgency_reason: string;
+            /** Impact */
+            impact: components["schemas"]["ImpactReasonOut"][];
+        };
         /**
          * NewsVisibility
          * @description Which items the feed shows: the ones a reader has not hidden, only the hidden, or both.
@@ -181,7 +213,7 @@ export interface components {
         NewsVisibility: "visible" | "dismissed" | "all";
         /**
          * NpaDTO
-         * @description A legislative act to register. `url` identifies it (unique in the store).
+         * @description A cross-service NPA candidate; the destination verifies its URL and contents.
          */
         NpaDTO: {
             /**
@@ -199,6 +231,11 @@ export interface components {
             /** Published At */
             published_at?: string | null;
         };
+        /**
+         * RelevanceCategory
+         * @enum {string}
+         */
+        RelevanceCategory: "низкая релевантность" | "релевантно" | "важно" | "требует внимания";
         /**
          * SourceReliability
          * @description How trustworthy a source's reporting is, curated per source.

@@ -24,6 +24,7 @@ from common.entities.source import SourceReliability
 from common.schemas.types import SOURCE_RELIABILITY, SOURCE_TYPE
 
 if TYPE_CHECKING:
+    from common.schemas.news_cluster_ranking import NewsClusterRanking
     from common.schemas.news_event_state import NewsEventState
 
 URL_MAX_LENGTH = 2048
@@ -68,6 +69,10 @@ class News(Base):
     # Read-only view of the pipeline's state; loaded with the row so the API never lazy-loads.
     event_state: Mapped["NewsEventState | None"] = relationship(
         "NewsEventState", uselist=False, viewonly=True, lazy="joined"
+    )
+    # The cluster's relevance hangs on its head row (cluster_id == news.id): None on a duplicate.
+    cluster_ranking: Mapped["NewsClusterRanking | None"] = relationship(
+        "NewsClusterRanking", uselist=False, viewonly=True, lazy="joined"
     )
 
     @property

@@ -5,21 +5,26 @@ import { errorMessage } from "@/api/client"
 import { useErrorToast } from "@/api/errorToast"
 import {
   DEFAULT_PERIOD_HOURS,
+  DIMENSION_LABELS,
+  IMPACT_SCORE_MAX,
   PERIODS,
+  RELEVANCE_TONES,
+  URGENCY_LABELS,
   excerptOf,
   formatMoment,
   formatToday,
+  impactReasons,
   newsMoment,
+  relevanceLabel,
   sinceHoursAgo,
 } from "@/api/news"
-import type { NewsOut, NewsVisibility } from "@/api/news"
+import type { NewsOut, NewsRelevance, NewsVisibility } from "@/api/news"
 import { useDismissNews, useNews, useRestoreNews } from "@/api/newsMutations"
 import { RELIABILITY_LABELS } from "@/api/sources"
 import { Choice, SearchField } from "@/components/monitoring/Shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { withPlaceholders, type NewsItemView } from "@/data/newsPlaceholders"
 
 // The feed's two tabs: the current items, and what the reader hid (`visibility=dismissed`).
 const TABS = ["Актуальные", "Скрытые"] as const
@@ -29,6 +34,10 @@ const SEARCH_DEBOUNCE_MS = 300
 const SKELETON_CARDS = [0, 1, 2, 3]
 // The `@keyframes` name in App.css a hidden / restored card plays before it leaves the list.
 const LEAVE_ANIMATION = "news-card-leave"
+// What the details say while the pipeline has not reached the item yet.
+const SUMMARY_PENDING = "AI-саммари ещё не готово — материал в обработке."
+const RELEVANCE_PENDING = "Оценка релевантности ещё не выполнена."
+const NO_CONSEQUENCES = "Модель не нашла прямых последствий для компании."
 
 function useDebounced(value: string, delayMs: number): string {
   const [debounced, setDebounced] = useState(value)
@@ -41,6 +50,11 @@ function useDebounced(value: string, delayMs: number): string {
 
 function visibilityOf(tab: Tab): NewsVisibility {
   return tab === "Скрытые" ? "dismissed" : "visible"
+}
+
+/** The card's stripe / badge modifier: the category's tone, or `pending` before ranking. */
+function toneOf(item: NewsOut): string {
+  return item.relevance ? RELEVANCE_TONES[item.relevance.category] : "pending"
 }
 
 export function NewsPage() {
@@ -61,12 +75,12 @@ export function NewsPage() {
   const restore = useRestoreNews()
   const reportError = useErrorToast()
 
-  const items = useMemo(() => (feed.data ?? []).map(withPlaceholders), [feed.data])
+  const items = feed.data ?? []
   const item = items.find((entry) => entry.id === selectedId) ?? items[0]
 
   // Runs when the leave animation ends: the swipe is done, now the server does its part. The
   // card stays played-out until the mutation settles — that is, until the refetched list landed.
-  function toggleHidden(selected: NewsItemView) {
+  function toggleHidden(selected: NewsOut) {
     const mutation = selected.dismissed_at !== null ? restore : dismiss
     mutation.mutate(
       { params: { path: { news_id: selected.id } } },
@@ -155,7 +169,7 @@ function NewsDetails({
   isBusy,
   onToggleHidden,
 }: {
-  item: NewsItemView
+  item: NewsOut
   isBusy: boolean
   onToggleHidden: () => void
 }) {
@@ -165,6 +179,7 @@ function NewsDetails({
     <>
       <div className="detail-meta">
         <span>{formatMoment(newsMoment(item))}</span>
+        {item.relevance && <RelevanceBadge relevance={item.relevance} />}
       </div>
       <a className="detail-title" href={item.url} target="_blank" rel="noopener noreferrer">
         <h2>{item.title}</h2>
@@ -184,12 +199,15 @@ function NewsDetails({
           <Sparkles />
           AI-САММАРИ
         </h3>
-        <p>{item.summary}</p>
-        {item.isPlaceholder && <small>Заглушка: анализ ещё не подключён</small>}
+        <p>{item.summary ?? SUMMARY_PENDING}</p>
       </div>
       <div className="impact-box">
         <h3>Почему это важно для GS Labs</h3>
-        <p>{item.impact}</p>
+        {item.relevance ? (
+          <RelevanceDetails relevance={item.relevance} />
+        ) : (
+          <p>{RELEVANCE_PENDING}</p>
+        )}
       </div>
       <div className="actions">
         {isHidden ? (
@@ -208,6 +226,47 @@ function NewsDetails({
   )
 }
 
+function RelevanceBadge({ relevance }: { relevance: NewsRelevance }) {
+  return (
+    <Badge className={`status ${RELEVANCE_TONES[relevance.category]}`} title="AI-приоритет">
+      {relevanceLabel(relevance)}
+    </Badge>
+  )
+}
+
+/** The ranker's grounding: urgency, how widely the event was reported, and each scored
+ * impact dimension with the model's reason. */
+function RelevanceDetails({ relevance }: { relevance: NewsRelevance }) {
+  const reasons = impactReasons(relevance)
+
+  return (
+    <>
+      <p className="relevance-meta">
+        <span>{URGENCY_LABELS[relevance.urgency_basis] ?? relevance.urgency_basis}</span>
+        <span>Сообщений о событии: {relevance.member_count}</span>
+      </p>
+      <p>{relevance.urgency_reason}</p>
+      {reasons.length ? (
+        <ul className="impact-reasons">
+          {reasons.map((reason) => (
+            <li key={reason.dimension}>
+              <span className="impact-dimension">
+                {DIMENSION_LABELS[reason.dimension]}
+                <small>
+                  {reason.score}/{IMPACT_SCORE_MAX}
+                </small>
+              </span>
+              <span>{reason.reason}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>{NO_CONSEQUENCES}</p>
+      )}
+    </>
+  )
+}
+
 function NewsCard({
   item,
   selected,
@@ -215,7 +274,7 @@ function NewsCard({
   onSelect,
   onLeft,
 }: {
-  item: NewsItemView
+  item: NewsOut
   selected: boolean
   isLeaving: boolean
   onSelect: () => void
@@ -230,7 +289,7 @@ function NewsCard({
     >
       <Button
         variant="ghost"
-        className={selected ? "news-card selected" : "news-card"}
+        className={`news-card ${toneOf(item)} ${selected ? "selected" : ""}`}
         aria-pressed={selected}
         onClick={onSelect}
       >
@@ -238,9 +297,10 @@ function NewsCard({
           <span>
             {item.source_name} · {formatMoment(newsMoment(item))}
           </span>
+          {item.relevance && <RelevanceBadge relevance={item.relevance} />}
         </span>
         <strong>{item.title}</strong>
-        <span className="excerpt">{excerptOf(item satisfies NewsOut)}</span>
+        <span className="excerpt">{excerptOf(item)}</span>
         {item.source_tags.length > 0 && (
           <span className="tags">
             {item.source_tags.map((tag) => (
