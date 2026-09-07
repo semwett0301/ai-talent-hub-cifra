@@ -1,5 +1,17 @@
 import type { ArticleChange, NpaItem, NpaVersion } from "@/types/monitoring";
 
+/** A State Duma bill card link, and nothing else — what every "add a law" form needs
+ * to check before it lets a reader submit. */
+export function isDumaBillUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" && url.hostname === "sozd.duma.gov.ru" &&
+      /^\/bill\/\d+-\d+\/?$/.test(url.pathname) && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+}
+
 interface NpaResponse {
   id: string;
   url: string;
@@ -60,10 +72,11 @@ async function parseResponse(response: Response): Promise<unknown> {
   const detail = typeof payload === "object" && payload !== null && "detail" in payload
     ? String(payload.detail)
     : "";
-  throw new NpaApiError(detail || errorMessage(response.status));
+  throw new NpaApiError(detail || npaErrorMessage(response.status));
 }
 
-function errorMessage(status: number) {
+/** Shared with the news-escalation flow (`NewsPage`) — both hit the same npa_service errors. */
+export function npaErrorMessage(status: number) {
   if (status === 404) return "НПА больше не найден в реестре";
   if (status === 409) return "Этот законопроект уже добавлен в реестр";
   if (status === 422) return "Не удалось прочитать карточку или документ законопроекта";

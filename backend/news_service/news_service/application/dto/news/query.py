@@ -22,3 +22,5 @@ class NewsQuery(BaseModel):
     # Items published (or, undated, collected) at or after this moment.
     since: datetime | None = None
     visibility: NewsVisibility = NewsVisibility.VISIBLE
+    # Unset shows both; true/false narrows to escalated / not-escalated items only.
+    is_alert: bool | None = None

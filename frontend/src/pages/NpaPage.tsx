@@ -1,4 +1,5 @@
 import { createNpa, getNpa, listNpa, NpaApiError } from "@/api/npa"
+import { DumaBillDialog } from "@/components/monitoring/DumaBillDialog"
 import { SearchField } from "@/components/monitoring/Shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -6,14 +7,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { news } from "@/data/news"
-import type { ArticleChange, NewsItem, NpaItem, NpaVersion } from "@/types/monitoring"
+import type { ArticleChange, NpaItem, NpaVersion } from "@/types/monitoring"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowRight,
@@ -23,7 +21,6 @@ import {
   FileClock,
   FileText,
   History,
-  LoaderCircle,
   Plus,
   RefreshCw,
   Scale,
@@ -33,38 +30,27 @@ import {
 } from "lucide-react"
 import { useMemo, useState } from "react"
 
-type NpaFilter = "Реестр отслеживаемых НПА" | "Алерты" | "Обновления НПА"
-const FILTERS: NpaFilter[] = ["Реестр отслеживаемых НПА", "Алерты", "Обновления НПА"]
 const DETAIL_SKELETONS = [0, 1, 2]
 
 export function NpaPage() {
   const registry = useNpaRegistry()
   const [query, setQuery] = useState("")
-  const [filter, setFilter] = useState<NpaFilter>(FILTERS[0])
   const [selectedNpa, setSelectedNpa] = useState("")
-  const [selectedAlert, setSelectedAlert] = useState(news[0]?.id ?? "")
   const [addOpen, setAddOpen] = useState(false)
 
-  const visible = useVisibleNpa(registry.acts, query, filter)
-  const alerts = useAlerts(query)
+  const visible = useVisibleNpa(registry.acts, query)
   const npaItem = visible.find((entry) => entry.id === selectedNpa) ?? visible[0]
-  const alertItem = alerts.find((entry) => entry.id === selectedAlert) ?? alerts[0]
-  const details = useNpaDetails(filter === "Алерты" ? undefined : npaItem?.id)
+  const details = useNpaDetails(npaItem?.id)
 
   return (
     <div className="content-columns npa-workspace">
       <RegistryPanel
-        filter={filter}
-        setFilter={setFilter}
         query={query}
         setQuery={setQuery}
         visible={visible}
         total={registry.acts.length}
-        alerts={alerts}
         selectedNpa={npaItem?.id}
-        selectedAlert={alertItem?.id}
         setSelectedNpa={setSelectedNpa}
-        setSelectedAlert={setSelectedAlert}
         loading={registry.loading}
         refreshing={registry.refreshing}
         error={registry.error}
@@ -72,24 +58,25 @@ export function NpaPage() {
         onAdd={() => setAddOpen(true)}
       />
       <section className="panel details npa-details" aria-label="Подробности НПА">
-        {filter === "Алерты" ? (
-          <AlertDetails item={alertItem} onAdd={() => setAddOpen(true)} />
-        ) : (
-          <NpaDetailPanel
-            key={npaItem?.id ?? "empty"}
-            item={details.item}
-            loading={details.loading}
-            error={details.error}
-            onRetry={details.reload}
-          />
-        )}
+        <NpaDetailPanel
+          key={npaItem?.id ?? "empty"}
+          item={details.item}
+          loading={details.loading}
+          error={details.error}
+          onRetry={details.reload}
+        />
       </section>
-      <LawDialog
+      <DumaBillDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        onAdd={async (url) => {
+        title="Добавить НПА для отслеживания"
+        description="Вставьте ссылку на карточку законопроекта. Сервис загрузит актуальную Word-редакцию,
+            сохранит первую версию и включит плановую проверку изменений."
+        steps={["Проверка ссылки", "Загрузка редакции", "Добавление в реестр"]}
+        submitLabel="Добавить в реестр"
+        savingLabel="Загружаем карточку и официальный документ. Это может занять несколько секунд."
+        onSubmit={async (url) => {
           const created = await registry.add(url)
-          setFilter(FILTERS[0])
           setQuery("")
           setSelectedNpa(created.id)
         }}
@@ -99,62 +86,37 @@ export function NpaPage() {
 }
 
 function RegistryPanel(props: RegistryProps) {
-  const isAlerts = props.filter === "Алерты"
-  const countLabel = isAlerts
-    ? `${props.alerts.length} сигналов`
-    : `${props.visible.length} из ${props.total}`
-
   return (
     <section className="panel feed npa-registry">
       <div className="section-heading npa-heading">
         <div>
           <h2>Нормативные акты</h2>
-          <p className="small muted">{countLabel}</p>
+          <p className="small muted">{props.visible.length} из {props.total}</p>
         </div>
-        {!isAlerts && (
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Обновить реестр"
-            title="Обновить реестр"
-            disabled={props.refreshing}
-            onClick={props.onRefresh}
-          >
-            <RefreshCw className={props.refreshing ? "spin" : ""} />
-          </Button>
-        )}
-      </div>
-      <div className="filters npa-filters">
-        {FILTERS.map((label) => (
-          <Button
-            key={label}
-            variant="outline"
-            size="sm"
-            aria-pressed={props.filter === label}
-            className={props.filter === label ? "active-filter" : ""}
-            onClick={() => props.setFilter(label)}
-          >
-            {label}
-          </Button>
-        ))}
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Обновить реестр"
+          title="Обновить реестр"
+          disabled={props.refreshing}
+          onClick={props.onRefresh}
+        >
+          <RefreshCw className={props.refreshing ? "spin" : ""} />
+        </Button>
       </div>
       <SearchField
         value={props.query}
         onChange={props.setQuery}
-        placeholder={isAlerts ? "Поиск по новостям и регуляторам" : "Поиск по названию и номеру"}
+        placeholder="Поиск по названию и номеру"
       />
-      {isAlerts ? (
-        <AlertList items={props.alerts} selected={props.selectedAlert} onSelect={props.setSelectedAlert} />
-      ) : (
-        <NpaList
-          items={props.visible}
-          selected={props.selectedNpa}
-          onSelect={props.setSelectedNpa}
-          loading={props.loading}
-          error={props.error}
-          onRetry={props.onRefresh}
-        />
-      )}
+      <NpaList
+        items={props.visible}
+        selected={props.selectedNpa}
+        onSelect={props.setSelectedNpa}
+        loading={props.loading}
+        error={props.error}
+        onRetry={props.onRefresh}
+      />
       <div className="sticky-add-law">
         <Button variant="outline" className="add-source" onClick={props.onAdd}>
           <Plus />
@@ -401,100 +363,6 @@ function VersionDialog({ version, onClose }: { version: NpaVersion | null; onClo
   )
 }
 
-// News-to-NPA alerts are intentionally left on their existing implementation path.
-function AlertList({ items, selected, onSelect }: AlertListProps) {
-  return <div className="npa-list">{items.map((entry) => <Button variant="ghost" key={entry.id}
-    className={`news-card ${entry.priority} ${entry.id === selected ? "selected" : ""}`}
-    onClick={() => onSelect(entry.id)}><span className="card-meta"><span>{entry.source} · {entry.time}</span>
-      <span>Сигнал о НПА</span></span><strong>{entry.title}</strong>
-      <span className="excerpt">{entry.excerpt}</span></Button>)}</div>
-}
-
-function AlertDetails({ item, onAdd }: { item?: NewsItem; onAdd: () => void }) {
-  if (!item) return <p className="empty-state">Выберите новость</p>
-  return <><div className="detail-meta"><Badge className={`status ${item.priority}`}>
-    • Сигнал о НПА</Badge><span>{item.time}</span></div><h2>{item.title}</h2>
-    <p className="small muted">{item.source} · новость</p><div className="summary-box">
-      <h3><Sparkles />AI-САММАРИ</h3><p>{item.summary}</p></div>
-    <Button className="manual-law-button" onClick={onAdd}><Plus />Добавить закон вручную</Button></>
-}
-
-function LawDialog({ open, onOpenChange, onAdd }: LawDialogProps) {
-  const [url, setUrl] = useState("")
-  const [error, setError] = useState("")
-  const [saving, setSaving] = useState(false)
-
-  function changeOpen(nextOpen: boolean) {
-    if (!nextOpen && saving) return
-    if (!nextOpen) {
-      setUrl("")
-      setError("")
-    }
-    onOpenChange(nextOpen)
-  }
-
-  async function handleAdd(event: React.FormEvent) {
-    event.preventDefault()
-    if (!isDumaBillUrl(url)) {
-      setError("Нужна ссылка вида https://sozd.duma.gov.ru/bill/123-8")
-      return
-    }
-    setSaving(true)
-    setError("")
-    try {
-      await onAdd(url.trim())
-      setUrl("")
-      setError("")
-      onOpenChange(false)
-    } catch (cause) {
-      setError(cause instanceof NpaApiError ? cause.message : "Не удалось добавить НПА")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogContent>
-        <form className="npa-add-form" onSubmit={handleAdd}>
-          <DialogTitle>Добавить НПА для отслеживания</DialogTitle>
-          <DialogDescription>
-            Вставьте ссылку на карточку законопроекта. Сервис загрузит актуальную Word-редакцию,
-            сохранит первую версию и включит плановую проверку изменений.
-          </DialogDescription>
-          <div className="npa-add-steps" aria-label="Что произойдёт после добавления">
-            <span><strong>1</strong>Проверка ссылки</span>
-            <span><strong>2</strong>Загрузка редакции</span>
-            <span><strong>3</strong>Добавление в реестр</span>
-          </div>
-          <label className="form-field">
-            Ссылка на законопроект
-            <Input
-              autoFocus
-              aria-label="Ссылка на законопроект"
-              aria-invalid={Boolean(error)}
-              value={url}
-              onChange={(event) => { setUrl(event.target.value); setError("") }}
-              placeholder="https://sozd.duma.gov.ru/bill/1286425-8"
-            />
-          </label>
-          {error && <p role="alert" className="form-error">{error}</p>}
-          {saving && <p className="small muted npa-saving-note" aria-live="polite">
-            <LoaderCircle className="spin" /> Загружаем карточку и официальный документ. Это может занять несколько секунд.
-          </p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" disabled={saving} onClick={() => changeOpen(false)}>Отмена</Button>
-            <Button type="submit" disabled={!url.trim() || saving}>
-              {saving ? <LoaderCircle className="spin" /> : <Scale />}
-              {saving ? "Добавляем…" : "Добавить в реестр"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 function useNpaRegistry() {
   const queryClient = useQueryClient()
   const query = useQuery({
@@ -547,20 +415,13 @@ function useNpaDetails(id: string | undefined) {
   }
 }
 
-function useVisibleNpa(acts: NpaItem[], query: string, filter: NpaFilter) {
+function useVisibleNpa(acts: NpaItem[], query: string) {
   return useMemo(() => {
     const normalized = query.trim().toLowerCase()
     return acts
       .filter((entry) => `${entry.title} ${entry.billNumber ?? ""} ${entry.stage ?? ""}`.toLowerCase().includes(normalized))
-      .filter((entry) => filter !== "Обновления НПА" || hasChanges(entry))
       .sort((left, right) => Date.parse(right.sourceUpdatedAt ?? right.updatedAt) - Date.parse(left.sourceUpdatedAt ?? left.updatedAt))
-  }, [acts, query, filter])
-}
-
-function useAlerts(query: string) {
-  return useMemo(() => news.filter((entry) => entry.kind === "НПА")
-    .filter((entry) => `${entry.title} ${entry.source}`.toLowerCase().includes(query.toLowerCase()))
-    .sort((left, right) => right.relevance - left.relevance), [query])
+  }, [acts, query])
 }
 
 function hasChanges(item: NpaItem) {
@@ -595,16 +456,6 @@ function monitoringDescription(item: NpaItem) {
   return "Автоматический контроль недоступен для этой записи. Официальная карточка остаётся доступна по ссылке."
 }
 
-function isDumaBillUrl(value: string) {
-  try {
-    const url = new URL(value.trim())
-    return url.protocol === "https:" && url.hostname === "sozd.duma.gov.ru" &&
-      /^\/bill\/\d+-\d+\/?$/.test(url.pathname) && !url.search && !url.hash
-  } catch {
-    return false
-  }
-}
-
 function formatDate(value: string | null) {
   if (!value) return "—"
   const date = new Date(value)
@@ -621,17 +472,12 @@ function formatDateTime(value: string | null) {
 }
 
 interface RegistryProps {
-  filter: NpaFilter
-  setFilter: (value: NpaFilter) => void
   query: string
   setQuery: (value: string) => void
   visible: NpaItem[]
   total: number
-  alerts: NewsItem[]
   selectedNpa?: string
-  selectedAlert?: string
   setSelectedNpa: (id: string) => void
-  setSelectedAlert: (id: string) => void
   loading: boolean
   refreshing: boolean
   error: string
@@ -653,16 +499,4 @@ interface NpaDetailPanelProps {
   loading: boolean
   error: string
   onRetry: () => void
-}
-
-interface AlertListProps {
-  items: NewsItem[]
-  selected?: string
-  onSelect: (id: string) => void
-}
-
-interface LawDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAdd: (url: string) => Promise<void>
 }
