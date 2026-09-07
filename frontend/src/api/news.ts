@@ -4,7 +4,6 @@ export type NewsOut = components["schemas"]["NewsOut"]
 export type NewsListParams = NonNullable<operations["list_news__get"]["parameters"]["query"]>
 export type NewsVisibility = components["schemas"]["NewsVisibility"]
 export type NewsRelevance = components["schemas"]["NewsRelevanceOut"]
-export type ImpactReason = components["schemas"]["ImpactReasonOut"]
 export type RelevanceCategory = components["schemas"]["RelevanceCategory"]
 
 /** The tone a card and its badge take per relevance category (a CSS modifier). */
@@ -15,35 +14,6 @@ export const RELEVANCE_TONES: Record<RelevanceCategory, RelevanceTone> = {
   релевантно: "normal",
   "низкая релевантность": "low",
 }
-// The ranker's urgency bases, as the details read them.
-export const URGENCY_LABELS: Record<string, string> = {
-  not_urgent: "Без срочности",
-  over_30_days: "Срок более 30 дней",
-  within_4_30_days: "Срок 4–30 дней",
-  within_3_days: "Срок до 3 дней",
-  already_happened: "Уже произошло",
-  breaking: "Срочно",
-}
-export const DIMENSION_LABELS: Record<ImpactReason["dimension"], string> = {
-  finance: "Финансы",
-  reputation: "Репутация",
-  technology: "Технологии",
-  competition: "Конкуренция",
-}
-export const IMPACT_SCORE_MAX = 3
-
-/** The impact dimensions the model found a company consequence in, strongest first. */
-export function impactReasons(relevance: NewsRelevance): ImpactReason[] {
-  return relevance.impact
-    .filter((reason) => reason.score > 0)
-    .sort((left, right) => right.score - left.score)
-}
-
-/** "важно · 68" — the category with the rounded score, as the badge reads. */
-export function relevanceLabel(relevance: NewsRelevance): string {
-  return `${relevance.category} · ${Math.round(relevance.score)}`
-}
-
 // The feed's periods, as the filter offers them. The server takes an absolute `since`.
 export const PERIODS = [
   { hours: 24, label: "За 24 часа" },

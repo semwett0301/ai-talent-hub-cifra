@@ -5,17 +5,12 @@ import { errorMessage, errorStatus } from "@/api/client"
 import { useErrorToast } from "@/api/errorToast"
 import {
   DEFAULT_PERIOD_HOURS,
-  DIMENSION_LABELS,
-  IMPACT_SCORE_MAX,
   PERIODS,
   RELEVANCE_TONES,
-  URGENCY_LABELS,
   excerptOf,
   formatMoment,
   formatToday,
-  impactReasons,
   newsMoment,
-  relevanceLabel,
   sinceHoursAgo,
 } from "@/api/news"
 import type { NewsOut, NewsRelevance, NewsVisibility } from "@/api/news"
@@ -39,8 +34,6 @@ const SKELETON_CARDS = [0, 1, 2, 3]
 const LEAVE_ANIMATION = "news-card-leave"
 // What the details say while the pipeline has not reached the item yet.
 const SUMMARY_PENDING = "AI-саммари ещё не готово — материал в обработке."
-const RELEVANCE_PENDING = "Оценка релевантности ещё не выполнена."
-const NO_CONSEQUENCES = "Модель не нашла прямых последствий для компании."
 
 function useDebounced(value: string, delayMs: number): string {
   const [debounced, setDebounced] = useState(value)
@@ -207,14 +200,6 @@ function NewsDetails({
         </h3>
         <p>{item.summary ?? SUMMARY_PENDING}</p>
       </div>
-      <div className="impact-box">
-        <h3>Почему это важно для GS Labs</h3>
-        {item.relevance ? (
-          <RelevanceDetails relevance={item.relevance} />
-        ) : (
-          <p>{RELEVANCE_PENDING}</p>
-        )}
-      </div>
       <div className="actions">
         {isHidden ? (
           <Button variant="default" disabled={isBusy} onClick={onToggleHidden}>
@@ -258,44 +243,12 @@ function NewsDetails({
   )
 }
 
+/** The category alone — the score and the model's reasons stay server-side. */
 function RelevanceBadge({ relevance }: { relevance: NewsRelevance }) {
   return (
     <Badge className={`status ${RELEVANCE_TONES[relevance.category]}`} title="AI-приоритет">
-      {relevanceLabel(relevance)}
+      {relevance.category}
     </Badge>
-  )
-}
-
-/** The ranker's grounding: urgency, how widely the event was reported, and each scored
- * impact dimension with the model's reason. */
-function RelevanceDetails({ relevance }: { relevance: NewsRelevance }) {
-  const reasons = impactReasons(relevance)
-
-  return (
-    <>
-      <p className="relevance-meta">
-        <span>{URGENCY_LABELS[relevance.urgency_basis] ?? relevance.urgency_basis}</span>
-        <span>Сообщений о событии: {relevance.member_count}</span>
-      </p>
-      <p>{relevance.urgency_reason}</p>
-      {reasons.length ? (
-        <ul className="impact-reasons">
-          {reasons.map((reason) => (
-            <li key={reason.dimension}>
-              <span className="impact-dimension">
-                {DIMENSION_LABELS[reason.dimension]}
-                <small>
-                  {reason.score}/{IMPACT_SCORE_MAX}
-                </small>
-              </span>
-              <span>{reason.reason}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>{NO_CONSEQUENCES}</p>
-      )}
-    </>
   )
 }
 

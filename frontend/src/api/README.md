@@ -2,9 +2,9 @@
 
 - `news.ts` — types off the generated `schema.news.d.ts` (`NewsOut`, `NewsRelevance`,
   `RelevanceCategory`) plus the feed's presentation helpers: periods → `since`, moment
-  formatting, the card teaser, and the relevance vocabulary — `RELEVANCE_TONES` (category →
-  CSS modifier), `URGENCY_LABELS`, `DIMENSION_LABELS`, `impactReasons` (scored dimensions,
-  strongest first), `relevanceLabel`. The AI summary and relevance come from the API
+  formatting, the card teaser, and `RELEVANCE_TONES` (relevance category → CSS modifier; the
+  UI shows the category alone — the score and the model's reasons stay server-side, so no
+  English model prose reaches the reader). The AI summary and relevance come from the API
   (`summary`, `relevance`, both null until the pipeline reaches the item) — no placeholders.
 - `newsMutations.ts` — the news list query and dismiss / restore mutations; every mutation
   refetches the list.

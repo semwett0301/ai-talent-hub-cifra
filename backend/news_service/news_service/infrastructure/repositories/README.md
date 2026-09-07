@@ -13,9 +13,11 @@ over SQLAlchemy.
   title and text with LIKE wildcards escaped by `_like_pattern`) plus `IS_CLUSTER_HEAD`: one row per event —
   `event_cluster_id IS NULL OR event_cluster_id = news.id`, so a duplicate (pointing at
   another item's cluster) is left out while an item dedup has not reached yet still shows —
-  and `IS_WORTH_SHOWING` over the LEFT JOINed `news_cluster_ranking` (`contains_eager` into
-  `News.cluster_ranking`): a cluster ranked `низкая релевантность` is left out, an unranked
-  one still shows. `get` has neither filter (any row can be opened by id). Writes stage on the session:
+  and, unless `is_alert=true` is asked for (`_gates`), `IS_RANKED_RELEVANT` over the LEFT
+  JOINed `news_cluster_ranking` (`contains_eager` into `News.cluster_ranking`): only rows
+  whose cluster is ranked `релевантно` / `важно` / `требует внимания` pass — `низкая
+  релевантность` and unranked rows do not. `get` has neither filter (any row can be opened by
+  id). Writes stage on the session:
   `mark_alert` / `mark_dismissed` (keeps an earlier moment) / `mark_restored` (`flush`, no
   commit). `commit()` commits the session; a driver / connection failure is raised as
   `NewsStoreError`. The consumer's own write path does not go through this class — see

@@ -271,7 +271,8 @@ p {
   align-items: stretch;
   flex-direction: column;
   gap: 10px;
-  padding: 17px 14px 16px;
+  /* Left padding clears the relevance stripe drawn by `:before` at 10–15px. */
+  padding: 17px 14px 16px 27px;
   border: 1px solid #1c2e42;
   border-radius: 11px;
   text-align: left;
@@ -473,8 +474,7 @@ p {
   width: 18px;
   height: 18px;
 }
-.summary-box p,
-.impact-box p {
+.summary-box p {
   font-size: 12px;
   color: #d0dbea;
   line-height: 1.75;
@@ -501,49 +501,6 @@ p {
 .facts dd {
   margin: 0;
   line-height: 1.5;
-}
-.impact-box {
-  background: #382b17;
-  border: 1px solid #503818;
-  padding: 16px 14px;
-  border-radius: 8px;
-}
-.impact-box h3 {
-  color: #efbd45;
-  margin-bottom: 7px;
-}
-/* The ranker's grounding under the heading: urgency + reach line, then one row per dimension. */
-.relevance-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #c9a45a;
-  margin-bottom: 6px;
-}
-.impact-reasons {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0 0;
-  display: grid;
-  gap: 8px;
-}
-.impact-reasons li {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 10px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #d0dbea;
-}
-.impact-dimension {
-  color: #efbd45;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.impact-dimension small {
-  color: #c9a45a;
-  font-size: 10px;
 }
 .actions {
   margin-top: 22px;
@@ -633,8 +590,7 @@ p {
   .news-card strong {
     font-size: 18px;
   }
-  .summary-box p,
-  .impact-box p {
+  .summary-box p {
     font-size: 13px;
   }
 }

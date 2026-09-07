@@ -122,11 +122,18 @@ def test_feed_statement_keeps_only_cluster_heads_and_undeduplicated_items():
     ) in sql
 
 
-def test_feed_statement_hides_low_relevance_but_keeps_unranked_items():
+def test_feed_statement_shows_only_ranked_relevant_clusters():
     sql = str(_feed_statement(NewsQuery()).compile(dialect=postgresql.dialect()))
 
     assert "LEFT OUTER JOIN news_cluster_ranking" in sql
-    assert ("news_cluster_ranking.category IS NULL OR news_cluster_ranking.category != ") in sql
+    assert "news_cluster_ranking.category IN (" in sql
+
+
+def test_alerts_tab_is_not_gated_by_relevance():
+    sql = str(_feed_statement(NewsQuery(is_alert=True)).compile(dialect=postgresql.dialect()))
+
+    assert "news.is_alert IS true" in sql
+    assert "news_cluster_ranking.category IN (" not in sql
 
 
 def test_news_out_reads_dedup_state_through_the_row():
