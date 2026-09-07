@@ -35,6 +35,7 @@ MODEL_ERRORS = (
     ValueError,
 )
 MAX_RETRIES = 2
+DETERMINISTIC_TEMPERATURE = 0.0
 
 logger = get_logger(__name__)
 
@@ -73,8 +74,9 @@ class OpenRouterEventModels(EventModels):
         self.__api_key = api_key
         self.__base_url = base_url
         self.__batch_size = config.llm_batch_size
-        self.__extractor = self.__make_model(config.extractor_model)
-        self.__verifier = self.__make_model(config.verifier_model)
+        # GPT-5 providers reject `temperature`, and `require_parameters` would then route nowhere.
+        self.__extractor = self.__make_model(config.extractor_model, temperature=None)
+        self.__verifier = self.__make_model(config.verifier_model, DETERMINISTIC_TEMPERATURE)
 
     async def summarize(self, items: list[NewsTarget]) -> list[EventSummary]:
         logger.info("event summaries started: items=%d", len(items))
@@ -129,13 +131,13 @@ class OpenRouterEventModels(EventModels):
             raise EventModelError(f"event model batch failed: items={len(inputs)}") from error
         return responses
 
-    def __make_model(self, model: str) -> ChatOpenRouter:
+    def __make_model(self, model: str, temperature: float | None) -> ChatOpenRouter:
         try:
             return ChatOpenRouter(
                 model_name=model,
                 api_key=self.__api_key,
                 base_url=self.__base_url,
-                temperature=0.0,
+                temperature=temperature,
                 max_retries=MAX_RETRIES,
                 openrouter_provider={"require_parameters": True},
             )
