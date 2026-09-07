@@ -39,7 +39,7 @@ from source_service.infrastructure.crawlers.feedparser_reader import FeedparserF
 from source_service.infrastructure.crawlers.litellm_client import LiteLlmClient
 from source_service.infrastructure.parsing import FeedsearchRssFeedFinder
 from source_service.infrastructure.rabbit.connector import RabbitConnector
-from source_service.infrastructure.repositories import SourceRepo
+from source_service.infrastructure.repositories import SourceRepo, StoredNewsRepo
 from source_service.infrastructure.scheduling import ApSchedulerJobs
 
 logger = get_logger(__name__)
@@ -49,8 +49,8 @@ def build_pull_collectors(
     page_fetcher: PageFetcher, page_crawler: Crawl4AiPageCrawler
 ) -> dict[SourceType, PullCollector]:
     """Pull registry: SourceType → collector. RSS reads feeds and articles over the HTTP
-    `PageFetcher`; WEB drives the browser crawler."""
-    rss = RssCollector(FeedparserFeedReader(page_fetcher), page_fetcher)
+    `PageFetcher`, skipping entries already stored; WEB drives the browser crawler."""
+    rss = RssCollector(FeedparserFeedReader(page_fetcher), page_fetcher, StoredNewsRepo())
     return {SourceType.RSS: rss, SourceType.WEB: build_web_collector(page_crawler)}
 
 

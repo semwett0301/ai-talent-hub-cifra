@@ -6,6 +6,8 @@ Collector implementations of the application collector ports — the per-source-
 - `rss.py` — `RssCollector` (pull). **Implemented.** Polls every feed in
   `source.rss_links` (the detected feed URLs, distinct from `source.link`) through the
   `FeedReader` port — an entry listed by two feeds is taken once, from the first —
+  drops the entries the shared `news` table already holds (`StoredNewsIndex`) so a poll
+  re-crawls nothing, then for what is left
   fetches every entry's page through the `PageFetcher` port and extracts its full text
   with `application.parse.extract_article` (news-please); falls back to the feed summary
   when extraction comes back empty. Emits one `NewsDTO` per entry with `url` = the
