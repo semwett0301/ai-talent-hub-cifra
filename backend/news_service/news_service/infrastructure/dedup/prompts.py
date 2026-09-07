@@ -29,8 +29,11 @@ alone; there must be a stated path from the act to the company.
 - is_russian_regulation: the item's subject is a Russian normative act at any stage — a draft
   bill (законопроект) submitted, under discussion or passed in any reading; an adopted federal
   law; a government decree or resolution; an order, standard or mandatory requirements of a
-  regulator (Минцифры, ФСБ, ФСТЭК, Роскомнадзор, ФАС, ЦБ, etc.). Foreign law, court rulings,
-  opinion pieces with no concrete act, and companies' own policies do NOT qualify.
+  regulator (Минцифры, ФСБ, ФСТЭК, Роскомнадзор, ФАС, ЦБ, etc.). The act must be concrete
+  and identifiable — named, numbered, or unambiguously described together with its stage.
+  Speeches, interviews and forum statements by officials, explainers of how existing rules
+  work, general policy discussion, foreign law, court rulings, opinion pieces with no
+  concrete act, and companies' own policies do NOT qualify, even when a regulator is quoted.
 - concerns_company: the act's scope reaches the company's products, deployments, customers,
   infrastructure or markets as described by the profile facets. An act addressed to a
   category the company belongs to counts even when no company is named: Russian software

@@ -37,6 +37,10 @@ MODEL_ERRORS = (
 )
 MAX_RETRIES = 2
 DETERMINISTIC_TEMPERATURE = 0.0
+# Output caps bound what OpenRouter reserves per in-flight request; reasoning models spend
+# their thinking tokens from the same budget, so the caps stay far above the JSON itself.
+EXTRACTOR_MAX_TOKENS = 4096
+VERIFIER_MAX_TOKENS = 8192
 
 logger = get_logger(__name__)
 
@@ -86,8 +90,10 @@ class OpenRouterEventModels(EventModels):
         # The extractor also judges the regulatory alert, so it needs the company context.
         self.__extractor_prompt = f"{PRIMARY_EVENT_SYSTEM}\n\n{company.judge_context}"
         # GPT-5 providers reject `temperature`, and `require_parameters` would then route nowhere.
-        self.__extractor = self.__make_model(config.extractor_model, temperature=None)
-        self.__verifier = self.__make_model(config.verifier_model, DETERMINISTIC_TEMPERATURE)
+        self.__extractor = self.__make_model(config.extractor_model, None, EXTRACTOR_MAX_TOKENS)
+        self.__verifier = self.__make_model(
+            config.verifier_model, DETERMINISTIC_TEMPERATURE, VERIFIER_MAX_TOKENS
+        )
 
     async def summarize(self, items: list[NewsTarget]) -> list[EventSummary]:
         logger.info("event summaries started: items=%d", len(items))
@@ -139,16 +145,21 @@ class OpenRouterEventModels(EventModels):
                 generated = await chain.abatch(batch, config={"max_concurrency": self.__batch_size})
                 responses.extend(cast(list[T | None], generated))
         except MODEL_ERRORS as error:
+            # The batch is requeued upstream; keep the model's exact complaint readable here.
+            logger.warning("event model batch rejected: %s", error)
             raise EventModelError(f"event model batch failed: items={len(inputs)}") from error
         return responses
 
-    def __make_model(self, model: str, temperature: float | None) -> ChatOpenRouter:
+    def __make_model(
+        self, model: str, temperature: float | None, max_tokens: int
+    ) -> ChatOpenRouter:
         try:
             return ChatOpenRouter(
                 model_name=model,
                 api_key=self.__api_key,
                 base_url=self.__base_url,
                 temperature=temperature,
+                max_tokens=max_tokens,
                 max_retries=MAX_RETRIES,
                 openrouter_provider={"require_parameters": True},
             )

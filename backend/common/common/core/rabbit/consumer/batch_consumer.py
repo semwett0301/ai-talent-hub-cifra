@@ -29,6 +29,19 @@ from common.core.rabbit.consumer.message_batch import MessageBatch
 from common.core.rabbit.model import BatchConsumerConfig, BatchHandler
 
 logger = get_logger(__name__)
+CAUSE_SEPARATOR = " <- "
+
+
+def _describe(error: BaseException) -> str:
+    """The failure and its `raise ... from` chain, so a requeue names its root cause."""
+    parts: list[str] = []
+    current: BaseException | None = error
+    while current is not None:
+        parts.append(
+            f"{type(current).__name__}: {str(current).splitlines()[0] if str(current) else ''}"
+        )
+        current = current.__cause__
+    return CAUSE_SEPARATOR.join(parts)
 
 
 class RabbitBatchConsumer[T: BaseModel]:
@@ -136,14 +149,14 @@ class RabbitBatchConsumer[T: BaseModel]:
 
         try:
             await self.__handler.handle_batch(batch.items)
-        except BatchStoreError:
-            await self.__settle_failed(batch)
+        except BatchStoreError as error:
+            await self.__settle_failed(batch, error)
             return False
 
         await batch.ack()
         return True
 
-    async def __settle_failed(self, batch: MessageBatch[T]) -> None:
+    async def __settle_failed(self, batch: MessageBatch[T], error: BatchStoreError) -> None:
         """Hand a batch the handler could not store back to the broker: requeued for
         another attempt, or dropped when `requeue_on_store_error` is off."""
         if self.__config.requeue_on_store_error:
@@ -154,8 +167,9 @@ class RabbitBatchConsumer[T: BaseModel]:
             outcome = "dropped"
 
         logger.warning(
-            "batch %s: queue=%s items=%d (store failed)",
+            "batch %s: queue=%s items=%d (store failed: %s)",
             outcome,
             self.__config.queue_name,
             len(batch.items),
+            _describe(error),
         )

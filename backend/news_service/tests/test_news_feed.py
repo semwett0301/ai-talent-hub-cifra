@@ -122,6 +122,13 @@ def test_feed_statement_keeps_only_cluster_heads_and_undeduplicated_items():
     ) in sql
 
 
+def test_feed_statement_hides_low_relevance_but_keeps_unranked_items():
+    sql = str(_feed_statement(NewsQuery()).compile(dialect=postgresql.dialect()))
+
+    assert "LEFT OUTER JOIN news_cluster_ranking" in sql
+    assert ("news_cluster_ranking.category IS NULL OR news_cluster_ranking.category != ") in sql
+
+
 def test_news_out_reads_dedup_state_through_the_row():
     state = NewsEventState(news_id=NEWS_ID, summary="Short", event_cluster_id=CLUSTER_ID)
 

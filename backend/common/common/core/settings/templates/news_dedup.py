@@ -10,8 +10,9 @@ class NewsDedupSettings(SettingsTemplate):
     model_config = SettingsConfigDict(env_prefix="NEWS_DEDUP_")
 
     extractor_model: str = "openai/gpt-5-mini"
-    verifier_model: str = "anthropic/claude-sonnet-4.5"
-    llm_batch_size: int = Field(default=70, gt=0)
+    verifier_model: str = "deepseek/deepseek-v4-flash-0731"
+    # Concurrent structured calls; OpenRouter reserves credits per in-flight request.
+    llm_batch_size: int = Field(default=20, gt=0)
 
     embedding_model: str = "baai/bge-m3"
     embedding_batch_size: int = Field(default=64, gt=0)

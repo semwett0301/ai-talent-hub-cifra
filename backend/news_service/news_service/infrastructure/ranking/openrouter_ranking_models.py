@@ -37,6 +37,9 @@ URGENCY_SCORE: dict[UrgencyBasis, int] = {
     "breaking": 3,
 }
 MAX_RETRIES = 2
+# Bounds OpenRouter's per-request credit reserve; a reasoning model spends its thinking tokens
+# from this same budget, so it stays far above the eight scores/reasons themselves.
+IMPACT_MAX_TOKENS = 8192
 MODEL_ERRORS = (
     httpx.HTTPError,
     OpenRouterError,
@@ -98,6 +101,8 @@ class OpenRouterRankingModels(RankingModels):
             chain = prompt | self.__impact_model.with_structured_output(_ImpactResponse)
             responses = await _invoke_batches(chain, inputs, self.__llm_batch_size)
         except MODEL_ERRORS as error:
+            # The batch is requeued upstream; keep the model's exact complaint readable here.
+            logger.warning("cluster impact assessment rejected: %s", error)
             raise RankingModelError(
                 f"cluster impact assessment failed: clusters={len(targets)}"
             ) from error
@@ -111,6 +116,7 @@ class OpenRouterRankingModels(RankingModels):
                 api_key=self.__api_key,
                 base_url=self.__base_url,
                 temperature=0.0,
+                max_tokens=IMPACT_MAX_TOKENS,
                 max_retries=MAX_RETRIES,
                 openrouter_provider={"require_parameters": True},
             )

@@ -26,8 +26,9 @@ def _to_out_or_404(news: News | None) -> NewsOut:
 async def list_news(
     query: Annotated[NewsQuery, Query()], feed: NewsFeed = Depends(get_news_feed)
 ) -> list[NewsOut]:
-    """One item per event (duplicates of an already listed story are left out). Visible items
-    by default (`visibility`); `q` searches title and text, `since` bounds the period."""
+    """One item per event (duplicates left out), never a cluster ranked as low relevance;
+    visible items by default (`visibility`); `q` searches title and text, `since` bounds
+    the period."""
     return [NewsOut.model_validate(news) for news in await feed.list(query)]
 
 

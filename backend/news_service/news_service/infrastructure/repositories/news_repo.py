@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 from common.core.logging import get_logger
 from common.entities.news import NewsDTO
-from common.schemas import News, NewsEventState, Source
+from common.schemas import News, NewsClusterRanking, NewsEventState, Source
 from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -15,6 +15,7 @@ from sqlalchemy.orm import contains_eager
 from news_service.application.dto.news import NewsQuery, NewsVisibility
 from news_service.application.errors import NewsStoreError
 from news_service.application.ports import NewsRepository
+from news_service.domain.event_cluster import RelevanceCategory
 
 # What a failed write surfaces as: SQLAlchemy wraps driver errors, but a refused TCP
 # connection from asyncpg can still escape as a bare OSError.
@@ -24,6 +25,11 @@ LIKE_ESCAPE = "\\"
 # the dedup stage has not reached yet (no cluster) still shows.
 IS_CLUSTER_HEAD = or_(
     NewsEventState.event_cluster_id.is_(None), NewsEventState.event_cluster_id == News.id
+)
+# The feed never shows what the ranker judged irrelevant; an item not ranked yet still shows.
+IS_WORTH_SHOWING = or_(
+    NewsClusterRanking.category.is_(None),
+    NewsClusterRanking.category != RelevanceCategory.LOW.value,
 )
 
 logger = get_logger(__name__)
@@ -58,12 +64,14 @@ def _filters(query: NewsQuery) -> list[ColumnElement[bool]]:
 
 
 def _feed_statement(query: NewsQuery) -> Select[tuple[News]]:
-    """The feed's rows with their dedup state loaded in the same query, duplicates dropped."""
+    """The feed's rows with dedup state and ranking loaded in the same query; duplicates and
+    low-relevance clusters dropped."""
     return (
         select(News)
         .outerjoin(News.event_state)
-        .options(contains_eager(News.event_state))
-        .where(*_filters(query), IS_CLUSTER_HEAD)
+        .outerjoin(News.cluster_ranking)
+        .options(contains_eager(News.event_state), contains_eager(News.cluster_ranking))
+        .where(*_filters(query), IS_CLUSTER_HEAD, IS_WORTH_SHOWING)
         .order_by(News.published_at.desc().nulls_last(), News.created_at.desc(), News.id)
     )
 

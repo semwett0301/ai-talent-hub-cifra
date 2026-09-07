@@ -7,9 +7,11 @@ WEIGHT_BM25 = 0.05625
 WEIGHT_URGENCY = 0.0375
 WEIGHT_SOURCE = 0.015
 BM25_SATURATION = 10.0
-RELEVANT_SCORE = 50.0
-IMPORTANT_SCORE = 65.0
-ATTENTION_SCORE = 80.0
+# Impact alone yields ~25 per grade (1 → 25, 2 → 51, 3 → 76 before BM25/urgency), so the
+# thresholds map one impact grade to one category: any evidenced consequence is relevant.
+RELEVANT_SCORE = 25.0
+IMPORTANT_SCORE = 50.0
+ATTENTION_SCORE = 75.0
 
 
 def calculate_relevance(impact: int, urgency: int, source: int, bm25_score: float) -> float:
