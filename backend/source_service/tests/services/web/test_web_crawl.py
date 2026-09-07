@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from common.schemas import Source
+from source_service.application.services.dedup import StoredNewsFilter
 from source_service.application.services.web import CrawlStages, WebCrawl
 from source_service.domain import (
     Article,
@@ -71,6 +72,14 @@ class FakeSourceRepo:
         return source
 
 
+class FakeStoredNewsIndex:
+    def __init__(self, *stored: str) -> None:
+        self.stored = set(stored)
+
+    async def list_stored_urls(self, urls: list[str]) -> set[str]:
+        return self.stored.intersection(urls)
+
+
 class FakeDates:
     """Nothing is `FETCHED`, so date resolution has no work to do."""
 
@@ -78,7 +87,7 @@ class FakeDates:
         return articles
 
 
-def crawl(harvest: FakeHarvest, cards: int, repo: FakeSourceRepo) -> WebCrawl:
+def crawl(harvest: FakeHarvest, cards: int, repo: FakeSourceRepo, *stored: str) -> WebCrawl:
     stages = CrawlStages(
         hubs=FakeHubs(),  # type: ignore[arg-type]
         cards=FakeCards(cards),  # type: ignore[arg-type]
@@ -86,7 +95,8 @@ def crawl(harvest: FakeHarvest, cards: int, repo: FakeSourceRepo) -> WebCrawl:
         dates=FakeDates(),  # type: ignore[arg-type]
         judgement=FakeJudgement(),  # type: ignore[arg-type]
     )
-    return WebCrawl(stages, repo)  # type: ignore[arg-type]
+    stored_news = StoredNewsFilter(FakeStoredNewsIndex(*stored), "web")
+    return WebCrawl(stages, repo, stored_news)  # type: ignore[arg-type]
 
 
 @pytest.mark.asyncio
@@ -119,4 +129,29 @@ async def test_harvested_articles_are_deduped_by_identity_and_returned_newest_fi
 
     assert [a.url for a in found] == [newer.url, other.url]
     assert all(a.status is ArticleStatus.ACCEPTED for a in found)
+    assert repo.updates == []
+
+
+@pytest.mark.asyncio
+async def test_a_stored_candidate_is_dropped_before_harvest():
+    harvest = FakeHarvest([])
+    repo = FakeSourceRepo()
+    stored = "https://example.test/news/0"
+
+    await crawl(harvest, 2, repo, stored).run(SOURCE)
+
+    assert [a.url for a in harvest.received] == ["https://example.test/news/1"]
+    assert repo.updates == []
+
+
+@pytest.mark.asyncio
+async def test_every_candidate_already_stored_touches_no_harvest():
+    harvest = FakeHarvest([])
+    repo = FakeSourceRepo()
+    stored = "https://example.test/news/0"
+
+    found = await crawl(harvest, 1, repo, stored).run(SOURCE)
+
+    assert found == []
+    assert harvest.received == []
     assert repo.updates == []

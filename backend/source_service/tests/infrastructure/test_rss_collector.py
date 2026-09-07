@@ -5,6 +5,7 @@ from common.entities.news import SourceType
 from common.entities.source import SourceReliability
 from common.schemas import RssLink, Source
 from source_service.application.ports.scraping import FeedEntry
+from source_service.application.services.dedup import StoredNewsFilter
 from source_service.infrastructure.collectors.rss import RssCollector
 
 MAIN_FEED = "https://example.test/rss"
@@ -45,7 +46,9 @@ class FakeStoredNewsIndex:
 
 
 def rss_collector(reader: FakeFeedReader, *stored: str) -> RssCollector:
-    return RssCollector(reader, UnreachablePageFetcher(), FakeStoredNewsIndex(*stored))
+    return RssCollector(
+        reader, UnreachablePageFetcher(), StoredNewsFilter(FakeStoredNewsIndex(*stored), "rss")
+    )
 
 
 def rss_source(*feed_urls: str) -> Source:
@@ -116,7 +119,8 @@ async def test_a_source_without_feeds_yields_nothing():
 async def test_a_stored_entry_is_neither_fetched_nor_collected_again():
     reader = FakeFeedReader({MAIN_FEED: [entry(SHARED_ENTRY), entry(SECTION_ENTRY)]})
     page_fetcher = UnreachablePageFetcher()
-    collector = RssCollector(reader, page_fetcher, FakeStoredNewsIndex(SHARED_ENTRY))
+    stored_news = StoredNewsFilter(FakeStoredNewsIndex(SHARED_ENTRY), "rss")
+    collector = RssCollector(reader, page_fetcher, stored_news)
 
     news = await collector.fetch(rss_source(MAIN_FEED))
 
@@ -128,7 +132,8 @@ async def test_a_stored_entry_is_neither_fetched_nor_collected_again():
 async def test_a_feed_with_nothing_new_touches_no_page():
     reader = FakeFeedReader({MAIN_FEED: [entry(SHARED_ENTRY)]})
     page_fetcher = UnreachablePageFetcher()
-    collector = RssCollector(reader, page_fetcher, FakeStoredNewsIndex(SHARED_ENTRY))
+    stored_news = StoredNewsFilter(FakeStoredNewsIndex(SHARED_ENTRY), "rss")
+    collector = RssCollector(reader, page_fetcher, stored_news)
 
     assert await collector.fetch(rss_source(MAIN_FEED)) == []
     assert page_fetcher.fetched_urls == []

@@ -6,10 +6,10 @@ entry's page through the `PageFetcher` port and extracts its full text with
 entry seen in two feeds is collected once (first feed wins).
 
 A feed lists its whole window on every poll (200-300 entries is normal), so entries the
-shared `news` table already holds are dropped through the `StoredNewsIndex` port before
-any page is fetched — otherwise each poll re-crawls the entire feed. The collector keeps
-no state of its own: the DB is the record of what was collected, keyed by `NewsDTO.url`
-(the entry's canonical link), the same key downstream dedupes on.
+shared `news` table already holds are dropped through `StoredNewsFilter` before any page
+is fetched — otherwise each poll re-crawls the entire feed. The collector keeps no state
+of its own: the DB is the record of what was collected, keyed by `NewsDTO.url` (the
+entry's canonical link), the same key downstream dedupes on.
 """
 
 import asyncio
@@ -20,7 +20,8 @@ from common.schemas import RssLink, Source
 
 from source_service.application.parse import ExtractedArticle, extract_article
 from source_service.application.ports.scraping import FeedEntry, FeedReader, PageFetcher
-from source_service.application.ports.source import PullCollector, StoredNewsIndex
+from source_service.application.ports.source import PullCollector
+from source_service.application.services.dedup import StoredNewsFilter
 
 MAX_CONCURRENT_EXTRACTIONS = 4
 
@@ -51,7 +52,7 @@ class RssCollector(PullCollector):
         self,
         feed_reader: FeedReader,
         page_fetcher: PageFetcher,
-        stored_news: StoredNewsIndex,
+        stored_news: StoredNewsFilter,
     ) -> None:
         self.__feed_reader = feed_reader
         self.__page_fetcher = page_fetcher
@@ -63,27 +64,11 @@ class RssCollector(PullCollector):
             return []
 
         entries = await self.__read_feeds(source.rss_links)
-        uncollected = await self.__uncollected(source, entries)
-        if not uncollected:
+        fresh = await self.__stored_news.unstored(source.link, entries)
+        if not fresh:
             return []
 
-        return await self.__collect(source, uncollected)
-
-    async def __uncollected(self, source: Source, entries: list[FeedEntry]) -> list[FeedEntry]:
-        """The feed's entries minus the ones already stored — dropped before any page fetch."""
-        if not entries:
-            return []
-
-        stored = await self.__stored_news.list_stored_urls([entry.url for entry in entries])
-        fresh = [entry for entry in entries if entry.url not in stored]
-
-        logger.info(
-            "rss entries filtered: link=%s new=%d stored=%d",
-            source.link,
-            len(fresh),
-            len(stored),
-        )
-        return fresh
+        return await self.__collect(source, fresh)
 
     async def __read_feeds(self, feeds: list[RssLink]) -> list[FeedEntry]:
         """Every feed's entries, an entry URL kept once — the feed that listed it first."""

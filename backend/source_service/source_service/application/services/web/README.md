@@ -8,9 +8,12 @@ into links (`listings/`), then open the links (`articles/`).
   else. Builds the `Site` from the `Source` row, calls the five stages in order, applies the
   domain's `merge_duplicates` to what came out accepted and writes one `web crawl finished`
   line from `CrawlRun`. When the listing search finds no candidate at all it marks the
-  source `is_relevant=false` itself — no fallback. Takes its stages as one `CrawlStages`
-  plus the `SourceRepository` port (wired in `deps.py`) and **no settings at all**: every
-  threshold belongs to a stage.
+  source `is_relevant=false` itself — no fallback. Between `cards` and `harvest` it drops
+  candidates the shared `news` table already holds through `services.dedup.StoredNewsFilter`
+  (the same step `RssCollector` uses), so a browser fetch never runs for an already-stored
+  article. Takes its stages as one `CrawlStages`, the `SourceRepository` port and the
+  `StoredNewsFilter` (all wired in `deps.py`) and **no settings at all**: every threshold
+  belongs to a stage.
 - `hubs/` — site → `list[Hub]`: `HubDiscovery`, `ListingClassifier`.
 - `listings/` — hubs → candidate links: `CardCollection`.
 - `articles/` — candidate links → accepted articles: `ArticleHarvest`, `DateResolution`,
