@@ -6,7 +6,7 @@ from common.entities.news import NewsDTO, SourceType
 from common.entities.source import SourceReliability
 from news_service.application.errors import NewsProcessingError, SummaryEmbeddingError
 from news_service.application.services.news_ingestor import NewsIngestor
-from news_service.domain.dedup import EventSummary, PreparedNews, StoredNewsState
+from news_service.domain.event_summary import EventSummary, PreparedNews, StoredNewsState
 
 
 def _news(url: str) -> NewsDTO:
@@ -66,7 +66,7 @@ class _Models:
                 target.news_id,
                 target.news.url,
                 "Acme launched a product",
-                {"primary_event_found": True},
+                True,
                 target.news.published_at,
             )
             for target in targets
@@ -143,7 +143,7 @@ async def test_retry_reuses_saved_summary_and_only_resumes_deduplication():
             news_id,
             "https://news.test/1",
             "saved summary",
-            {"primary_event_found": True},
+            True,
             datetime(2026, 9, 5, tzinfo=UTC),
             (1.0,),
         )

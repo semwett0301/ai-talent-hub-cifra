@@ -2,29 +2,24 @@
 
 The interfaces application depends on and infrastructure implements (`Protocol`).
 Impls **inherit** the port (explicit conformance). Re-exported from `__init__.py`.
+Grouped the same way `infrastructure/` is — see each subpackage's own README:
 
-- `repositories.py` — `NewsRepository`: data access over **one unit of work** (one HTTP
-  request — scoped by `deps.py`, never by the use case). Reads: `list_matching(query)`
-  (every row a `NewsQuery`'s filters admit, newest publication first), `get(id)`. Writes
-  *stage* and return the row (None when the id is unknown): `mark_alert(id)`,
-  `mark_dismissed(id)`, `mark_restored(id)`. `commit()` persists everything staged; a
-  unit of work that ends without it rolls back. `commit()` raises `NewsStoreError` on a
-  DB failure. The consumer's own write path — checkpointed ingestion, dedup, ranking —
-  goes through `DedupRepository` / `RankingRepository` instead, not this port.
-- `dedup_repository.py` — idempotent summarized-news writes, pending work, pgvector
-  candidates, and final cluster assignments.
-- `event_models.py` — batched extraction/summary and precluster-alignment LLM stages.
-- `summary_embedder.py` — local summary embedding contract.
-- `pipeline_stage.py` — ordered post-summary stage contract used by dedup and ranking.
-- `ranking_models.py` — cluster impact/urgency and semantic reranker model boundary.
-- `ranking_repository.py` — affected-cluster loading and ranking upsert boundary.
-- `npa_gateway.py` — `NpaGateway`: `create(NpaDTO) -> id` registers an act in
-  `npa_service`; raises `NpaConflictError` (409 there) or `NpaGatewayError` (anything
-  else) instead of returning a sentinel, so the use case can stop before `commit()`.
-- `batch_handler.py` — `NewsBatchHandler`: the shared `common.core.rabbit.BatchHandler`
-  narrowed to `NewsDTO` — the inward-facing port the bus consumer calls with one
-  batch. Implemented by `NewsIngestor` (application), assembled once by
-  `deps.build_consumer()`, consumed by the shared `RabbitBatchConsumer` (`common`).
+- `repositories/` — `NewsRepository`, `DedupRepository`, `RankingRepository`. Mirrors
+  `infrastructure/repositories/`.
+- `dedup/` — `EventModels`, `SummaryEmbedder`. Mirrors `infrastructure/dedup/`.
+- `ranking/` — `RankingModels`. Mirrors `infrastructure/ranking/`.
+- `gateways/` — `NpaGateway`. Mirrors `infrastructure/gateways/`.
+Two contracts intentionally do not live here — see the package docstring for why:
+`NewsPipelineStage` sits inside `application/services/news_ingestor/` (both its
+implementers and its sole consumer are nested there too, so it never crosses into
+infrastructure).
+
+No news-specific batch-handler port either: `NewsIngestor` (application) implements the shared
+`common.core.rabbit.BatchHandler[NewsDTO]` directly — the inward-facing port the bus
+consumer calls with one batch, assembled once by `deps.build_consumer()`, consumed by the
+shared `RabbitBatchConsumer` (`common`). A narrowed local Protocol used to sit here; it
+added nothing beyond a duplicate docstring and had exactly one implementer, so it was
+removed.
 
 Notes: the use case decides **when** to commit — after every step that has to succeed
 first (an external call, a whole batch) has succeeded — and knows nothing about sessions.

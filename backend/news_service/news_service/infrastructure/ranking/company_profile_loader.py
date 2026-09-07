@@ -1,11 +1,11 @@
-"""Load and validate the packaged or operator-supplied company relevance profile."""
+"""Load and validate the packaged company relevance profile."""
 
 import json
 from importlib import resources
 
 from pydantic import BaseModel, Field, ValidationError
 
-from news_service.domain.ranking import CompanyProfile, Facet
+from news_service.domain.company_profile import CompanyProfile, Facet
 
 PROFILE_PACKAGE = "news_service.infrastructure.ranking"
 DEFAULT_PROFILE_NAME = "company_profile.json"
@@ -15,7 +15,7 @@ class _FacetPayload(BaseModel):
     name: str
     description: str
     bm25_terms: list[str] = Field(default_factory=list)
-    reranker_guidance: str = ""
+    judging_guidance: str = ""
 
 
 class _CompanyPayload(BaseModel):
@@ -49,5 +49,5 @@ def _to_facet(payload: _FacetPayload) -> Facet:
         payload.name,
         payload.description,
         tuple(payload.bm25_terms),
-        payload.reranker_guidance,
+        payload.judging_guidance,
     )

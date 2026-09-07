@@ -15,14 +15,18 @@ over SQLAlchemy.
   `dedup_repo.py` / `ranking_repo.py` below.
 - `dedup_repo.py` — `SqlDedupRepository`: **opens a fresh session per call** (no shared
   unit of work — the consumer pipeline calls it once per stage, not once per request).
-  Checkpoints summaries before embeddings, resumes either stage while the cluster is
-  null, retrieves candidates through cosine pgvector search, loads the oldest/newest
-  anchors, and writes final assignments. `save_summaries` skips (not detaches) items
-  whose source is gone — `source_id` is `NOT NULL`, so an orphan cannot be inserted at
-  all — one WARNING per batch naming the dropped ids, not one per item.
-- `ranking_repo.py` — `SqlRankingRepository`: same fresh-session-per-call shape; loads
-  each affected dedup cluster once using bounded oldest/newest anchors and upserts one
-  cluster-level relevance result.
+  Every query joins `news` (unchanging source facts) with `news_event_state` (the
+  pipeline's own rewritten state). Checkpoints summaries before embeddings, resumes
+  either stage while the cluster is null, retrieves candidates through cosine pgvector
+  search, loads the oldest/newest anchors, and writes final assignments. `save_summaries`
+  upserts `news` (`ON CONFLICT DO NOTHING` — a source's facts never change) and
+  `news_event_state` (`ON CONFLICT DO UPDATE` while incomplete) in the same transaction;
+  it skips (not detaches) items whose source is gone — `source_id` is `NOT NULL`, so an
+  orphan cannot be inserted at all — one WARNING per batch naming the dropped ids, not
+  one per item.
+- `ranking_repo.py` — `SqlRankingRepository`: same fresh-session-per-call shape, same
+  `news` ⋈ `news_event_state` join; loads each affected dedup cluster once using bounded
+  oldest/newest anchors and upserts one cluster-level relevance result.
 
 Notes: all three classes explicitly inherit their ports. Sessions come from
 `common.core.db`, but only the composition root touches the factory. The upserts use the

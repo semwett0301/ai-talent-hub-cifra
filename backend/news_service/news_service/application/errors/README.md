@@ -8,4 +8,4 @@ Application failure signals. The package re-exports its public API from `__init_
 - `summary_embedding_error.py` — local embedding failure.
 - `npa_gateway_error.py` — unsuccessful NPA service interaction.
 - `npa_conflict_error.py` — specialized duplicate-NPA response.
-- `ranking_model_error.py` — impact-assessment or reranker failure.
+- `ranking_model_error.py` — impact-assessment failure.

@@ -27,11 +27,15 @@ class per module (re-exported from `__init__.py`).
   a required, indexed FK to `source` with `ON DELETE CASCADE` (a source's news goes with
   it), `source_name` is the name at collection time, `source_tags` is a `TEXT[]` column
   (no index — tags are shown, never filtered on), `excerpt` / `updated_at` are nullable.
-  `summary`, `event_extraction`, the 1024-dimensional `summary_embedding`, and
-  `event_cluster_id` persist the staged event-dedup pipeline (`news_service.application
-  .services.news_deduplicator`); `summary_embedding` has an HNSW cosine index. Two
-  service-owned fields: `dismissed_at` (a reader hid the item from the feed) and
-  `is_alert` (default false; set when the item is escalated into a legislative act).
+  These facts never change after ingestion. Two service-owned fields: `dismissed_at` (a
+  reader hid the item from the feed) and `is_alert` (default false; set when the item is
+  escalated into a legislative act).
+- `news_event_state.py` — `NewsEventState`: the dedup pipeline's own derived state for one
+  `news` row (`news_id` FK, `ON DELETE CASCADE`, also the primary key — at most one state
+  row per news row). `summary`, `primary_event_found`, the 1024-dimensional
+  `summary_embedding` (HNSW cosine index), and `event_cluster_id` are rewritten in stages
+  by `news_service.application.services.news_ingestor.news_deduplicator` — kept off `News`
+  because that table's facts never change once written, while this state does, repeatedly.
 - `news_cluster_ranking.py` — one explainable relevance result per deduplicated
   `event_cluster_id`; reranking an affected cluster updates this row rather than
   duplicating the score on every member news item.

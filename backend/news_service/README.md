@@ -30,13 +30,15 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     `common.core.rabbit.RabbitBatchConsumer[NewsDTO]` (bound with `NEWS_BINDING_KEY` =
     `news.raw.#`) — each consumed batch opens its own sessions inside the repositories
     it calls, not one shared session per batch.
-  - `application/` — `ports/` (`NewsRepository`, `NewsBatchHandler`, `NpaGateway`,
-    `DedupRepository`, `EventModels`, `NewsPipelineStage`, `RankingModels`,
-    `RankingRepository`, `SummaryEmbedder`) + `dto/news/` (`NewsQuery` in, `NewsOut` out,
+  - `application/` — `ports/` (`NewsRepository`, `NpaGateway`, `DedupRepository`,
+    `EventModels`, `NewsPipelineStage`, `RankingModels`, `RankingRepository`,
+    `SummaryEmbedder` — grouped into `repositories/`/`gateways/`/`dedup/`/`ranking/`
+    subpackages mirroring `infrastructure/`) + `dto/news/` (`NewsQuery` in, `NewsOut` out,
     now carrying `summary`/`event_cluster_id`) + `services/` (`NewsFeed`
     list/get/dismiss/restore, `NewsIngestor` checkpointed batch store, `NewsDeduplicator`,
     `NewsRanker`, `NpaEscalation` flag + register act) + `errors/`.
-  - `domain/` — pure dedup and cluster-ranking entities/rules.
+  - `domain/` — pure entities and rules, one package per entity: `event_summary/`,
+    `event_cluster/`, `company_profile/`.
   - `infrastructure/` — `repositories/` (`NewsRepo` over the session it is given for the
     read API — writes stage, `commit()` persists; `SqlDedupRepository` /
     `SqlRankingRepository`, a fresh session per call, for the consumer pipeline),

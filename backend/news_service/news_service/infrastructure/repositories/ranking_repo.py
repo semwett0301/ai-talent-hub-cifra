@@ -2,10 +2,11 @@
 
 import uuid
 from collections import defaultdict
+from typing import cast
 
 from common.core.db import async_session_factory
 from common.entities.source import SourceReliability
-from common.schemas import News, NewsClusterRanking
+from common.schemas import News, NewsClusterRanking, NewsEventState
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from news_service.application.errors import NewsStoreError
 from news_service.application.ports import RankingRepository
-from news_service.domain.ranking import ClusterRankingTarget, RankingResult
+from news_service.domain.event_cluster import EventCluster, RankingResult
 
 STORE_ERRORS = (SQLAlchemyError, OSError)
 SOURCE_SCORE = case(
@@ -24,7 +25,7 @@ SOURCE_SCORE = case(
 
 
 class SqlRankingRepository(RankingRepository):
-    async def list_clusters(self, urls: list[str]) -> list[ClusterRankingTarget]:
+    async def list_clusters(self, urls: list[str]) -> list[EventCluster]:
         if not urls:
             return []
         try:
@@ -50,38 +51,45 @@ class SqlRankingRepository(RankingRepository):
 
 
 async def _affected_cluster_ids(session: AsyncSession, urls: list[str]) -> list[uuid.UUID]:
+    cluster_id = func.coalesce(NewsEventState.event_cluster_id, News.id)
     statement = (
-        select(News.event_cluster_id)
-        .where(News.url.in_(urls), News.event_cluster_id.is_not(None))
+        select(cluster_id)
+        .select_from(News)
+        .outerjoin(NewsEventState, NewsEventState.news_id == News.id)
+        .where(News.url.in_(urls))
         .distinct()
     )
     values = (await session.execute(statement)).scalars().all()
-    return [cluster_id for cluster_id in values if cluster_id is not None]
+    return cast(list[uuid.UUID], list(values))
 
 
 def _cluster_anchor_statement(cluster_ids: list[uuid.UUID]):
-    cluster_id = News.event_cluster_id.label("cluster_id")
+    cluster_id = func.coalesce(NewsEventState.event_cluster_id, News.id).label("cluster_id")
     event_time = func.coalesce(News.published_at, News.created_at)
-    base = select(
-        cluster_id,
-        News.summary,
-        News.event_extraction,
-        News.summary_embedding,
-        News.published_at,
-        News.created_at,
-        func.count().over(partition_by=News.event_cluster_id).label("member_count"),
-        func.max(SOURCE_SCORE).over(partition_by=News.event_cluster_id).label("source_score"),
-        func.row_number()
-        .over(partition_by=News.event_cluster_id, order_by=(event_time.asc(), News.id.asc()))
-        .label("oldest_rank"),
-        func.row_number()
-        .over(partition_by=News.event_cluster_id, order_by=(event_time.desc(), News.id.desc()))
-        .label("newest_rank"),
-    ).where(
-        News.event_cluster_id.in_(cluster_ids),
-        News.summary.is_not(None),
-        News.event_extraction.is_not(None),
-        News.summary_embedding.is_not(None),
+    base = (
+        select(
+            cluster_id,
+            NewsEventState.summary,
+            NewsEventState.primary_event_found,
+            News.published_at,
+            News.created_at,
+            func.count().over(partition_by=cluster_id).label("member_count"),
+            func.max(SOURCE_SCORE).over(partition_by=cluster_id).label("source_score"),
+            func.row_number()
+            .over(partition_by=cluster_id, order_by=(event_time.asc(), News.id.asc()))
+            .label("oldest_rank"),
+            func.row_number()
+            .over(partition_by=cluster_id, order_by=(event_time.desc(), News.id.desc()))
+            .label("newest_rank"),
+        )
+        .select_from(News)
+        .join(NewsEventState, NewsEventState.news_id == News.id)
+        .where(
+            func.coalesce(NewsEventState.event_cluster_id, News.id).in_(cluster_ids),
+            NewsEventState.summary.is_not(None),
+            NewsEventState.primary_event_found.is_not(None),
+            NewsEventState.summary_embedding.is_not(None),
+        )
     )
     ranked = base.subquery()
     return (
@@ -91,7 +99,7 @@ def _cluster_anchor_statement(cluster_ids: list[uuid.UUID]):
     )
 
 
-def _to_targets(rows) -> list[ClusterRankingTarget]:
+def _to_targets(rows) -> list[EventCluster]:
     grouped: defaultdict[uuid.UUID, list] = defaultdict(list)
     for row in rows:
         grouped[row.cluster_id].append(row)
@@ -101,13 +109,12 @@ def _to_targets(rows) -> list[ClusterRankingTarget]:
     ]
 
 
-def _to_target(cluster_id: uuid.UUID, anchors: list) -> ClusterRankingTarget:
+def _to_target(cluster_id: uuid.UUID, anchors: list) -> EventCluster:
     newest = max(anchors, key=lambda row: row.published_at or row.created_at)
-    return ClusterRankingTarget(
+    return EventCluster(
         cluster_id=cluster_id,
         summaries=tuple(row.summary for row in anchors),
-        extractions=tuple(dict(row.event_extraction) for row in anchors),
-        embeddings=tuple(tuple(row.summary_embedding) for row in anchors),
+        primary_event_flags=tuple(row.primary_event_found for row in anchors),
         published_at=newest.published_at or newest.created_at,
         source_score=int(newest.source_score),
         member_count=int(newest.member_count),
@@ -120,7 +127,6 @@ def _ranking_upsert(rankings: list[RankingResult]):
             "cluster_id": ranking.cluster_id,
             "relevance_score": ranking.relevance_score,
             "category": ranking.category.value,
-            "context_score": ranking.context_score,
             "member_count": ranking.member_count,
             "details": ranking.details,
         }
@@ -132,7 +138,6 @@ def _ranking_upsert(rankings: list[RankingResult]):
         set_={
             "relevance_score": statement.excluded.relevance_score,
             "category": statement.excluded.category,
-            "context_score": statement.excluded.context_score,
             "member_count": statement.excluded.member_count,
             "details": statement.excluded.details,
             "ranked_at": func.now(),

@@ -23,7 +23,6 @@ class NewsClusterRanking(Base):
     )
     relevance_score: Mapped[float] = mapped_column(Float, index=True)
     category: Mapped[str] = mapped_column(String(CATEGORY_MAX_LENGTH))
-    context_score: Mapped[float] = mapped_column(Float)
     member_count: Mapped[int] = mapped_column(Integer)
     details: Mapped[dict[str, Any]] = mapped_column(JSONB)
     ranked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

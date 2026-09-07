@@ -28,7 +28,6 @@ def upgrade() -> None:
         sa.Column("cluster_id", sa.Uuid(), nullable=False),
         sa.Column("relevance_score", sa.Float(), nullable=False),
         sa.Column("category", sa.String(length=32), nullable=False),
-        sa.Column("context_score", sa.Float(), nullable=False),
         sa.Column("member_count", sa.Integer(), nullable=False),
         sa.Column("details", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column(

@@ -60,7 +60,7 @@ def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
         settings.news_dedup.embedding_batch_size,
     )
     event_models = _event_models()
-    stages = _build_pipeline(dedup_repository, event_models, embedder)
+    stages = _build_pipeline(dedup_repository, event_models)
     handler = NewsIngestor(dedup_repository, event_models, embedder, stages)
     return RabbitBatchConsumer(_consumer_config(), handler, NewsDTO)
 
@@ -88,7 +88,6 @@ def _event_models() -> OpenRouterEventModels:
 def _build_pipeline(
     dedup_repository: SqlDedupRepository,
     event_models: OpenRouterEventModels,
-    embedder: SentenceTransformerSummaryEmbedder,
 ) -> tuple[NewsDeduplicator, NewsRanker]:
     deduplicator = NewsDeduplicator(dedup_repository, event_models, settings.news_dedup)
     ranking_models = OpenRouterRankingModels(
@@ -99,7 +98,6 @@ def _build_pipeline(
     ranker = NewsRanker(
         SqlRankingRepository(),
         ranking_models,
-        embedder,
         load_company_profile(),
     )
     return deduplicator, ranker

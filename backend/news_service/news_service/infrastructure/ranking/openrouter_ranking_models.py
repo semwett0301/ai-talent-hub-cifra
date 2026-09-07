@@ -1,4 +1,4 @@
-"""OpenRouter impact judge and cross-encoder reranker for event clusters."""
+"""OpenRouter impact judge for event clusters."""
 
 import json
 from collections.abc import Iterable
@@ -16,11 +16,8 @@ from pydantic import BaseModel, Field, ValidationError
 
 from news_service.application.errors import RankingModelError
 from news_service.application.ports import RankingModels
-from news_service.domain.ranking import (
-    ClusterRankingTarget,
-    CompanyProfile,
-    ImpactAssessment,
-)
+from news_service.domain.company_profile import CompanyProfile
+from news_service.domain.event_cluster import EventCluster, ImpactAssessment
 from news_service.infrastructure.ranking.prompts import IMPACT_SYSTEM
 
 UrgencyBasis = Literal[
@@ -39,7 +36,6 @@ URGENCY_SCORE: dict[UrgencyBasis, int] = {
     "already_happened": 3,
     "breaking": 3,
 }
-DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MAX_RETRIES = 2
 MODEL_ERRORS = (
     httpx.HTTPError,
@@ -78,18 +74,14 @@ class OpenRouterRankingModels(RankingModels):
         if not api_key:
             raise RankingModelError("OPENROUTER_API_KEY is required for news ranking")
         self.__api_key = api_key
-        self.__base_url = (base_url or DEFAULT_OPENROUTER_BASE_URL).rstrip("/")
+        self.__base_url = base_url
         self.__impact_model = self.__make_model(config.impact_model)
-        self.__reranker_model = config.reranker_model
         self.__llm_batch_size = config.llm_batch_size
-        self.__reranker_batch_size = config.reranker_batch_size
-        self.__timeout = config.reranker_timeout_seconds
-        self.__max_cluster_chars = config.max_cluster_chars
 
     async def assess(
         self,
         company: CompanyProfile,
-        targets: list[ClusterRankingTarget],
+        targets: list[EventCluster],
         evaluated_at: datetime,
     ) -> list[ImpactAssessment]:
         if not targets:
@@ -111,47 +103,6 @@ class OpenRouterRankingModels(RankingModels):
             ) from error
         logger.info("cluster impact assessment completed: clusters=%d", len(responses))
         return [_to_assessment(response) for response in responses]
-
-    async def rerank(
-        self, company: CompanyProfile, targets: list[ClusterRankingTarget]
-    ) -> list[float]:
-        if not targets:
-            return []
-        logger.info("cluster semantic reranking started: clusters=%d", len(targets))
-        query = company.reranker_query
-        documents = [target.document[: self.__max_cluster_chars] for target in targets]
-        try:
-            scores = await self.__rerank_batches(query, documents)
-        except MODEL_ERRORS as error:
-            raise RankingModelError(
-                f"cluster semantic reranking failed: clusters={len(targets)}"
-            ) from error
-        logger.info("cluster semantic reranking completed: clusters=%d", len(scores))
-        return scores
-
-    async def __rerank_batches(self, query: str, documents: list[str]) -> list[float]:
-        scores: list[float] = []
-        async with httpx.AsyncClient(timeout=self.__timeout) as client:
-            for batch in _chunks(documents, self.__reranker_batch_size):
-                scores.extend(await self.__rerank_batch(client, query, batch))
-        return scores
-
-    async def __rerank_batch(
-        self, client: httpx.AsyncClient, query: str, documents: list[str]
-    ) -> list[float]:
-        response = await client.post(
-            f"{self.__base_url}/rerank",
-            headers={"Authorization": f"Bearer {self.__api_key}"},
-            json={
-                "model": self.__reranker_model,
-                "query": query,
-                "documents": documents,
-                "top_n": len(documents),
-            },
-        )
-        response.raise_for_status()
-        payload = response.json()
-        return _reranker_scores(payload, len(documents))
 
     def __make_model(self, model: str) -> ChatOpenRouter:
         try:
@@ -176,16 +127,16 @@ async def _invoke_batches(chain, inputs: list[dict[str, str]], size: int) -> lis
 
 
 def _impact_system(company: CompanyProfile) -> str:
-    return f"{IMPACT_SYSTEM}\n\n{company.reranker_query}"
+    return f"{IMPACT_SYSTEM}\n\n{company.judge_context}"
 
 
-def _impact_payload(target: ClusterRankingTarget, evaluated_at: datetime) -> dict[str, object]:
+def _impact_payload(target: EventCluster, evaluated_at: datetime) -> dict[str, object]:
     return {
         "cluster_id": str(target.cluster_id),
         "evaluated_at": evaluated_at.isoformat(),
         "published_at": target.published_at.isoformat() if target.published_at else None,
         "summaries": target.summaries,
-        "event_extractions": target.extractions,
+        "primary_event_confirmed": target.primary_event_flags,
         "member_count": target.member_count,
     }
 
@@ -205,25 +156,6 @@ def _to_assessment(response: _ImpactResponse) -> ImpactAssessment:
         URGENCY_SCORE[response.urgency_basis],
         response.model_dump(mode="json"),
     )
-
-
-def _reranker_scores(payload: object, expected: int) -> list[float]:
-    if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
-        raise ValueError("unexpected OpenRouter reranker response")
-    scores = [0.0] * expected
-    seen: set[int] = set()
-    for row in payload["results"]:
-        index = int(row["index"])
-        score = float(row["relevance_score"])
-        if index < 0 or index >= expected or index in seen:
-            raise ValueError("invalid OpenRouter reranker result index")
-        if score < 0.0 or score > 1.0:
-            raise ValueError("OpenRouter reranker score is outside 0..1")
-        seen.add(index)
-        scores[index] = score
-    if len(seen) != expected:
-        raise ValueError("reranker response count does not match document count")
-    return scores
 
 
 def _chunks[T](values: list[T], size: int) -> Iterable[list[T]]:

@@ -1,16 +1,18 @@
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import pytest
 from common.core.settings import NewsDedupSettings
-from news_service.application.services.news_deduplicator import NewsDeduplicator
-from news_service.domain.dedup import (
+from news_service.application.services.news_ingestor.news_deduplicator.news_deduplicator import (
+    NewsDeduplicator,
+)
+from news_service.domain.event_cluster import (
     CandidateCluster,
     ClusterAssignment,
-    EventSummary,
     MembershipDecision,
     Precluster,
 )
+from news_service.domain.event_summary import EventSummary
 
 
 def _summary(news_id: uuid.UUID, hour: int = 10) -> EventSummary:
@@ -18,10 +20,7 @@ def _summary(news_id: uuid.UUID, hour: int = 10) -> EventSummary:
         news_id,
         f"https://news.test/{news_id}",
         "Acme launched a product",
-        {
-            "primary_event_found": True,
-            "event_time": {"start": "2026-09-05", "precision": "day"},
-        },
+        True,
         datetime(2026, 9, 5, hour, tzinfo=UTC),
         (1.0, 0.0),
     )
@@ -100,33 +99,3 @@ async def test_uncertain_member_gets_an_isolated_cluster():
     await deduplicator.process([first.url, second.url])
 
     assert repository.assignments[1].cluster_id == second.news_id
-
-
-@pytest.mark.asyncio
-async def test_explicit_time_conflict_skips_the_llm_and_blocks_merge():
-    first = _summary(uuid.uuid4())
-    second = _summary(uuid.uuid4(), 11)
-    second = EventSummary(
-        second.news_id,
-        second.url,
-        second.text,
-        {
-            "primary_event_found": True,
-            "event_time": {"start": "2026-09-09", "precision": "day"},
-        },
-        first.published_at + timedelta(hours=1),  # type: ignore[operator]
-        second.embedding,
-    )
-    repository = _Repository(first)
-    models = _Models("SAME")
-    deduplicator = NewsDeduplicator(
-        repository,
-        models,
-        NewsDedupSettings(),  # type: ignore[arg-type]
-    )
-    repository.pending = [first, second]
-
-    await deduplicator.process([first.url, second.url])
-
-    assert repository.assignments[1].cluster_id == second.news_id
-    assert models.preclusters == []

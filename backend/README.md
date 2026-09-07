@@ -72,9 +72,9 @@ source_service/                 # the importable package
 
 `news_service/` mirrors it, with the bus as an *entry point* instead of an exit: the
 shared `common.core.rabbit.RabbitBatchConsumer` (built in `deps.py`) calls the
-inward-facing port `application.ports.NewsBatchHandler`, implemented by
-`application.services.NewsIngestor`, which writes through `NewsRepository`
-(`infrastructure/repositories/news_repo.py`). The consumer mechanism lives in `common`
+inward-facing `common.core.rabbit.BatchHandler[NewsDTO]`, implemented directly by
+`application.services.NewsIngestor`, which writes through `DedupRepository`
+(`infrastructure/repositories/dedup_repo.py`). The consumer mechanism lives in `common`
 so the next bus consumer service only supplies its model, handler, and config.
 `news_service` also has one *outbound* HTTP port, `application.ports.NpaGateway`
 (implemented by `infrastructure/gateways/npa_http_gateway.py` over httpx), through

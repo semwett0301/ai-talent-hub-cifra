@@ -176,15 +176,13 @@ The feedsearch crawl `source_service` runs on a new address to decide RSS vs WEB
 | `NEWS_BATCH_SIZE` | Messages per DB batch; also the channel `prefetch_count`. | `100` | no |
 | `NEWS_BATCH_INTERVAL_SECONDS` | Max seconds a partial batch waits before being written. A batch flushes on **either** limit. | `60` | no |
 | `NEWS_REQUEUE_ON_STORE_ERROR` | When the DB write of a batch fails: `true` nacks it back onto the queue and retries after one interval (at-least-once, nothing lost); `false` nacks it without requeue (dropped, or dead-lettered if the queue gets a DLX). | `true` | no |
-| `NEWS_DEDUP_EXTRACTOR_MODEL` / `NEWS_DEDUP_SUMMARY_MODEL` / `NEWS_DEDUP_VERIFIER_MODEL` | OpenRouter models for event extraction, the persisted per-news summary, and conservative membership alignment. | `openai/gpt-5-mini` / same / `anthropic/claude-sonnet-4.5` | no |
+| `NEWS_DEDUP_EXTRACTOR_MODEL` / `NEWS_DEDUP_VERIFIER_MODEL` | OpenRouter models for the persisted per-news event summary and conservative membership alignment. | `openai/gpt-5-mini` / `anthropic/claude-sonnet-4.5` | no |
 | `NEWS_DEDUP_LLM_BATCH_SIZE` | Maximum concurrent structured LLM calls in one stage. | `70` | no |
 | `NEWS_DEDUP_EMBEDDING_MODEL` / `NEWS_DEDUP_EMBEDDING_BATCH_SIZE` | Local CPU sentence-transformer and encode batch size; the schema expects 1024 dimensions. | `deepvk/USER-bge-m3` / `16` | no |
-| `NEWS_DEDUP_CANDIDATE_WINDOW_DAYS` / `NEWS_DEDUP_TOP_K_CANDIDATES` / `NEWS_DEDUP_MIN_RETRIEVAL_SCORE` | pgvector candidate window, limit, and minimum cosine similarity. | `5` / `6` / `0.16` | no |
-| `NEWS_DEDUP_HARD_TIME_TOLERANCE_DAYS` | Explicit event-time gap that blocks a merge before the verifier. | `1` | no |
+| `NEWS_DEDUP_CANDIDATE_WINDOW_DAYS` / `NEWS_DEDUP_TOP_K_CANDIDATES` / `NEWS_DEDUP_MIN_RETRIEVAL_SCORE` | pgvector candidate window, limit, and minimum cosine similarity. | `3` / `6` / `0.16` | no |
 | `NEWS_DEDUP_REJECT_IF_ANY_UNCERTAIN_CANDIDATE` | Refuse auto-merge when any competing candidate stays uncertain. | `true` | no |
-| `NEWS_RANKING_IMPACT_MODEL` / `NEWS_RANKING_RERANKER_MODEL` | OpenRouter models for cluster impact/urgency assessment and semantic reranking. | `deepseek/deepseek-v4-flash-0731` / `voyageai/rerank-2.5-lite` | no |
-| `NEWS_RANKING_LLM_BATCH_SIZE` / `NEWS_RANKING_RERANKER_BATCH_SIZE` | Maximum items per impact-model and reranker batch. | `70` / `70` | no |
-| `NEWS_RANKING_RERANKER_TIMEOUT_SECONDS` / `NEWS_RANKING_MAX_CLUSTER_CHARS` | Reranker timeout and maximum cluster-document length. | `60` / `12000` | no |
+| `NEWS_RANKING_IMPACT_MODEL` | OpenRouter model for cluster impact/urgency assessment. | `deepseek/deepseek-v4-flash-0731` | no |
+| `NEWS_RANKING_LLM_BATCH_SIZE` | Maximum items per impact-model batch. | `70` | no |
 
 `news_service` requires `OPENROUTER_API_KEY`. Each unseen URL is extracted and summarized;
 summary/extraction are committed first, vectors are filled in the next checkpoint, and only

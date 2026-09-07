@@ -28,8 +28,10 @@ Alembic — the **shared** schema history for all services on the one database
   `0013_npa_tracking_versions` adds current tracking state and immutable text/version
   history with overall and per-article summaries. `7199923ff81c` merges the npa and
   news heads that diverged from `0010`. `0018_news_event_dedup` (on top of that merge)
-  enables pgvector and adds the per-news summary, extraction, embedding, cluster id, and
-  indexes; `0019_news_cluster_ranking` creates one explainable relevance result per event
+  enables pgvector and creates `news_event_state` — one row per `news` row, holding the
+  per-news summary, extraction, embedding, and cluster id the dedup pipeline rewrites in
+  stages — kept off `news` itself since that table's own facts never change once
+  written; `0019_news_cluster_ranking` creates one explainable relevance result per event
   cluster. (Several intermediate revisions between `0010` and `0018` — `0011`, `0012`,
   `0014`-`0017` — are not yet described here; this gap predates the merge.)
 

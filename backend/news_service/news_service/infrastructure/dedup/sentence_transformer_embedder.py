@@ -1,7 +1,7 @@
 """Normalized local CPU embeddings for pgvector candidate retrieval."""
 
 from common.core.logging import get_logger
-from common.schemas.news import SUMMARY_EMBEDDING_DIMENSION
+from common.schemas.news_event_state import SUMMARY_EMBEDDING_DIMENSION
 from sentence_transformers import SentenceTransformer
 
 from news_service.application.errors import SummaryEmbeddingError

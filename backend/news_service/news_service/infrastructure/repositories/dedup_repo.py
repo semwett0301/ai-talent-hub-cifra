@@ -7,7 +7,7 @@ from typing import cast
 
 from common.core.db import async_session_factory
 from common.core.logging import get_logger
-from common.schemas import News, Source
+from common.schemas import News, NewsEventState, Source
 from sqlalchemy import Table, bindparam, desc, func, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -15,14 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from news_service.application.errors import NewsStoreError
 from news_service.application.ports import DedupRepository
-from news_service.domain.dedup import (
-    CandidateCluster,
-    CandidateQuery,
-    ClusterAssignment,
-    EventSummary,
-    PreparedNews,
-    StoredNewsState,
-)
+from news_service.domain.event_cluster import CandidateCluster, CandidateQuery, ClusterAssignment
+from news_service.domain.event_summary import EventSummary, PreparedNews, StoredNewsState
 
 STORE_ERRORS = (SQLAlchemyError, OSError)
 
@@ -33,8 +27,15 @@ class SqlDedupRepository(DedupRepository):
     async def list_states(self, urls: list[str]) -> dict[str, StoredNewsState]:
         if not urls:
             return {}
-        has_summary = News.summary.is_not(None) & News.event_extraction.is_not(None)
-        statement = select(News.id, News.url, has_summary).where(News.url.in_(urls))
+        has_summary = NewsEventState.summary.is_not(
+            None
+        ) & NewsEventState.primary_event_found.is_not(None)
+        statement = (
+            select(News.id, News.url, has_summary)
+            .select_from(News)
+            .outerjoin(NewsEventState, NewsEventState.news_id == News.id)
+            .where(News.url.in_(urls))
+        )
         try:
             async with async_session_factory() as session:
                 rows = (await session.execute(statement)).all()
@@ -51,6 +52,7 @@ class SqlDedupRepository(DedupRepository):
                 survivors = _drop_orphans(items, known_sources)
                 if not survivors:
                     return
+                await session.execute(_news_upsert(survivors))
                 await session.execute(_summary_upsert(survivors))
                 await session.commit()
         except STORE_ERRORS as error:
@@ -61,10 +63,10 @@ class SqlDedupRepository(DedupRepository):
             return []
         statement = _summary_select().where(
             News.url.in_(urls),
-            News.event_cluster_id.is_(None),
-            News.summary.is_not(None),
-            News.event_extraction.is_not(None),
-            News.summary_embedding.is_(None),
+            NewsEventState.event_cluster_id.is_(None),
+            NewsEventState.summary.is_not(None),
+            NewsEventState.primary_event_found.is_not(None),
+            NewsEventState.summary_embedding.is_(None),
         )
         try:
             async with async_session_factory() as session:
@@ -77,10 +79,10 @@ class SqlDedupRepository(DedupRepository):
         if not summaries:
             return
         statement = (
-            update(cast(Table, News.__table__))
+            update(cast(Table, NewsEventState.__table__))
             .where(
-                News.id == bindparam("embedding_news_id"),
-                News.summary_embedding.is_(None),
+                NewsEventState.news_id == bindparam("embedding_news_id"),
+                NewsEventState.summary_embedding.is_(None),
             )
             .values(summary_embedding=bindparam("embedding_value"))
         )
@@ -102,10 +104,10 @@ class SqlDedupRepository(DedupRepository):
             return []
         statement = _summary_select().where(
             News.url.in_(urls),
-            News.event_cluster_id.is_(None),
-            News.summary.is_not(None),
-            News.event_extraction.is_not(None),
-            News.summary_embedding.is_not(None),
+            NewsEventState.event_cluster_id.is_(None),
+            NewsEventState.summary.is_not(None),
+            NewsEventState.primary_event_found.is_not(None),
+            NewsEventState.summary_embedding.is_not(None),
         )
         try:
             async with async_session_factory() as session:
@@ -133,10 +135,10 @@ class SqlDedupRepository(DedupRepository):
         if not assignments:
             return
         statement = (
-            update(cast(Table, News.__table__))
+            update(cast(Table, NewsEventState.__table__))
             .where(
-                News.id == bindparam("assignment_news_id"),
-                News.event_cluster_id.is_(None),
+                NewsEventState.news_id == bindparam("assignment_news_id"),
+                NewsEventState.event_cluster_id.is_(None),
             )
             .values(event_cluster_id=bindparam("assignment_cluster_id"))
         )
@@ -174,18 +176,30 @@ def _drop_orphans(items: list[PreparedNews], known_sources: set[uuid.UUID]) -> l
     return [item for item in items if item.news.source_id not in orphans]
 
 
-def _summary_upsert(items: list[PreparedNews]):
-    rows = [_prepared_row(item) for item in items]
+def _news_upsert(items: list[PreparedNews]):
+    rows = [_news_row(item) for item in items]
     statement = postgres_insert(News).values(rows)
+    return statement.on_conflict_do_nothing(index_elements=[News.url])
+
+
+def _news_row(item: PreparedNews) -> dict[str, object]:
+    row = item.news.model_dump()
+    row["id"] = item.summary.news_id
+    return row
+
+
+def _summary_upsert(items: list[PreparedNews]):
+    rows = [_state_row(item) for item in items]
+    statement = postgres_insert(NewsEventState).values(rows)
     incomplete = or_(
-        News.summary.is_(None),
-        News.event_extraction.is_(None),
+        NewsEventState.summary.is_(None),
+        NewsEventState.primary_event_found.is_(None),
     )
     return statement.on_conflict_do_update(
-        index_elements=[News.url],
+        index_elements=[NewsEventState.news_id],
         set_={
             "summary": statement.excluded.summary,
-            "event_extraction": statement.excluded.event_extraction,
+            "primary_event_found": statement.excluded.primary_event_found,
             "summary_embedding": None,
             "event_cluster_id": None,
         },
@@ -193,29 +207,29 @@ def _summary_upsert(items: list[PreparedNews]):
     )
 
 
-def _prepared_row(item: PreparedNews) -> dict[str, object]:
-    row = item.news.model_dump()
-    row.update(
-        {
-            "id": item.summary.news_id,
-            "summary": item.summary.text,
-            "event_extraction": item.summary.extraction,
-            "summary_embedding": None,
-            "event_cluster_id": None,
-        }
-    )
-    return row
+def _state_row(item: PreparedNews) -> dict[str, object]:
+    return {
+        "news_id": item.summary.news_id,
+        "summary": item.summary.text,
+        "primary_event_found": item.summary.has_primary_event,
+        "summary_embedding": None,
+        "event_cluster_id": None,
+    }
 
 
 def _summary_select():
-    return select(
-        News.id,
-        News.url,
-        News.summary,
-        News.event_extraction,
-        News.published_at,
-        News.created_at,
-        News.summary_embedding,
+    return (
+        select(
+            News.id,
+            News.url,
+            NewsEventState.summary,
+            NewsEventState.primary_event_found,
+            News.published_at,
+            News.created_at,
+            NewsEventState.summary_embedding,
+        )
+        .select_from(News)
+        .join(NewsEventState, NewsEventState.news_id == News.id)
     )
 
 
@@ -224,23 +238,28 @@ def _to_summary(row) -> EventSummary:
         news_id=row.id,
         url=row.url,
         text=row.summary,
-        extraction=dict(row.event_extraction),
+        has_primary_event=row.primary_event_found,
         published_at=row.published_at or row.created_at,
         embedding=tuple(row.summary_embedding or ()),
     )
 
 
 async def _candidate_scores(session: AsyncSession, query: CandidateQuery):
-    cluster_id = func.coalesce(News.event_cluster_id, News.id)
-    similarity = literal(1.0) - News.summary_embedding.cosine_distance(
+    cluster_id = func.coalesce(NewsEventState.event_cluster_id, News.id)
+    similarity = literal(1.0) - NewsEventState.summary_embedding.cosine_distance(
         list(query.summary.embedding)
     )
     best_score = func.max(similarity).label("score")
     reference_time = query.summary.published_at
-    statement = select(cluster_id.label("cluster_id"), best_score).where(
-        News.id != query.summary.news_id,
-        News.summary_embedding.is_not(None),
-        _is_available(query.available_pending_ids),
+    statement = (
+        select(cluster_id.label("cluster_id"), best_score)
+        .select_from(News)
+        .join(NewsEventState, NewsEventState.news_id == News.id)
+        .where(
+            News.id != query.summary.news_id,
+            NewsEventState.summary_embedding.is_not(None),
+            _is_available(query.available_pending_ids),
+        )
     )
     if reference_time is not None:
         window = timedelta(days=query.window_days)
@@ -259,8 +278,8 @@ async def _candidate_scores(session: AsyncSession, query: CandidateQuery):
 
 def _is_available(pending_ids: tuple[uuid.UUID, ...]):
     if not pending_ids:
-        return News.event_cluster_id.is_not(None)
-    return or_(News.event_cluster_id.is_not(None), News.id.in_(pending_ids))
+        return NewsEventState.event_cluster_id.is_not(None)
+    return or_(NewsEventState.event_cluster_id.is_not(None), News.id.in_(pending_ids))
 
 
 async def _candidate_anchors(
@@ -276,28 +295,33 @@ async def _candidate_anchors(
 
 
 def _anchor_statement(cluster_ids: list[uuid.UUID]):
-    cluster_id = func.coalesce(News.event_cluster_id, News.id).label("cluster_id")
+    cluster_id = func.coalesce(NewsEventState.event_cluster_id, News.id).label("cluster_id")
     event_time = func.coalesce(News.published_at, News.created_at)
-    base = select(
-        cluster_id,
-        News.id,
-        News.url,
-        News.summary,
-        News.event_extraction,
-        News.published_at,
-        News.created_at,
-        News.summary_embedding,
-        func.row_number()
-        .over(partition_by=cluster_id, order_by=(event_time.asc(), News.id.asc()))
-        .label("oldest_rank"),
-        func.row_number()
-        .over(partition_by=cluster_id, order_by=(event_time.desc(), News.id.desc()))
-        .label("newest_rank"),
-    ).where(
-        func.coalesce(News.event_cluster_id, News.id).in_(cluster_ids),
-        News.summary.is_not(None),
-        News.event_extraction.is_not(None),
-        News.summary_embedding.is_not(None),
+    base = (
+        select(
+            cluster_id,
+            News.id,
+            News.url,
+            NewsEventState.summary,
+            NewsEventState.primary_event_found,
+            News.published_at,
+            News.created_at,
+            NewsEventState.summary_embedding,
+            func.row_number()
+            .over(partition_by=cluster_id, order_by=(event_time.asc(), News.id.asc()))
+            .label("oldest_rank"),
+            func.row_number()
+            .over(partition_by=cluster_id, order_by=(event_time.desc(), News.id.desc()))
+            .label("newest_rank"),
+        )
+        .select_from(News)
+        .join(NewsEventState, NewsEventState.news_id == News.id)
+        .where(
+            func.coalesce(NewsEventState.event_cluster_id, News.id).in_(cluster_ids),
+            NewsEventState.summary.is_not(None),
+            NewsEventState.primary_event_found.is_not(None),
+            NewsEventState.summary_embedding.is_not(None),
+        )
     )
     ranked = base.subquery()
     return select(ranked).where(or_(ranked.c.oldest_rank == 1, ranked.c.newest_rank == 1))

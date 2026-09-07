@@ -18,17 +18,11 @@ from pydantic import BaseModel, Field, ValidationError
 
 from news_service.application.errors import EventModelError
 from news_service.application.ports import EventModels
-from news_service.domain.dedup import (
-    EventSummary,
-    MembershipDecision,
-    NewsTarget,
-    Precluster,
-)
-from news_service.domain.dedup.membership_decision import Decision
+from news_service.domain.event_cluster import Decision, MembershipDecision, Precluster
+from news_service.domain.event_summary import EventSummary, NewsTarget
 from news_service.infrastructure.dedup.prompts import (
     PRECLUSTER_ALIGNMENT_SYSTEM,
     PRIMARY_EVENT_SYSTEM,
-    SUMMARY_SYSTEM,
 )
 
 MODEL_ERRORS = (
@@ -40,48 +34,13 @@ MODEL_ERRORS = (
     TypeError,
     ValueError,
 )
-NO_EVENT_SUMMARY = "No concrete primary event identified."
 MAX_RETRIES = 2
 
 logger = get_logger(__name__)
 
 
-class _EvidenceSpan(BaseModel):
-    field: str
-    quote: str
-
-
-class _EventTime(BaseModel):
-    start: str | None = None
-    end: str | None = None
-    precision: str = "unknown"
-    source: str = "unknown"
-
-
-class _Quantity(BaseModel):
-    type: str
-    value: str
-    unit: str | None = None
-
-
 class _EventExtraction(BaseModel):
     primary_event_found: bool
-    primary_event_mention: str | None = None
-    event_type: str | None = None
-    actors: list[str] = Field(default_factory=list)
-    action: str | None = None
-    objects: list[str] = Field(default_factory=list)
-    location: str | None = None
-    event_time: _EventTime | None = None
-    quantities: list[_Quantity] = Field(default_factory=list)
-    lifecycle_stage: str | None = None
-    identifiers: dict[str, str] = Field(default_factory=dict)
-    evidence: list[_EvidenceSpan] = Field(default_factory=list)
-    background_events: list[str] = Field(default_factory=list)
-    critical_unknowns: list[str] = Field(default_factory=list)
-
-
-class _SummaryResponse(BaseModel):
     summary: str
 
 
@@ -115,30 +74,26 @@ class OpenRouterEventModels(EventModels):
         self.__base_url = base_url
         self.__batch_size = config.llm_batch_size
         self.__extractor = self.__make_model(config.extractor_model)
-        self.__summarizer = self.__make_model(config.summary_model)
         self.__verifier = self.__make_model(config.verifier_model)
 
     async def summarize(self, items: list[NewsTarget]) -> list[EventSummary]:
-        logger.info("event extraction started: items=%d", len(items))
-        extractions = await self.__extract(items)
-        logger.info("event extraction completed: items=%d", len(extractions))
+        logger.info("event summaries started: items=%d", len(items))
         payloads = [
             {
-                "source_item": target.news.model_dump(mode="json"),
-                "extraction": extraction.model_dump(mode="json"),
+                "item": target.news.model_dump(mode="json"),
+                "publication_time": target.news.published_at,
             }
-            for target, extraction in zip(items, extractions, strict=True)
+            for target in items
         ]
-        logger.info("event summaries started: items=%d", len(items))
-        generated = await self.__invoke(
-            _BatchSpec(self.__summarizer, SUMMARY_SYSTEM, payloads, _SummaryResponse)
+        responses = await self.__invoke(
+            _BatchSpec(self.__extractor, PRIMARY_EVENT_SYSTEM, payloads, _EventExtraction)
         )
-        if len(generated) != len(items):
+        if len(responses) != len(items):
             raise EventModelError("event summary count does not match input count")
-        logger.info("event summaries completed: items=%d", len(generated))
+        logger.info("event summaries completed: items=%d", len(responses))
         return [
-            _build_summary(target, extraction, response)
-            for target, extraction, response in zip(items, extractions, generated, strict=True)
+            _build_summary(target, response)
+            for target, response in zip(items, responses, strict=True)
         ]
 
     async def align(
@@ -153,19 +108,6 @@ class OpenRouterEventModels(EventModels):
             raise EventModelError("event alignment count does not match precluster count")
         logger.info("event alignment completed: preclusters=%d", len(responses))
         return [_membership_map(response) for response in responses]
-
-    async def __extract(self, items: list[NewsTarget]) -> list[_EventExtraction]:
-        payloads = [
-            {
-                "item": target.news.model_dump(mode="json"),
-                "publication_time": target.news.published_at,
-            }
-            for target in items
-        ]
-        responses = await self.__invoke(
-            _BatchSpec(self.__extractor, PRIMARY_EVENT_SYSTEM, payloads, _EventExtraction)
-        )
-        return [response or _EventExtraction(primary_event_found=False) for response in responses]
 
     async def __invoke[T: BaseModel](self, spec: _BatchSpec[T]) -> list[T | None]:
         inputs = [
@@ -205,38 +147,15 @@ def _chunks(values: list[dict[str, str]], size: int) -> Iterable[list[dict[str, 
     return (values[start : start + size] for start in range(0, len(values), size))
 
 
-def _build_summary(
-    target: NewsTarget,
-    extraction: _EventExtraction,
-    response: _SummaryResponse | None,
-) -> EventSummary:
-    text = (
-        response.summary.strip() if response and response.summary.strip() else _fallback(extraction)
-    )
+def _build_summary(target: NewsTarget, response: _EventExtraction | None) -> EventSummary:
+    if response is None or not response.summary.strip():
+        raise EventModelError(f"event summary missing or empty: news_id={target.news_id}")
     return EventSummary(
         news_id=target.news_id,
         url=target.news.url,
-        text=text,
-        extraction=extraction.model_dump(mode="json"),
+        text=response.summary.strip(),
+        has_primary_event=response.primary_event_found,
         published_at=target.news.published_at,
-    )
-
-
-def _fallback(extraction: _EventExtraction) -> str:
-    if not extraction.primary_event_found:
-        return NO_EVENT_SUMMARY
-    event_time = extraction.event_time.start if extraction.event_time else ""
-    parts = [
-        ", ".join(extraction.actors),
-        extraction.action or "",
-        ", ".join(extraction.objects),
-        extraction.location or "",
-        event_time or "",
-    ]
-    return (
-        " ".join(part for part in parts if part).strip()
-        or extraction.primary_event_mention
-        or NO_EVENT_SUMMARY
     )
 
 
@@ -250,11 +169,7 @@ def _precluster_payload(precluster: Precluster) -> dict[str, Any]:
 
 
 def _summary_payload(summary: EventSummary) -> dict[str, Any]:
-    return {
-        "news_id": str(summary.news_id),
-        "summary": summary.text,
-        "extraction": summary.extraction,
-    }
+    return {"news_id": str(summary.news_id), "summary": summary.text}
 
 
 def _membership_map(

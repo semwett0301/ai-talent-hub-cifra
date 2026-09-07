@@ -2,4 +2,4 @@
 
 
 class RankingModelError(RuntimeError):
-    """Impact assessment or semantic reranking failed at the model boundary."""
+    """Impact assessment failed at the model boundary."""

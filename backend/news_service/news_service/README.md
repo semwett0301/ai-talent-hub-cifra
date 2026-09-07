@@ -14,4 +14,6 @@ file only maps the layers.
 - `api/` — FastAPI routers (`/news` list + dismiss).
 
 Notes: the bus is the entry point — `common.core.rabbit.RabbitBatchConsumer` calls the
-inward-facing `NewsBatchHandler`; the consumer mechanism itself lives in `common`.
+inward-facing `common.core.rabbit.BatchHandler[NewsDTO]`, implemented directly by
+`NewsIngestor` (no news-specific narrowing port); the consumer mechanism itself lives in
+`common`.

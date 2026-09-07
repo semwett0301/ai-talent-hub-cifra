@@ -5,11 +5,12 @@ from datetime import UTC, datetime
 
 from common.core.logging import get_logger
 from common.entities.news import NewsDTO
-from common.schemas import News, Source
-from sqlalchemy import ColumnElement, func, or_, select
+from common.schemas import News, NewsEventState, Source
+from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import contains_eager
 
 from news_service.application.dto.news import NewsQuery, NewsVisibility
 from news_service.application.errors import NewsStoreError
@@ -19,6 +20,11 @@ from news_service.application.ports import NewsRepository
 # connection from asyncpg can still escape as a bare OSError.
 STORE_ERRORS = (SQLAlchemyError, OSError)
 LIKE_ESCAPE = "\\"
+# One item per event: a duplicate points at another item's cluster and is left out; an item
+# the dedup stage has not reached yet (no cluster) still shows.
+IS_CLUSTER_HEAD = or_(
+    NewsEventState.event_cluster_id.is_(None), NewsEventState.event_cluster_id == News.id
+)
 
 logger = get_logger(__name__)
 
@@ -51,6 +57,17 @@ def _filters(query: NewsQuery) -> list[ColumnElement[bool]]:
     return clauses
 
 
+def _feed_statement(query: NewsQuery) -> Select[tuple[News]]:
+    """The feed's rows with their dedup state loaded in the same query, duplicates dropped."""
+    return (
+        select(News)
+        .outerjoin(News.event_state)
+        .options(contains_eager(News.event_state))
+        .where(*_filters(query), IS_CLUSTER_HEAD)
+        .order_by(News.published_at.desc().nulls_last(), News.created_at.desc(), News.id)
+    )
+
+
 def _drop_orphans(items: list[NewsDTO], known: set[uuid.UUID]) -> list[NewsDTO]:
     """Skip items whose source is gone: a row needs its source, so the FK never fails the batch."""
     orphans = {item.source_id for item in items if item.source_id not in known}
@@ -72,12 +89,8 @@ class NewsRepo(NewsRepository):
         self.__session = session
 
     async def list_matching(self, query: NewsQuery) -> list[News]:
-        stmt = (
-            select(News)
-            .where(*_filters(query))
-            .order_by(News.published_at.desc().nulls_last(), News.created_at.desc(), News.id)
-        )
-        return list((await self.__session.execute(stmt)).scalars().all())
+        rows = await self.__session.execute(_feed_statement(query))
+        return list(rows.scalars().all())
 
     async def get(self, news_id: uuid.UUID) -> News | None:
         return await self.__session.get(News, news_id)
