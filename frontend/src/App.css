@@ -271,29 +271,13 @@ p {
   align-items: stretch;
   flex-direction: column;
   gap: 10px;
-  padding: 17px 14px 16px 30px;
+  padding: 17px 14px 16px;
   border: 1px solid #1c2e42;
   border-radius: 11px;
   text-align: left;
   white-space: normal;
   background: transparent;
   font-weight: 400;
-}
-.news-card:before {
-  content: "";
-  position: absolute;
-  left: 10px;
-  top: 13px;
-  bottom: 13px;
-  width: 5px;
-  border-radius: 4px;
-  background: #42d392;
-}
-.news-card.critical:before {
-  background: #ef6877;
-}
-.news-card.warning:before {
-  background: #efb443;
 }
 .news-card.selected {
   border-color: #418fe7 !important;

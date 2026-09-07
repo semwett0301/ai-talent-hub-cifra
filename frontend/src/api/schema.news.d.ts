@@ -257,6 +257,7 @@ export interface operations {
                 q?: string | null;
                 since?: string | null;
                 visibility?: components["schemas"]["NewsVisibility"];
+                is_alert?: boolean | null;
             };
             header?: never;
             path?: never;

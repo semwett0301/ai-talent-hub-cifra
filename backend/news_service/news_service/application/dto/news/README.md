@@ -6,7 +6,8 @@ DTOs for the `News` resource — one class per module, re-exported from `__init_
 - `out.py` — `NewsOut`: the response shape (`from_attributes=True`, built from ORM) —
   every `NewsDTO` field plus `id`, `dismissed_at`, `is_alert`, `created_at`.
 - `query.py` — `NewsQuery`: what the feed is asked for (`q`, `since`, `visibility` —
-  `NewsVisibility.VISIBLE` (default) / `DISMISSED` / `ALL`); FastAPI reads it straight off
+  `NewsVisibility.VISIBLE` (default) / `DISMISSED` / `ALL`, `is_alert` — unset shows both,
+  `true`/`false` narrows to escalated / not-escalated items); FastAPI reads it straight off
   the query string (`Annotated[NewsQuery, Query()]`), the use case and the repository take
   it as one object. No paging: `GET /` answers every match as a plain `NewsOut[]`.
 
