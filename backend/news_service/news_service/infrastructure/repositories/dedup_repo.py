@@ -177,14 +177,19 @@ def _drop_orphans(items: list[PreparedNews], known_sources: set[uuid.UUID]) -> l
 
 
 def _news_upsert(items: list[PreparedNews]):
+    """A source's facts never change once stored; only the alert flag may still turn on."""
     rows = [_news_row(item) for item in items]
     statement = postgres_insert(News).values(rows)
-    return statement.on_conflict_do_nothing(index_elements=[News.url])
+    return statement.on_conflict_do_update(
+        index_elements=[News.url],
+        set_={"is_alert": or_(News.is_alert, statement.excluded.is_alert)},
+    )
 
 
 def _news_row(item: PreparedNews) -> dict[str, object]:
     row = item.news.model_dump()
     row["id"] = item.summary.news_id
+    row["is_alert"] = item.summary.is_regulatory_alert
     return row
 
 
@@ -227,6 +232,7 @@ def _summary_select():
             News.published_at,
             News.created_at,
             NewsEventState.summary_embedding,
+            News.is_alert,
         )
         .select_from(News)
         .join(NewsEventState, NewsEventState.news_id == News.id)
@@ -241,6 +247,7 @@ def _to_summary(row) -> EventSummary:
         has_primary_event=row.primary_event_found,
         published_at=row.published_at or row.created_at,
         embedding=tuple(row.summary_embedding or ()),
+        is_regulatory_alert=row.is_alert,
     )
 
 
@@ -307,6 +314,7 @@ def _anchor_statement(cluster_ids: list[uuid.UUID]):
             News.published_at,
             News.created_at,
             NewsEventState.summary_embedding,
+            News.is_alert,
             func.row_number()
             .over(partition_by=cluster_id, order_by=(event_time.asc(), News.id.asc()))
             .label("oldest_rank"),

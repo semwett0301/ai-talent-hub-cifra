@@ -20,6 +20,7 @@ from news_service.application.services import (
     NewsRanker,
     NpaEscalation,
 )
+from news_service.domain.company_profile import CompanyProfile
 from news_service.infrastructure.dedup import OpenRouterEventModels, OpenRouterSummaryEmbedder
 from news_service.infrastructure.gateways import HttpNpaGateway
 from news_service.infrastructure.ranking import OpenRouterRankingModels, load_company_profile
@@ -51,14 +52,15 @@ def get_npa_escalation(repo: NewsRepo = Depends(get_news_repo)) -> NpaEscalation
 def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
     """The bus entry point; owns a `start`/`stop` lifecycle the caller drives around
     serving. Parses deliveries into `NewsDTO` and feeds batches to `NewsIngestor`."""
+    company = load_company_profile()
     dedup_repository = SqlDedupRepository()
     embedder = OpenRouterSummaryEmbedder(
         settings.llm.openrouter_api_key,
         settings.llm.openrouter_base_url,
         settings.news_dedup,
     )
-    event_models = _event_models()
-    stages = _build_pipeline(dedup_repository, event_models)
+    event_models = _event_models(company)
+    stages = _build_pipeline(dedup_repository, event_models, company)
     handler = NewsIngestor(dedup_repository, event_models, embedder, stages)
     return RabbitBatchConsumer(_consumer_config(), handler, NewsDTO)
 
@@ -75,17 +77,20 @@ def _consumer_config() -> BatchConsumerConfig:
     )
 
 
-def _event_models() -> OpenRouterEventModels:
+def _event_models(company: CompanyProfile) -> OpenRouterEventModels:
+    """The extractor summarizes and judges the regulatory alert, hence the company context."""
     return OpenRouterEventModels(
         settings.llm.openrouter_api_key,
         settings.llm.openrouter_base_url,
         settings.news_dedup,
+        company,
     )
 
 
 def _build_pipeline(
     dedup_repository: SqlDedupRepository,
     event_models: OpenRouterEventModels,
+    company: CompanyProfile,
 ) -> tuple[NewsDeduplicator, NewsRanker]:
     deduplicator = NewsDeduplicator(dedup_repository, event_models, settings.news_dedup)
     ranking_models = OpenRouterRankingModels(
@@ -93,9 +98,5 @@ def _build_pipeline(
         settings.llm.openrouter_base_url,
         settings.news_ranking,
     )
-    ranker = NewsRanker(
-        SqlRankingRepository(),
-        ranking_models,
-        load_company_profile(),
-    )
+    ranker = NewsRanker(SqlRankingRepository(), ranking_models, company)
     return deduplicator, ranker

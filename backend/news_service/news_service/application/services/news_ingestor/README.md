@@ -6,7 +6,9 @@ The batch ingestion pipeline, as one package — root orchestrator plus its stag
 
 - `news_ingestor.py` — `NewsIngestor`: the orchestrator. Implements the shared
   `common.core.rabbit.BatchHandler[NewsDTO]` directly, assembled once by
-  `deps.build_consumer()`. Checkpoints every per-news summary first, embeds missing
+  `deps.build_consumer()`. Checkpoints every per-news summary first (the same write sets
+  `news.is_alert` when the extraction flagged a regulatory alert — one `news alert raised`
+  line per such item), embeds missing
   vectors, then runs the injected `NewsPipelineStage` stages in order — each stage opens
   its own repository session per call, not one shared session per batch. Retries reuse
   stored summaries instead of calling the LLM again.

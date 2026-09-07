@@ -24,7 +24,8 @@ over SQLAlchemy.
   pipeline's own rewritten state). Checkpoints summaries before embeddings, resumes
   either stage while the cluster is null, retrieves candidates through cosine pgvector
   search, loads the oldest/newest anchors, and writes final assignments. `save_summaries`
-  upserts `news` (`ON CONFLICT DO NOTHING` — a source's facts never change) and
+  upserts `news` (`ON CONFLICT DO UPDATE` touching only `is_alert = is_alert OR excluded` —
+  a source's facts never change, the alert flag may still turn on) and
   `news_event_state` (`ON CONFLICT DO UPDATE` while incomplete) in the same transaction;
   it skips (not detaches) items whose source is gone — `source_id` is `NOT NULL`, so an
   orphan cannot be inserted at all — one WARNING per batch naming the dropped ids, not

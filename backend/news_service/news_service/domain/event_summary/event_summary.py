@@ -13,6 +13,8 @@ class EventSummary:
     has_primary_event: bool
     published_at: datetime | None
     embedding: tuple[float, ...] = ()
+    # The item reports a Russian normative act that reaches the company and calls for action.
+    is_regulatory_alert: bool = False
 
     def with_embedding(self, embedding: list[float]) -> "EventSummary":
         return replace(self, embedding=tuple(embedding))

@@ -12,6 +12,7 @@ directories (no `services/` wrapper).
   + RSS pull implemented, Web crawl a stub), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
 - `news_service/` — consumer service: reads the `news` exchange in batches (prefetch +
   deferred ack), stores each `NewsDTO` once per `url`, persists a per-news event summary
+  (flagging `is_alert` when it reports an actionable Russian normative act)
   and pgvector embedding, assigns a precision-first event cluster, then stores one
   explainable relevance result per affected cluster; serves
   list + dismiss on `/api/news`; `POST /{id}/npa` escalates an alert into a

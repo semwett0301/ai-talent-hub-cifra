@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from news_service.application.errors import EventModelError
 from news_service.application.ports import EventModels
+from news_service.domain.company_profile import CompanyProfile
 from news_service.domain.event_cluster import Decision, MembershipDecision, Precluster
 from news_service.domain.event_summary import EventSummary, NewsTarget
 from news_service.infrastructure.dedup.prompts import (
@@ -43,6 +44,10 @@ logger = get_logger(__name__)
 class _EventExtraction(BaseModel):
     primary_event_found: bool
     summary: str
+    # Regulatory alert flags; the alert is their conjunction (see `_build_summary`).
+    is_russian_regulation: bool
+    concerns_company: bool
+    regulation_is_useful: bool
 
 
 class _MemberVerdict(BaseModel):
@@ -67,13 +72,19 @@ class _BatchSpec[T: BaseModel]:
 
 class OpenRouterEventModels(EventModels):
     def __init__(
-        self, api_key: str | None, base_url: str | None, config: NewsDedupSettings
+        self,
+        api_key: str | None,
+        base_url: str | None,
+        config: NewsDedupSettings,
+        company: CompanyProfile,
     ) -> None:
         if not api_key:
             raise EventModelError("OPENROUTER_API_KEY is required for news deduplication")
         self.__api_key = api_key
         self.__base_url = base_url
         self.__batch_size = config.llm_batch_size
+        # The extractor also judges the regulatory alert, so it needs the company context.
+        self.__extractor_prompt = f"{PRIMARY_EVENT_SYSTEM}\n\n{company.judge_context}"
         # GPT-5 providers reject `temperature`, and `require_parameters` would then route nowhere.
         self.__extractor = self.__make_model(config.extractor_model, temperature=None)
         self.__verifier = self.__make_model(config.verifier_model, DETERMINISTIC_TEMPERATURE)
@@ -88,7 +99,7 @@ class OpenRouterEventModels(EventModels):
             for target in items
         ]
         responses = await self.__invoke(
-            _BatchSpec(self.__extractor, PRIMARY_EVENT_SYSTEM, payloads, _EventExtraction)
+            _BatchSpec(self.__extractor, self.__extractor_prompt, payloads, _EventExtraction)
         )
         if len(responses) != len(items):
             raise EventModelError("event summary count does not match input count")
@@ -158,6 +169,16 @@ def _build_summary(target: NewsTarget, response: _EventExtraction | None) -> Eve
         text=response.summary.strip(),
         has_primary_event=response.primary_event_found,
         published_at=target.news.published_at,
+        is_regulatory_alert=_is_regulatory_alert(response),
+    )
+
+
+def _is_regulatory_alert(response: _EventExtraction) -> bool:
+    """Fail closed: a Russian act that both reaches the company and gives it something to do."""
+    return (
+        response.is_russian_regulation
+        and response.concerns_company
+        and response.regulation_is_useful
     )
 
 

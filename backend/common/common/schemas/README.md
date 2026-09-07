@@ -28,8 +28,9 @@ class per module (re-exported from `__init__.py`).
   it), `source_name` is the name at collection time, `source_tags` is a `TEXT[]` column
   (no index — tags are shown, never filtered on), `excerpt` / `updated_at` are nullable.
   These facts never change after ingestion. Two service-owned fields: `dismissed_at` (a
-  reader hid the item from the feed) and `is_alert` (default false; set when the item is
-  escalated into a legislative act). `event_state` is a read-only (`viewonly`, `lazy="joined"`)
+  reader hid the item from the feed) and `is_alert` (default false; set by the summary
+  extraction when the item reports a Russian normative act that concerns the company, or
+  when a reader escalates the item into a legislative act). `event_state` is a read-only (`viewonly`, `lazy="joined"`)
   view of the row's `NewsEventState`; the `summary` / `event_cluster_id` properties read
   through it (None until the pipeline has written state) so the API DTO stays flat.
   `cluster_ranking` is the same kind of view of `NewsClusterRanking` — the cluster's

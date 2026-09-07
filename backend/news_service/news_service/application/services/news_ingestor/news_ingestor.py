@@ -69,6 +69,10 @@ class NewsIngestor(BatchHandler[NewsDTO]):
         items_by_id = {target.news_id: target.news for target in targets}
         prepared = [PreparedNews(items_by_id[summary.news_id], summary) for summary in summaries]
         await self.__repository.save_summaries(prepared)
+
+        for summary in summaries:
+            if summary.is_regulatory_alert:
+                logger.info("news alert raised: id=%s url=%s", summary.news_id, summary.url)
         logger.info("news summaries stored: items=%d", len(prepared))
 
     async def __embed_and_save(self, urls: list[str]) -> None:
