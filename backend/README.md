@@ -11,7 +11,10 @@ directories (no `services/` wrapper).
 - `source_service/` — ingestion service: CRUD sources, collect news (Telegram push
   + RSS pull implemented, Web crawl a stub), publish to RabbitMQ. See `../plans/source-service-architecture.md`.
 - `news_service/` — consumer service: reads the `news` exchange in batches (prefetch +
-  deferred ack), stores each `NewsDTO` once per `url` in the `news` table, serves
+  deferred ack), stores each `NewsDTO` once per `url`, persists a per-news event summary
+  (flagging `is_alert` when it reports an actionable Russian normative act)
+  and pgvector embedding, assigns a precision-first event cluster, then stores one
+  explainable relevance result per affected cluster; serves
   list + dismiss on `/api/news`; `POST /{id}/npa` escalates an alert into a
   legislative act (dismiss + synchronous create in `npa_service`, atomically).
   See `../plans/news-service.md`.
@@ -34,7 +37,7 @@ concrete wiring happens once, at the composition root.
 
 | Layer | Holds | Depends on |
 |-------|-------|-----------|
-| `common` (shared) | ORM **schemas** (`Source`, `News`, `Npa`) + business **entities** (`NewsDTO`, `NpaDTO`) + `core` infra. Shared across all services. | SQLAlchemy / pydantic |
+| `common` (shared) | ORM **schemas** (`Source`, `News`, `NewsClusterRanking`, `Npa`) + business **entities** (`NewsDTO`, `NpaDTO`) + `core` infra. Shared across all services. | SQLAlchemy / pydantic |
 | `domain/` (per service, optional) | The service's own entities and pure rules — `source_service`: `Article`, `Hub`, scoring, URL/date rules. No I/O. | common |
 | `application/` | Use cases / orchestration, the **ports** (interfaces) infra implements, and DTOs. | common, service `domain/` |
 | `infrastructure/` | Implementations of the ports: repositories, RabbitMQ, collectors (feedparser / Playwright / kurigram), external APIs. | application, common |
@@ -70,9 +73,9 @@ source_service/                 # the importable package
 
 `news_service/` mirrors it, with the bus as an *entry point* instead of an exit: the
 shared `common.core.rabbit.RabbitBatchConsumer` (built in `deps.py`) calls the
-inward-facing port `application.ports.NewsBatchHandler`, implemented by
-`application.services.NewsIngestor`, which writes through `NewsRepository`
-(`infrastructure/repositories/news_repo.py`). The consumer mechanism lives in `common`
+inward-facing `common.core.rabbit.BatchHandler[NewsDTO]`, implemented directly by
+`application.services.NewsIngestor`, which writes through `DedupRepository`
+(`infrastructure/repositories/dedup_repo.py`). The consumer mechanism lives in `common`
 so the next bus consumer service only supplies its model, handler, and config.
 `news_service` also has one *outbound* HTTP port, `application.ports.NpaGateway`
 (implemented by `infrastructure/gateways/npa_http_gateway.py` over httpx), through

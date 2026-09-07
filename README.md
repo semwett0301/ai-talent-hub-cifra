@@ -176,6 +176,20 @@ The feedsearch crawl `source_service` runs on a new address to decide RSS vs WEB
 | `NEWS_BATCH_SIZE` | Messages per DB batch; also the channel `prefetch_count`. | `100` | no |
 | `NEWS_BATCH_INTERVAL_SECONDS` | Max seconds a partial batch waits before being written. A batch flushes on **either** limit. | `60` | no |
 | `NEWS_REQUEUE_ON_STORE_ERROR` | When the DB write of a batch fails: `true` nacks it back onto the queue and retries after one interval (at-least-once, nothing lost); `false` nacks it without requeue (dropped, or dead-lettered if the queue gets a DLX). | `true` | no |
+| `NEWS_DEDUP_EXTRACTOR_MODEL` / `NEWS_DEDUP_VERIFIER_MODEL` | OpenRouter models for the persisted per-news event summary (+ regulatory alert flags) and conservative membership alignment. | `openai/gpt-5-mini` / `deepseek/deepseek-v4-flash-0731` | no |
+| `NEWS_DEDUP_LLM_BATCH_SIZE` | Maximum concurrent structured LLM calls in one stage. OpenRouter reserves credits per in-flight request, so a high value needs a matching balance. | `20` | no |
+| `NEWS_DEDUP_EMBEDDING_MODEL` / `NEWS_DEDUP_EMBEDDING_BATCH_SIZE` | OpenRouter embedding model (`POST /embeddings`, same `OPENROUTER_API_KEY`) and summaries per request; the schema expects 1024 dimensions, so the model must emit exactly that. | `baai/bge-m3` / `64` | no |
+| `NEWS_DEDUP_CANDIDATE_WINDOW_DAYS` / `NEWS_DEDUP_TOP_K_CANDIDATES` / `NEWS_DEDUP_MIN_RETRIEVAL_SCORE` | pgvector candidate window, limit, and minimum cosine similarity. | `3` / `6` / `0.16` | no |
+| `NEWS_DEDUP_REJECT_IF_ANY_UNCERTAIN_CANDIDATE` | Refuse auto-merge when any competing candidate stays uncertain. | `true` | no |
+| `NEWS_RANKING_IMPACT_MODEL` | OpenRouter model for cluster impact/urgency assessment. | `deepseek/deepseek-v4-flash-0731` | no |
+| `NEWS_RANKING_LLM_BATCH_SIZE` | Maximum concurrent impact-model calls. | `20` | no |
+
+`news_service` requires `OPENROUTER_API_KEY`. Each unseen URL is extracted and summarized;
+summary/extraction are committed first, vectors are filled in the next checkpoint, and only
+then does pgvector retrieval plus LLM alignment assign `event_cluster_id`. A retry resumes the
+first incomplete checkpoint without paying for summarization again. Every affected cluster is
+then evaluated once against the packaged GS Labs profile; one explainable result is upserted into
+`news_cluster_ranking` even when the cluster contains multiple news rows.
 
 ### news_service → npa_service
 

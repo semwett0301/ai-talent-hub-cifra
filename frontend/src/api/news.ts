@@ -3,7 +3,17 @@ import type { components, operations } from "./schema.news"
 export type NewsOut = components["schemas"]["NewsOut"]
 export type NewsListParams = NonNullable<operations["list_news__get"]["parameters"]["query"]>
 export type NewsVisibility = components["schemas"]["NewsVisibility"]
+export type NewsRelevance = components["schemas"]["NewsRelevanceOut"]
+export type RelevanceCategory = components["schemas"]["RelevanceCategory"]
 
+/** The tone a card and its badge take per relevance category (a CSS modifier). */
+export type RelevanceTone = "critical" | "warning" | "normal" | "low"
+export const RELEVANCE_TONES: Record<RelevanceCategory, RelevanceTone> = {
+  "требует внимания": "critical",
+  важно: "warning",
+  релевантно: "normal",
+  "низкая релевантность": "low",
+}
 // The feed's periods, as the filter offers them. The server takes an absolute `since`.
 export const PERIODS = [
   { hours: 24, label: "За 24 часа" },

@@ -4,21 +4,28 @@ Mirrors `common.entities.news.NewsDTO` field for field: the consumer stores the 
 message as-is, one flat row. `url` is unique — the same story is never stored twice.
 `source_id` points at the `source` row and the news goes with it when that source is
 deleted. Two service-owned fields: `dismissed_at` (a reader hid the item from the feed) and
-`is_alert` (the item was escalated into a legislative act).
+`is_alert` (the item was escalated into a legislative act). The dedup pipeline's own derived
+state (summary, extraction, embedding, cluster assignment) lives in `NewsEventState`, read
+here through the `event_state` relationship only.
 """
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from common.core.db import Base
 from common.entities.news import SourceType
 from common.entities.source import SourceReliability
 from common.schemas.types import SOURCE_RELIABILITY, SOURCE_TYPE
+
+if TYPE_CHECKING:
+    from common.schemas.news_cluster_ranking import NewsClusterRanking
+    from common.schemas.news_event_state import NewsEventState
 
 URL_MAX_LENGTH = 2048
 
@@ -58,3 +65,20 @@ class News(Base):
     dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_alert: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Read-only view of the pipeline's state; loaded with the row so the API never lazy-loads.
+    event_state: Mapped["NewsEventState | None"] = relationship(
+        "NewsEventState", uselist=False, viewonly=True, lazy="joined"
+    )
+    # The cluster's relevance hangs on its head row (cluster_id == news.id): None on a duplicate.
+    cluster_ranking: Mapped["NewsClusterRanking | None"] = relationship(
+        "NewsClusterRanking", uselist=False, viewonly=True, lazy="joined"
+    )
+
+    @property
+    def summary(self) -> str | None:
+        return self.event_state.summary if self.event_state else None
+
+    @property
+    def event_cluster_id(self) -> uuid.UUID | None:
+        return self.event_state.event_cluster_id if self.event_state else None

@@ -16,7 +16,7 @@ class NewsFeed:
         self.__repo = repo
 
     async def list(self, query: NewsQuery) -> list[News]:
-        """Every item matching the filters, newest publication first."""
+        """Items matching the filters, one per event cluster, newest publication first."""
         return await self.__repo.list_matching(query)
 
     async def get(self, news_id: uuid.UUID) -> News | None:

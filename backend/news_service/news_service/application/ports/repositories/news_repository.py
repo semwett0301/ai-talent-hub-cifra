@@ -18,7 +18,9 @@ class NewsRepository(Protocol):
     """
 
     async def list_matching(self, query: NewsQuery) -> list[News]:
-        """Every row matching `query`'s filters, newest publication first."""
+        """Rows matching `query`'s filters, one per event cluster (duplicates left out) and,
+        unless `is_alert` is asked for, only clusters ranked above low relevance — unranked
+        rows are left out too. Newest first."""
         ...
 
     async def get(self, news_id: uuid.UUID) -> News | None: ...

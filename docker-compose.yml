@@ -26,7 +26,7 @@ x-postgres-env: &postgres-env
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cifra}
@@ -47,6 +47,9 @@ services:
     logging: *default-logging
     expose:
       - "5672"
+    # Durable queues survive a `down`/recreate only with the data dir on a volume.
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -125,6 +128,19 @@ services:
       NEWS_BATCH_SIZE: ${NEWS_BATCH_SIZE:-100}
       NEWS_BATCH_INTERVAL_SECONDS: ${NEWS_BATCH_INTERVAL_SECONDS:-60}
       NEWS_REQUEUE_ON_STORE_ERROR: ${NEWS_REQUEUE_ON_STORE_ERROR:-true}
+      NEWS_DEDUP_EXTRACTOR_MODEL: ${NEWS_DEDUP_EXTRACTOR_MODEL:-openai/gpt-5-mini}
+      NEWS_DEDUP_VERIFIER_MODEL: ${NEWS_DEDUP_VERIFIER_MODEL:-deepseek/deepseek-v4-flash-0731}
+      NEWS_DEDUP_LLM_BATCH_SIZE: ${NEWS_DEDUP_LLM_BATCH_SIZE:-20}
+      NEWS_DEDUP_EMBEDDING_MODEL: ${NEWS_DEDUP_EMBEDDING_MODEL:-baai/bge-m3}
+      NEWS_DEDUP_EMBEDDING_BATCH_SIZE: ${NEWS_DEDUP_EMBEDDING_BATCH_SIZE:-64}
+      NEWS_DEDUP_CANDIDATE_WINDOW_DAYS: ${NEWS_DEDUP_CANDIDATE_WINDOW_DAYS:-3}
+      NEWS_DEDUP_TOP_K_CANDIDATES: ${NEWS_DEDUP_TOP_K_CANDIDATES:-6}
+      NEWS_DEDUP_MIN_RETRIEVAL_SCORE: ${NEWS_DEDUP_MIN_RETRIEVAL_SCORE:-0.16}
+      NEWS_DEDUP_REJECT_IF_ANY_UNCERTAIN_CANDIDATE: ${NEWS_DEDUP_REJECT_IF_ANY_UNCERTAIN_CANDIDATE:-true}
+      NEWS_RANKING_IMPACT_MODEL: ${NEWS_RANKING_IMPACT_MODEL:-deepseek/deepseek-v4-flash-0731}
+      NEWS_RANKING_LLM_BATCH_SIZE: ${NEWS_RANKING_LLM_BATCH_SIZE:-20}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       NEWS_API_PREFIX: ${NEWS_API_PREFIX:-/api/news}
       NPA_SERVICE_URL: http://npa_service:8000
     expose:
@@ -212,3 +228,4 @@ services:
 
 volumes:
   pgdata:
+  rabbitmq_data:

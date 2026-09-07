@@ -5,20 +5,33 @@ from datetime import UTC, datetime
 
 from common.core.logging import get_logger
 from common.entities.news import NewsDTO
-from common.schemas import News, Source
-from sqlalchemy import ColumnElement, func, or_, select
+from common.schemas import News, NewsClusterRanking, NewsEventState, Source
+from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import contains_eager
 
 from news_service.application.dto.news import NewsQuery, NewsVisibility
 from news_service.application.errors import NewsStoreError
 from news_service.application.ports import NewsRepository
+from news_service.domain.event_cluster import RelevanceCategory
 
 # What a failed write surfaces as: SQLAlchemy wraps driver errors, but a refused TCP
 # connection from asyncpg can still escape as a bare OSError.
 STORE_ERRORS = (SQLAlchemyError, OSError)
 LIKE_ESCAPE = "\\"
+# One item per event: a duplicate points at another item's cluster and is left out; an item
+# the dedup stage has not reached yet (no cluster) still shows.
+IS_CLUSTER_HEAD = or_(
+    NewsEventState.event_cluster_id.is_(None), NewsEventState.event_cluster_id == News.id
+)
+# The feed shows only what the ranker has judged relevant: unranked items and low-relevance
+# clusters never reach the reader. The alerts tab (`is_alert=true`) is exempt — see `_gates`.
+SHOWN_CATEGORIES = tuple(
+    category.value for category in RelevanceCategory if category is not RelevanceCategory.LOW
+)
+IS_RANKED_RELEVANT = NewsClusterRanking.category.in_(SHOWN_CATEGORIES)
 
 logger = get_logger(__name__)
 
@@ -54,6 +67,26 @@ def _filters(query: NewsQuery) -> list[ColumnElement[bool]]:
     return clauses
 
 
+def _gates(query: NewsQuery) -> list[ColumnElement[bool]]:
+    """One row per event always; only ranked-relevant rows unless the alerts tab is asked for —
+    an alert is its own signal and shows whatever the ranker made of it."""
+    if query.is_alert is True:
+        return [IS_CLUSTER_HEAD]
+    return [IS_CLUSTER_HEAD, IS_RANKED_RELEVANT]
+
+
+def _feed_statement(query: NewsQuery) -> Select[tuple[News]]:
+    """The feed's rows with dedup state and ranking loaded in the same query."""
+    return (
+        select(News)
+        .outerjoin(News.event_state)
+        .outerjoin(News.cluster_ranking)
+        .options(contains_eager(News.event_state), contains_eager(News.cluster_ranking))
+        .where(*_filters(query), *_gates(query))
+        .order_by(News.published_at.desc().nulls_last(), News.created_at.desc(), News.id)
+    )
+
+
 def _drop_orphans(items: list[NewsDTO], known: set[uuid.UUID]) -> list[NewsDTO]:
     """Skip items whose source is gone: a row needs its source, so the FK never fails the batch."""
     orphans = {item.source_id for item in items if item.source_id not in known}
@@ -75,12 +108,8 @@ class NewsRepo(NewsRepository):
         self.__session = session
 
     async def list_matching(self, query: NewsQuery) -> list[News]:
-        stmt = (
-            select(News)
-            .where(*_filters(query))
-            .order_by(News.published_at.desc().nulls_last(), News.created_at.desc(), News.id)
-        )
-        return list((await self.__session.execute(stmt)).scalars().all())
+        rows = await self.__session.execute(_feed_statement(query))
+        return list(rows.scalars().all())
 
     async def get(self, news_id: uuid.UUID) -> News | None:
         return await self.__session.get(News, news_id)

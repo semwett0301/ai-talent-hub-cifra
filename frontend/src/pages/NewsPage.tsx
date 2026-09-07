@@ -6,13 +6,14 @@ import { useErrorToast } from "@/api/errorToast"
 import {
   DEFAULT_PERIOD_HOURS,
   PERIODS,
+  RELEVANCE_TONES,
   excerptOf,
   formatMoment,
   formatToday,
   newsMoment,
   sinceHoursAgo,
 } from "@/api/news"
-import type { NewsOut, NewsVisibility } from "@/api/news"
+import type { NewsOut, NewsRelevance, NewsVisibility } from "@/api/news"
 import { useDismissNews, useEscalateNpa, useNews, useRestoreNews } from "@/api/newsMutations"
 import { npaErrorMessage } from "@/api/npa"
 import { RELIABILITY_LABELS } from "@/api/sources"
@@ -21,7 +22,6 @@ import { Choice, SearchField } from "@/components/monitoring/Shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { withPlaceholders, type NewsItemView } from "@/data/newsPlaceholders"
 
 // The feed's tabs: the current items, what the reader hid (`visibility=dismissed`), and
 // items flagged as NPA-relevant (`is_alert`) — a reader attaches the actual law from here.
@@ -32,6 +32,8 @@ const SEARCH_DEBOUNCE_MS = 300
 const SKELETON_CARDS = [0, 1, 2, 3]
 // The `@keyframes` name in App.css a hidden / restored card plays before it leaves the list.
 const LEAVE_ANIMATION = "news-card-leave"
+// What the details say while the pipeline has not reached the item yet.
+const SUMMARY_PENDING = "AI-саммари ещё не готово — материал в обработке."
 
 function useDebounced(value: string, delayMs: number): string {
   const [debounced, setDebounced] = useState(value)
@@ -44,6 +46,11 @@ function useDebounced(value: string, delayMs: number): string {
 
 function visibilityOf(tab: Tab): NewsVisibility {
   return tab === "Скрытые" ? "dismissed" : "visible"
+}
+
+/** The card's stripe / badge modifier: the category's tone, or `pending` before ranking. */
+function toneOf(item: NewsOut): string {
+  return item.relevance ? RELEVANCE_TONES[item.relevance.category] : "pending"
 }
 
 export function NewsPage() {
@@ -65,12 +72,12 @@ export function NewsPage() {
   const restore = useRestoreNews()
   const reportError = useErrorToast()
 
-  const items = useMemo(() => (feed.data ?? []).map(withPlaceholders), [feed.data])
+  const items = feed.data ?? []
   const item = items.find((entry) => entry.id === selectedId) ?? items[0]
 
   // Runs when the leave animation ends: the swipe is done, now the server does its part. The
   // card stays played-out until the mutation settles — that is, until the refetched list landed.
-  function toggleHidden(selected: NewsItemView) {
+  function toggleHidden(selected: NewsOut) {
     const mutation = selected.dismissed_at !== null ? restore : dismiss
     mutation.mutate(
       { params: { path: { news_id: selected.id } } },
@@ -159,7 +166,7 @@ function NewsDetails({
   isBusy,
   onToggleHidden,
 }: {
-  item: NewsItemView
+  item: NewsOut
   isBusy: boolean
   onToggleHidden: () => void
 }) {
@@ -171,6 +178,7 @@ function NewsDetails({
     <>
       <div className="detail-meta">
         <span>{formatMoment(newsMoment(item))}</span>
+        {item.relevance && <RelevanceBadge relevance={item.relevance} />}
       </div>
       <a className="detail-title" href={item.url} target="_blank" rel="noopener noreferrer">
         <h2>{item.title}</h2>
@@ -190,12 +198,7 @@ function NewsDetails({
           <Sparkles />
           AI-САММАРИ
         </h3>
-        <p>{item.summary}</p>
-        {item.isPlaceholder && <small>Заглушка: анализ ещё не подключён</small>}
-      </div>
-      <div className="impact-box">
-        <h3>Почему это важно для GS Labs</h3>
-        <p>{item.impact}</p>
+        <p>{item.summary ?? SUMMARY_PENDING}</p>
       </div>
       <div className="actions">
         {isHidden ? (
@@ -240,6 +243,15 @@ function NewsDetails({
   )
 }
 
+/** The category alone — the score and the model's reasons stay server-side. */
+function RelevanceBadge({ relevance }: { relevance: NewsRelevance }) {
+  return (
+    <Badge className={`status ${RELEVANCE_TONES[relevance.category]}`} title="AI-приоритет">
+      {relevance.category}
+    </Badge>
+  )
+}
+
 function NewsCard({
   item,
   selected,
@@ -247,7 +259,7 @@ function NewsCard({
   onSelect,
   onLeft,
 }: {
-  item: NewsItemView
+  item: NewsOut
   selected: boolean
   isLeaving: boolean
   onSelect: () => void
@@ -262,7 +274,7 @@ function NewsCard({
     >
       <Button
         variant="ghost"
-        className={selected ? "news-card selected" : "news-card"}
+        className={`news-card ${toneOf(item)} ${selected ? "selected" : ""}`}
         aria-pressed={selected}
         onClick={onSelect}
       >
@@ -270,9 +282,10 @@ function NewsCard({
           <span>
             {item.source_name} · {formatMoment(newsMoment(item))}
           </span>
+          {item.relevance && <RelevanceBadge relevance={item.relevance} />}
         </span>
         <strong>{item.title}</strong>
-        <span className="excerpt">{excerptOf(item satisfies NewsOut)}</span>
+        <span className="excerpt">{excerptOf(item)}</span>
         {item.source_tags.length > 0 && (
           <span className="tags">
             {item.source_tags.map((tag) => (

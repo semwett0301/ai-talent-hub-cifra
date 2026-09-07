@@ -11,7 +11,9 @@ a stream of deliveries into batches for a `BatchHandler` (definitions in `../mod
   full **or** the interval since that first delivery elapsed (`asyncio.timeout_at`),
   hands the parsed batch to the `BatchHandler`, then acks the whole run. On
   `BatchStoreError` the run is nacked — requeued when `config.requeue_on_store_error`
-  is set, dropped otherwise — and the runner backs off one interval. `start`/`stop`
+  is set, dropped otherwise — and the runner backs off one interval; the WARNING names
+  the error and its whole `raise ... from` chain (`store failed: A <- B <- C`), so the
+  root cause (an LLM 402, a missing column) is readable without a traceback. `start`/`stop`
   lifecycle driven by the service's lifespan; `stop` cancels the consumer, then the
   runner, which drains the collected + inboxed deliveries before exiting.
 - `message_batch.py` — `MessageBatch[T]`: one flush's deliveries. Parses each body into

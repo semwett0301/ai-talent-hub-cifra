@@ -9,6 +9,7 @@ dependencies = [
     "sqlalchemy[asyncio]==2.0.36",
     "asyncpg==0.30.0",
     "aio-pika==9.5.4",
+    "pgvector>=0.3,<1",
 ]
 
 # Hatchling auto-detects the `common/` package next to this file (name matches the
