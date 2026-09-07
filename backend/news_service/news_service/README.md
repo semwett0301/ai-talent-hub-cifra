@@ -9,8 +9,8 @@ file only maps the layers.
 - `application/` — use cases and ports for ingestion, deduplication, ranking, feed,
   and escalation.
 - `domain/` — event dedup and company-relevance entities and pure rules.
-- `infrastructure/` — read, dedup, and ranking repositories plus OpenRouter, profile,
-  and local embedding implementations.
+- `infrastructure/` — read, dedup, and ranking repositories plus OpenRouter (LLM stages
+  and embeddings) and profile implementations.
 - `api/` — FastAPI routers (`/news` list + dismiss).
 
 Notes: the bus is the entry point — `common.core.rabbit.RabbitBatchConsumer` calls the

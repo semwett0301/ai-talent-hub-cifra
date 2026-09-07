@@ -178,7 +178,7 @@ The feedsearch crawl `source_service` runs on a new address to decide RSS vs WEB
 | `NEWS_REQUEUE_ON_STORE_ERROR` | When the DB write of a batch fails: `true` nacks it back onto the queue and retries after one interval (at-least-once, nothing lost); `false` nacks it without requeue (dropped, or dead-lettered if the queue gets a DLX). | `true` | no |
 | `NEWS_DEDUP_EXTRACTOR_MODEL` / `NEWS_DEDUP_VERIFIER_MODEL` | OpenRouter models for the persisted per-news event summary and conservative membership alignment. | `openai/gpt-5-mini` / `anthropic/claude-sonnet-4.5` | no |
 | `NEWS_DEDUP_LLM_BATCH_SIZE` | Maximum concurrent structured LLM calls in one stage. | `70` | no |
-| `NEWS_DEDUP_EMBEDDING_MODEL` / `NEWS_DEDUP_EMBEDDING_BATCH_SIZE` | Local CPU sentence-transformer and encode batch size; the schema expects 1024 dimensions. | `deepvk/USER-bge-m3` / `16` | no |
+| `NEWS_DEDUP_EMBEDDING_MODEL` / `NEWS_DEDUP_EMBEDDING_BATCH_SIZE` | OpenRouter embedding model (`POST /embeddings`, same `OPENROUTER_API_KEY`) and summaries per request; the schema expects 1024 dimensions, so the model must emit exactly that. | `baai/bge-m3` / `64` | no |
 | `NEWS_DEDUP_CANDIDATE_WINDOW_DAYS` / `NEWS_DEDUP_TOP_K_CANDIDATES` / `NEWS_DEDUP_MIN_RETRIEVAL_SCORE` | pgvector candidate window, limit, and minimum cosine similarity. | `3` / `6` / `0.16` | no |
 | `NEWS_DEDUP_REJECT_IF_ANY_UNCERTAIN_CANDIDATE` | Refuse auto-merge when any competing candidate stays uncertain. | `true` | no |
 | `NEWS_RANKING_IMPACT_MODEL` | OpenRouter model for cluster impact/urgency assessment. | `deepseek/deepseek-v4-flash-0731` | no |

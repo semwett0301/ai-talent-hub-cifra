@@ -20,10 +20,7 @@ from news_service.application.services import (
     NewsRanker,
     NpaEscalation,
 )
-from news_service.infrastructure.dedup import (
-    OpenRouterEventModels,
-    SentenceTransformerSummaryEmbedder,
-)
+from news_service.infrastructure.dedup import OpenRouterEventModels, OpenRouterSummaryEmbedder
 from news_service.infrastructure.gateways import HttpNpaGateway
 from news_service.infrastructure.ranking import OpenRouterRankingModels, load_company_profile
 from news_service.infrastructure.repositories import (
@@ -55,9 +52,10 @@ def build_consumer() -> RabbitBatchConsumer[NewsDTO]:
     """The bus entry point; owns a `start`/`stop` lifecycle the caller drives around
     serving. Parses deliveries into `NewsDTO` and feeds batches to `NewsIngestor`."""
     dedup_repository = SqlDedupRepository()
-    embedder = SentenceTransformerSummaryEmbedder(
-        settings.news_dedup.embedding_model,
-        settings.news_dedup.embedding_batch_size,
+    embedder = OpenRouterSummaryEmbedder(
+        settings.llm.openrouter_api_key,
+        settings.llm.openrouter_base_url,
+        settings.news_dedup,
     )
     event_models = _event_models()
     stages = _build_pipeline(dedup_repository, event_models)

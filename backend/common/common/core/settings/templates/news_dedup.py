@@ -13,8 +13,8 @@ class NewsDedupSettings(SettingsTemplate):
     verifier_model: str = "anthropic/claude-sonnet-4.5"
     llm_batch_size: int = Field(default=70, gt=0)
 
-    embedding_model: str = "deepvk/USER-bge-m3"
-    embedding_batch_size: int = Field(default=16, gt=0)
+    embedding_model: str = "baai/bge-m3"
+    embedding_batch_size: int = Field(default=64, gt=0)
 
     candidate_window_days: int = Field(default=3, gt=0)
     top_k_candidates: int = Field(default=6, gt=0)

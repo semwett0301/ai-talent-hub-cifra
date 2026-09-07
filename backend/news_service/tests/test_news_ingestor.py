@@ -78,14 +78,14 @@ class _Embedder:
         self.events = events
         self.calls = 0
 
-    def embed(self, summaries):
+    async def embed(self, summaries):
         self.events.append("embed")
         self.calls += 1
         return [[1.0] for _ in summaries]
 
 
 class _FailingEmbedder(_Embedder):
-    def embed(self, summaries):
+    async def embed(self, summaries):
         self.events.append("embed")
         raise SummaryEmbeddingError("failed")
 

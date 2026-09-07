@@ -1,5 +1,5 @@
-"""Failure raised when local summary embedding cannot complete."""
+"""Failure raised when summary embedding cannot complete."""
 
 
 class SummaryEmbeddingError(RuntimeError):
-    """The local summary embedding model could not encode the batch."""
+    """The embedding provider could not encode the batch, or returned unusable vectors."""

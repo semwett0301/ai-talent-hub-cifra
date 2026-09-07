@@ -14,8 +14,8 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
 
 - `Dockerfile` — image (FastAPI + Uvicorn). Multi-stage: uv builds a self-contained
   `.venv`, copied onto a clean `python:3.12-slim`. Migrations live in `migrator`.
-- `pyproject.toml` — deps on `common`, API/bus libraries, LangChain/OpenRouter,
-  sentence-transformers, and pgvector through `common`.
+- `pyproject.toml` — deps on `common`, API/bus libraries, LangChain/OpenRouter and the
+  `openrouter` SDK (embeddings), and pgvector through `common`. No local ML runtime.
 - `news_service/`
   - `main.py` — FastAPI app + lifespan; starts/stops the consumer built by `deps`.
     Routers own paths from the root; nginx maps `/api/news/*` onto them
@@ -49,7 +49,7 @@ Structured as **onion architecture** (layers depend inward; see `../README.md`):
     `POST /{id}/dismiss`, `POST /{id}/restore`, `POST /{id}/npa`), `health.py`.
 
 Each unseen URL passes through batched primary-event extraction and a persisted per-news
-summary. The summary checkpoint is committed before local embedding; the whole prepared batch
+summary. The summary checkpoint is committed before embedding (OpenRouter Embeddings API); the whole prepared batch
 is then retrieved against the HNSW cosine index and conservatively aligned to candidate event
 clusters. Each affected cluster is ranked as one object and upserted once into
 `news_cluster_ranking`. A retry resumes without repeating completed summary or dedup checkpoints.

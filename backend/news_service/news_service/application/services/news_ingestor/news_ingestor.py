@@ -75,7 +75,7 @@ class NewsIngestor(BatchHandler[NewsDTO]):
         summaries = await self.__repository.list_unembedded(urls)
         if not summaries:
             return
-        vectors = self.__embedder.embed([summary.text for summary in summaries])
+        vectors = await self.__embedder.embed([summary.text for summary in summaries])
         if len(vectors) != len(summaries):
             raise SummaryEmbeddingError("embedding count does not match summary count")
         embedded = [
