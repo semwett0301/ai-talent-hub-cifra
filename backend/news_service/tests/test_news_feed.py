@@ -1,12 +1,37 @@
 import uuid
 from datetime import UTC, datetime
 
-from common.schemas import News
-from news_service.application.dto.news import NewsQuery, NewsVisibility
+from common.schemas import News, NewsEventState
+from news_service.application.dto.news import NewsOut, NewsQuery, NewsVisibility
 from news_service.application.services import NewsFeed
-from news_service.infrastructure.repositories.news_repo import _like_pattern
+from news_service.infrastructure.repositories.news_repo import _feed_statement, _like_pattern
+from sqlalchemy.dialects import postgresql
 
 NEWS_ID = uuid.uuid4()
+CLUSTER_ID = uuid.uuid4()
+
+
+def stored_news(state: NewsEventState | None = None) -> News:
+    return News(
+        id=NEWS_ID,
+        schema_version=1,
+        source_id=uuid.uuid4(),
+        source_link="https://example.test",
+        source_name="Example",
+        source_type="rss",
+        source_reliability="medium",
+        source_tags=[],
+        url="https://example.test/a",
+        title="A",
+        text="",
+        excerpt=None,
+        published_at=None,
+        updated_at=None,
+        dismissed_at=None,
+        is_alert=False,
+        created_at=datetime(2026, 9, 6, tzinfo=UTC),
+        event_state=state,
+    )
 
 
 class FakeRepo:
@@ -69,3 +94,22 @@ async def test_unknown_ids_yield_none_without_a_commit():
 
 def test_like_pattern_neutralises_wildcards():
     assert _like_pattern("100%_sure\\") == r"%100\%\_sure\\%"
+
+
+def test_feed_statement_keeps_only_cluster_heads_and_undeduplicated_items():
+    sql = str(_feed_statement(NewsQuery()).compile(dialect=postgresql.dialect()))
+
+    assert "LEFT OUTER JOIN news_event_state" in sql
+    assert (
+        "news_event_state.event_cluster_id IS NULL OR news_event_state.event_cluster_id = news.id"
+    ) in sql
+
+
+def test_news_out_reads_dedup_state_through_the_row():
+    state = NewsEventState(news_id=NEWS_ID, summary="Short", event_cluster_id=CLUSTER_ID)
+
+    with_state = NewsOut.model_validate(stored_news(state))
+    without_state = NewsOut.model_validate(stored_news())
+
+    assert (with_state.summary, with_state.event_cluster_id) == ("Short", CLUSTER_ID)
+    assert (without_state.summary, without_state.event_cluster_id) == (None, None)
