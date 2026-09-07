@@ -40,6 +40,9 @@ def _filters(query: NewsQuery) -> list[ColumnElement[bool]]:
     if query.since is not None:
         clauses.append(func.coalesce(News.published_at, News.created_at) >= query.since)
 
+    if query.is_alert is not None:
+        clauses.append(News.is_alert.is_(query.is_alert))
+
     if query.q:
         pattern = _like_pattern(query.q)
         clauses.append(

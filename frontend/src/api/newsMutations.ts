@@ -28,3 +28,15 @@ export function useDismissNews() {
 export function useRestoreNews() {
   return newsApi.useMutation("post", "/{news_id}/restore", useListInvalidation())
 }
+
+/** Flags the news item as an alert and registers the act in npa_service, atomically. */
+export function useEscalateNpa() {
+  const queryClient = useQueryClient()
+
+  return newsApi.useMutation("post", "/{news_id}/npa", {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: LIST_KEY })
+      queryClient.invalidateQueries({ queryKey: ["npa"] })
+    },
+  })
+}

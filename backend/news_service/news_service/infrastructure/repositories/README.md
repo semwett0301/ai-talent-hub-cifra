@@ -7,8 +7,8 @@ over SQLAlchemy.
   `AsyncSession` it is given** — it opens and closes nothing; `deps.get_news_repo` scopes a
   session per HTTP request, `deps.BatchScope` one per consumed batch. Reads: `list_matching`
   applies `_filters(query)` (`dismissed_at IS NULL` / `IS NOT NULL` / no clause per
-  `visibility`, `coalesce(published_at, created_at) >= since`, `ILIKE` on title and text
-  with LIKE wildcards escaped by `_like_pattern`), `get`. Writes stage on the session:
+  `visibility`, `coalesce(published_at, created_at) >= since`, `is_alert` equality when set,
+  `ILIKE` on title and text with LIKE wildcards escaped by `_like_pattern`), `get`. Writes stage on the session:
   `add_many` (`SELECT` the batch's `source_id`s that still exist, skip the items whose
   source is gone — `_drop_orphans`, one WARNING per batch naming the gone ids; `0` when
   nothing is left — then a single `INSERT … ON CONFLICT (url) DO NOTHING`, returns the

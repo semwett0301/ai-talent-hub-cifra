@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { EyeOff, ExternalLink, RotateCcw, Sparkles } from "lucide-react"
+import { EyeOff, ExternalLink, Plus, RotateCcw, Sparkles } from "lucide-react"
 
-import { errorMessage } from "@/api/client"
+import { errorMessage, errorStatus } from "@/api/client"
 import { useErrorToast } from "@/api/errorToast"
 import {
   DEFAULT_PERIOD_HOURS,
@@ -13,16 +13,19 @@ import {
   sinceHoursAgo,
 } from "@/api/news"
 import type { NewsOut, NewsVisibility } from "@/api/news"
-import { useDismissNews, useNews, useRestoreNews } from "@/api/newsMutations"
+import { useDismissNews, useEscalateNpa, useNews, useRestoreNews } from "@/api/newsMutations"
+import { npaErrorMessage } from "@/api/npa"
 import { RELIABILITY_LABELS } from "@/api/sources"
+import { DumaBillDialog } from "@/components/monitoring/DumaBillDialog"
 import { Choice, SearchField } from "@/components/monitoring/Shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { withPlaceholders, type NewsItemView } from "@/data/newsPlaceholders"
 
-// The feed's two tabs: the current items, and what the reader hid (`visibility=dismissed`).
-const TABS = ["Актуальные", "Скрытые"] as const
+// The feed's tabs: the current items, what the reader hid (`visibility=dismissed`), and
+// items flagged as NPA-relevant (`is_alert`) — a reader attaches the actual law from here.
+const TABS = ["Актуальные", "Скрытые", "Алерты"] as const
 type Tab = (typeof TABS)[number]
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -55,6 +58,7 @@ export function NewsPage() {
   const feed = useNews({
     since,
     visibility: visibilityOf(tab),
+    ...(tab === "Алерты" ? { is_alert: true } : {}),
     ...(search ? { q: search } : {}),
   })
   const dismiss = useDismissNews()
@@ -128,9 +132,9 @@ export function NewsPage() {
           ))}
           {feed.data && !items.length && (
             <div className="empty-state">
-              {tab === "Скрытые"
-                ? "Скрытых материалов нет."
-                : "Материалы не найдены. Измените запрос или период."}
+              {tab === "Скрытые" && "Скрытых материалов нет."}
+              {tab === "Алерты" && "Сигналов о НПА нет."}
+              {tab === "Актуальные" && "Материалы не найдены. Измените запрос или период."}
             </div>
           )}
         </div>
@@ -160,6 +164,8 @@ function NewsDetails({
   onToggleHidden: () => void
 }) {
   const isHidden = item.dismissed_at !== null
+  const [lawDialogOpen, setLawDialogOpen] = useState(false)
+  const escalate = useEscalateNpa()
 
   return (
     <>
@@ -203,7 +209,33 @@ function NewsDetails({
             Скрыть
           </Button>
         )}
+        {item.is_alert && (
+          <Button variant="outline" onClick={() => setLawDialogOpen(true)}>
+            <Plus />
+            Добавить закон вручную
+          </Button>
+        )}
       </div>
+      <DumaBillDialog
+        open={lawDialogOpen}
+        onOpenChange={setLawDialogOpen}
+        title="Добавить закон вручную"
+        description="Вставьте ссылку на карточку законопроекта в Государственной Думе. Сервис
+            зарегистрирует акт в npa_service и свяжет его с этой новостью."
+        submitLabel="Добавить закон"
+        savingLabel="Регистрируем закон в npa_service. Это может занять несколько секунд."
+        onSubmit={async (url) => {
+          try {
+            await escalate.mutateAsync({
+              params: { path: { news_id: item.id } },
+              body: { url, title: item.title, text: item.text, published_at: item.published_at },
+            })
+          } catch (cause) {
+            const status = errorStatus(cause)
+            throw new Error(status ? npaErrorMessage(status) : "Сервис НПА недоступен", { cause })
+          }
+        }}
+      />
     </>
   )
 }
