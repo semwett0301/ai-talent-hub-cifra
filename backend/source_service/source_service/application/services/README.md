@@ -12,6 +12,8 @@ its own README; nothing lives at the root of `services/`.
 - `web/` — collecting news from a `WEB` source: `WebCrawl` (the use case) over three stage
   subpackages, `web/hubs/` (site → listing pages), `web/listings/` (those pages → candidate
   links) and `web/articles/` (candidate links → accepted articles).
+- `dedup/` — `StoredNewsFilter`: the one step every pull collector shares regardless of
+  source type — drop what the shared `news` table already holds before a page is fetched.
 
 Notes: a service takes its collaborators as ports and its knobs as one settings group in
 the constructor, and exposes one `run`. Between the crawl services articles travel as

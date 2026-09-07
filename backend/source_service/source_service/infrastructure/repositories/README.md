@@ -11,5 +11,12 @@ over SQLAlchemy.
   module-level `_commit` that turns the `normalized_link` unique violation into
   `SourceAlreadyExistsError` (→ 409), the way `NpaRepo` does for `npa.url`.
 
-Notes: `SourceRepo` **inherits** the `SourceRepository` port (explicit conformance)
-and is re-exported from `__init__.py`. Sessions come from `common.core.db`.
+- `stored_news_repo.py` — `StoredNewsRepo`: implements `StoredNewsIndex` with one
+  `select(News.url)` per call. **Read-only** — the `news` table is written by
+  `news_service`; this only asks which URLs are already there so `RssCollector` skips
+  them before fetching article pages. Reading it here is the shared kernel (one DB, models
+  in `common.schemas`), not a cross-service import. A query failure logs a warning and
+  returns an empty set, so a DB blip re-collects instead of losing news.
+
+Notes: both repos **inherit** their port (explicit conformance) and are re-exported from
+`__init__.py`. Sessions come from `common.core.db`, a fresh one per call.

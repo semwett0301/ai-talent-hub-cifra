@@ -5,6 +5,7 @@ from common.entities.news import SourceType
 from common.entities.source import SourceReliability
 from common.schemas import RssLink, Source
 from source_service.application.ports.scraping import FeedEntry
+from source_service.application.services.dedup import StoredNewsFilter
 from source_service.infrastructure.collectors.rss import RssCollector
 
 MAIN_FEED = "https://example.test/rss"
@@ -28,8 +29,26 @@ class FakeFeedReader:
 
 
 class UnreachablePageFetcher:
+    def __init__(self) -> None:
+        self.fetched_urls: list[str] = []
+
     async def fetch(self, url: str) -> str | None:
+        self.fetched_urls.append(url)
         return None
+
+
+class FakeStoredNewsIndex:
+    def __init__(self, *stored: str) -> None:
+        self.stored = set(stored)
+
+    async def list_stored_urls(self, urls: list[str]) -> set[str]:
+        return self.stored.intersection(urls)
+
+
+def rss_collector(reader: FakeFeedReader, *stored: str) -> RssCollector:
+    return RssCollector(
+        reader, UnreachablePageFetcher(), StoredNewsFilter(FakeStoredNewsIndex(*stored), "rss")
+    )
 
 
 def rss_source(*feed_urls: str) -> Source:
@@ -52,7 +71,7 @@ async def test_reads_every_feed_and_collects_a_shared_entry_once():
             SECTION_FEED: [entry(SHARED_ENTRY), entry(SECTION_ENTRY)],
         }
     )
-    collector = RssCollector(reader, UnreachablePageFetcher())
+    collector = rss_collector(reader)
 
     news = await collector.fetch(rss_source(MAIN_FEED, SECTION_FEED))
 
@@ -65,7 +84,7 @@ async def test_takes_the_entry_as_the_first_feed_listed_it():
     reader = FakeFeedReader(
         {MAIN_FEED: [entry(SHARED_ENTRY, "First")], SECTION_FEED: [entry(SHARED_ENTRY, "Second")]}
     )
-    collector = RssCollector(reader, UnreachablePageFetcher())
+    collector = rss_collector(reader)
 
     news = await collector.fetch(rss_source(MAIN_FEED, SECTION_FEED))
 
@@ -76,7 +95,7 @@ async def test_takes_the_entry_as_the_first_feed_listed_it():
 async def test_maps_the_feed_entry_onto_the_flat_news_fields():
     source = rss_source(MAIN_FEED)
     reader = FakeFeedReader({MAIN_FEED: [entry(SECTION_ENTRY)]})
-    collector = RssCollector(reader, UnreachablePageFetcher())
+    collector = rss_collector(reader)
 
     [item] = await collector.fetch(source)
 
@@ -90,7 +109,31 @@ async def test_maps_the_feed_entry_onto_the_flat_news_fields():
 @pytest.mark.asyncio
 async def test_a_source_without_feeds_yields_nothing():
     reader = FakeFeedReader({})
-    collector = RssCollector(reader, UnreachablePageFetcher())
+    collector = rss_collector(reader)
 
     assert await collector.fetch(rss_source()) == []
     assert reader.read_urls == []
+
+
+@pytest.mark.asyncio
+async def test_a_stored_entry_is_neither_fetched_nor_collected_again():
+    reader = FakeFeedReader({MAIN_FEED: [entry(SHARED_ENTRY), entry(SECTION_ENTRY)]})
+    page_fetcher = UnreachablePageFetcher()
+    stored_news = StoredNewsFilter(FakeStoredNewsIndex(SHARED_ENTRY), "rss")
+    collector = RssCollector(reader, page_fetcher, stored_news)
+
+    news = await collector.fetch(rss_source(MAIN_FEED))
+
+    assert [item.url for item in news] == [SECTION_ENTRY]
+    assert page_fetcher.fetched_urls == [SECTION_ENTRY]
+
+
+@pytest.mark.asyncio
+async def test_a_feed_with_nothing_new_touches_no_page():
+    reader = FakeFeedReader({MAIN_FEED: [entry(SHARED_ENTRY)]})
+    page_fetcher = UnreachablePageFetcher()
+    stored_news = StoredNewsFilter(FakeStoredNewsIndex(SHARED_ENTRY), "rss")
+    collector = RssCollector(reader, page_fetcher, stored_news)
+
+    assert await collector.fetch(rss_source(MAIN_FEED)) == []
+    assert page_fetcher.fetched_urls == []

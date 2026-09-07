@@ -6,6 +6,8 @@ Collector implementations of the application collector ports — the per-source-
 - `rss.py` — `RssCollector` (pull). **Implemented.** Polls every feed in
   `source.rss_links` (the detected feed URLs, distinct from `source.link`) through the
   `FeedReader` port — an entry listed by two feeds is taken once, from the first —
+  drops the entries the shared `news` table already holds (`StoredNewsFilter`) so a poll
+  re-crawls nothing, then for what is left
   fetches every entry's page through the `PageFetcher` port and extracts its full text
   with `application.parse.extract_article` (news-please); falls back to the feed summary
   when extraction comes back empty. Emits one `NewsDTO` per entry with `url` = the
@@ -15,8 +17,9 @@ Collector implementations of the application collector ports — the per-source-
 - `web.py` — `WebCrawlCollector` (pull): hands the `Source` row to
   `application.services.web.WebCrawl` and emits each accepted `Article` via its own
   `to_news_dto(source)` — no business decision of its own. `WebCrawl` builds the `Site`,
-  runs the crawl and marks the source not relevant when nothing is found; this collector
-  only shapes the result into `NewsDTO`.
+  drops candidates already stored (`StoredNewsFilter`, same as RSS) before fetching any
+  of them, runs the rest of the crawl and marks the source not relevant when no candidate
+  is found at all; this collector only shapes the result into `NewsDTO`.
 - `telegram.py` — `TelegramCollector` (push, kurigram — a Pyrogram fork, imported as
   `pyrogram`): joins channels and publishes each new post as a `common.entities.news.NewsDTO`
   via the injected `NewsPublisher`. **Implemented.** A post has no headline, so `title` is

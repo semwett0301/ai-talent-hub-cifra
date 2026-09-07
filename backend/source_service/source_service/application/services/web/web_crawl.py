@@ -7,6 +7,7 @@ from common.schemas import Source
 
 from source_service.application.dto.crawl_run import CrawlRun
 from source_service.application.ports.source import SourceRepository
+from source_service.application.services.dedup import StoredNewsFilter
 from source_service.domain import Article, ArticleStatus, Site, merge_duplicates
 
 from .articles import ArticleHarvest, ArticleJudgement, DateResolution
@@ -18,8 +19,8 @@ logger = get_logger(__name__)
 
 @dataclass(frozen=True)
 class CrawlStages:
-    """The five services one site crawl is composed of — `WebCrawl`'s only argument besides
-    the repository, wired once in `deps`."""
+    """The five services one site crawl is composed of — `WebCrawl`'s stage argument,
+    wired once in `deps` alongside the repository and the stored-news filter."""
 
     hubs: HubDiscovery
     cards: CardCollection
@@ -33,9 +34,12 @@ class WebCrawl:
     and the dedupe: every judgement and every threshold lives in a stage. Each stage takes
     the whole list and touches only the status that is its own."""
 
-    def __init__(self, stages: CrawlStages, repo: SourceRepository) -> None:
+    def __init__(
+        self, stages: CrawlStages, repo: SourceRepository, stored_news: StoredNewsFilter
+    ) -> None:
         self.__stages = stages
         self.__repo = repo
+        self.__stored_news = stored_news
 
     async def run(self, source: Source) -> list[Article]:
         """Accepted articles for this source, freshest first. Marks the source not
@@ -51,7 +55,11 @@ class WebCrawl:
         if not candidates:
             return await self.__mark_not_relevant(source)
 
-        fetched = await self.__stages.harvest.run(candidates, stats)
+        fresh = await self.__stored_news.unstored(site.label, candidates)
+        if not fresh:
+            return []
+
+        fetched = await self.__stages.harvest.run(fresh, stats)
         dated = await self.__stages.dates.run(fetched)
         judged = self.__stages.judgement.run(dated)
 
